@@ -1,0 +1,371 @@
+import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { queryA2S } from './a2s.mjs';
+import { DockerClient, DockerError, demuxDockerStream } from './docker.mjs';
+import { rconCommand } from './rcon.mjs';
+import { parseAdminEntries, parseInteger, validateAdmins, validateCreateInput } from './validation.mjs';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const publicDir = path.join(root, 'public');
+const config = {
+  listenPort: parseInteger(process.env.PANEL_PORT || 8080, 'PANEL_PORT', 1, 65535),
+  token: process.env.PANEL_TOKEN || '',
+  image: process.env.SERVER_IMAGE || 'cs16-server:local',
+  network: process.env.PANEL_NETWORK || 'cs16_default',
+  portStart: parseInteger(process.env.PORT_RANGE_START || 27015, 'PORT_RANGE_START', 1024, 65535),
+  portEnd: parseInteger(process.env.PORT_RANGE_END || 27115, 'PORT_RANGE_END', 1024, 65535),
+};
+
+if (config.token.length < 16) {
+  console.error('[panel] PANEL_TOKEN must contain at least 16 characters');
+  process.exit(1);
+}
+if (config.portStart > config.portEnd) {
+  console.error('[panel] PORT_RANGE_START must not be greater than PORT_RANGE_END');
+  process.exit(1);
+}
+
+const docker = new DockerClient();
+const managedLabel = 'com.cs16.controlled=true';
+const managedAdminsFile = '/opt/hlds/cstrike/addons/amxmodx/data/panel_admins.txt';
+const usersFile = '/opt/hlds/cstrike/addons/amxmodx/configs/users.ini';
+
+function sendJson(response, status, data) {
+  const body = JSON.stringify(data);
+  response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(body) });
+  response.end(body);
+}
+
+function safeEqual(left, right) {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function isAuthorized(request) {
+  const header = request.headers.authorization || '';
+  return header.startsWith('Bearer ') && safeEqual(header.slice(7), config.token);
+}
+
+async function readJson(request) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    size += chunk.length;
+    if (size > 64 * 1024) throw new Error('Request body is too large');
+    chunks.push(chunk);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+  } catch {
+    throw new Error('Invalid JSON body');
+  }
+}
+
+function envValue(inspect, name, fallback = '') {
+  const prefix = `${name}=`;
+  const entry = (inspect.Config.Env || []).find((value) => value.startsWith(prefix));
+  return entry ? entry.slice(prefix.length) : fallback;
+}
+
+function publishedPort(inspect) {
+  const bindings = inspect.HostConfig?.PortBindings?.['27015/udp'];
+  return bindings?.[0]?.HostPort ? Number(bindings[0].HostPort) : null;
+}
+
+function containerAddress(inspect) {
+  const networks = inspect.NetworkSettings?.Networks || {};
+  return networks[config.network]?.IPAddress || Object.values(networks).find((network) => network.IPAddress)?.IPAddress || '';
+}
+
+async function assertControlled(id) {
+  if (!/^[a-f0-9]{12,64}$/.test(id)) throw new Error('Invalid server id');
+  const inspect = await docker.request('GET', `/containers/${id}/json`);
+  if (inspect.Config?.Labels?.['com.cs16.controlled'] !== 'true') throw new Error('Container is not managed by CS Control');
+  return inspect;
+}
+
+async function runExec(containerId, command) {
+  const created = await docker.request('POST', `/containers/${containerId}/exec`, {
+    AttachStdout: true,
+    AttachStderr: true,
+    Tty: false,
+    User: 'hlds',
+    Cmd: command,
+  });
+  const output = await docker.request('POST', `/exec/${created.Id}/start`, { Detach: false, Tty: false });
+  const result = await docker.request('GET', `/exec/${created.Id}/json`);
+  const text = demuxDockerStream(output);
+  if (result.ExitCode !== 0) throw new Error(text.trim() || `Container command failed (${result.ExitCode})`);
+  return text;
+}
+
+function serializeAdmins(admins) {
+  return admins.map(({ steamId, flags }) => `${steamId}|${flags}`).join(';');
+}
+
+function usersFileContent(admins) {
+  const lines = [
+    '; Managed live by CS Control.',
+    '; SteamID authentication is used, so no admin passwords are stored.',
+    '"loopback" "" "abcdefghijklmnopqrstu" "de"',
+    ...admins.map(({ steamId, flags }) => `"${steamId}" "" "${flags}" "ce"`),
+  ];
+  return `${lines.join('\n')}\n`;
+}
+
+async function requireRunning(id) {
+  const inspect = await assertControlled(id);
+  if (!inspect.State?.Running) throw new Error('Start the server before managing admins');
+  return inspect;
+}
+
+async function readAdmins(id, inspect) {
+  const output = await runExec(id, ['sh', '-c', `if [ -f '${managedAdminsFile}' ]; then printf 'panel\\n'; cat '${managedAdminsFile}'; else printf 'environment\\n'; printf '%s' "$AMXX_ADMINS"; fi`]);
+  const newline = output.indexOf('\n');
+  const source = newline === -1 ? 'environment' : output.slice(0, newline).trim();
+  const raw = newline === -1 ? envValue(inspect, 'AMXX_ADMINS') : output.slice(newline + 1).trim();
+  return { source, admins: parseAdminEntries(raw) };
+}
+
+async function reloadAdmins(id, inspect, admins, persist) {
+  const serialized = serializeAdmins(admins);
+  const users = usersFileContent(admins);
+  const script = persist
+    ? `printf '%s' "$1" > '${managedAdminsFile}' && printf '%s' "$2" > '${usersFile}'`
+    : `rm -f '${managedAdminsFile}' && printf '%s' "$1" > '${usersFile}'`;
+  const args = persist ? [script, 'admin-sync', serialized, users] : [script, 'admin-sync', users];
+  await runExec(id, ['sh', '-c', ...args]);
+  const address = containerAddress(inspect);
+  const reloadOutput = await rconCommand(address, 27015, envValue(inspect, 'RCON_PASSWORD'), 'amx_reloadadmins');
+  return { source: persist ? 'panel' : 'environment', admins, reloaded: true, output: reloadOutput };
+}
+
+async function listServers() {
+  const filters = encodeURIComponent(JSON.stringify({ label: [managedLabel] }));
+  const containers = await docker.request('GET', `/containers/json?all=1&filters=${filters}`);
+
+  return Promise.all(containers.map(async (container) => {
+    const inspect = await docker.request('GET', `/containers/${container.Id}/json`);
+    let game = null;
+    if (inspect.State?.Running) {
+      const address = containerAddress(inspect);
+      if (address) game = await queryA2S(address, 27015).catch(() => null);
+    }
+    return {
+      id: container.Id,
+      name: inspect.Config?.Labels?.['com.cs16.display-name'] || inspect.Name.replace(/^\//, ''),
+      containerName: inspect.Name.replace(/^\//, ''),
+      managedBy: inspect.Config?.Labels?.['com.cs16.managed-by'] || 'unknown',
+      mode: envValue(inspect, 'SERVER_MODE', 'classic'),
+      maxPlayers: Number(envValue(inspect, 'MAX_PLAYERS', 24)),
+      startMap: envValue(inspect, 'START_MAP', ''),
+      port: publishedPort(inspect),
+      state: inspect.State?.Status || 'unknown',
+      health: inspect.State?.Health?.Status || (inspect.State?.Running ? 'running' : 'stopped'),
+      players: game?.players ?? null,
+      liveMaxPlayers: game?.maxPlayers ?? null,
+      map: game?.map || null,
+      startedAt: inspect.State?.StartedAt || null,
+    };
+  }));
+}
+
+async function usedPorts() {
+  const containers = await docker.request('GET', '/containers/json?all=1');
+  const inspections = await Promise.all(containers.map((container) => docker.request('GET', `/containers/${container.Id}/json`)));
+  const ports = inspections.flatMap((inspect) => Object.values(inspect.HostConfig?.PortBindings || {})
+    .flatMap((bindings) => (bindings || []).map((binding) => Number(binding.HostPort)).filter(Boolean)));
+  return new Set(ports);
+}
+
+async function selectPort(requested) {
+  const used = await usedPorts();
+  if (requested !== null) {
+    if (used.has(requested)) throw new Error(`Port ${requested} is already in use by Docker`);
+    return requested;
+  }
+  for (let port = config.portStart; port <= config.portEnd; port += 1) {
+    if (!used.has(port)) return port;
+  }
+  throw new Error('No free game ports remain in the configured range');
+}
+
+async function ensureVolume(name) {
+  await docker.request('POST', '/volumes/create', { Name: name, Labels: { 'com.cs16.controlled': 'true' } });
+}
+
+async function createServer(input) {
+  const values = validateCreateInput(input, config.portStart, config.portEnd);
+  const port = await selectPort(values.port);
+  const instanceId = crypto.randomUUID().slice(0, 8);
+  const containerName = `cs16-instance-${instanceId}`;
+  const volumePrefix = `cs16_${instanceId}`;
+  const rconPassword = values.rconPassword || crypto.randomBytes(18).toString('base64url');
+
+  await ensureVolume(`${volumePrefix}_logs`);
+  await ensureVolume(`${volumePrefix}_data`);
+
+  const container = await docker.request('POST', `/containers/create?name=${containerName}`, {
+    Image: config.image,
+    Env: [
+      `SERVER_MODE=${values.mode}`,
+      `SERVER_NAME=${values.name}`,
+      `MAX_PLAYERS=${values.maxPlayers}`,
+      `START_MAP=${values.startMap}`,
+      'MAPCYCLE=',
+      `RCON_PASSWORD=${rconPassword}`,
+      `SERVER_PASSWORD=${values.serverPassword}`,
+      `AMXX_ADMINS=${values.adminSteamIds.map((steamId) => `${steamId}|abcdefghijklmnopqrstu`).join(';')}`,
+      'DB_ENABLED=0',
+      `SERVER_ID=${instanceId}`,
+    ],
+    Labels: {
+      'com.cs16.controlled': 'true',
+      'com.cs16.managed-by': 'panel',
+      'com.cs16.instance-id': instanceId,
+      'com.cs16.display-name': values.name,
+    },
+    ExposedPorts: { '27015/udp': {}, '27015/tcp': {} },
+    Healthcheck: {
+      Test: ['CMD-SHELL', 'pgrep -x hlds_linux >/dev/null'],
+      Interval: 30_000_000_000,
+      Timeout: 5_000_000_000,
+      Retries: 5,
+      StartPeriod: 90_000_000_000,
+    },
+    HostConfig: {
+      PortBindings: {
+        '27015/udp': [{ HostIp: '0.0.0.0', HostPort: String(port) }],
+        '27015/tcp': [{ HostIp: '0.0.0.0', HostPort: String(port) }],
+      },
+      RestartPolicy: { Name: 'unless-stopped', MaximumRetryCount: 0 },
+      StopTimeout: 30,
+      Mounts: [
+        { Type: 'volume', Source: `${volumePrefix}_logs`, Target: '/opt/hlds/cstrike/logs' },
+        { Type: 'volume', Source: `${volumePrefix}_data`, Target: '/opt/hlds/cstrike/addons/amxmodx/data' },
+      ],
+    },
+    NetworkingConfig: { EndpointsConfig: { [config.network]: {} } },
+  });
+
+  if (values.startImmediately) await docker.request('POST', `/containers/${container.Id}/start`);
+  return { id: container.Id, instanceId, port, rconPassword, started: values.startImmediately };
+}
+
+async function serveStatic(requestPath, response) {
+  const files = {
+    '/': ['index.html', 'text/html; charset=utf-8'],
+    '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
+    '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
+  };
+  const target = files[requestPath];
+  if (!target) return false;
+  const content = await fs.readFile(path.join(publicDir, target[0]));
+  response.writeHead(200, {
+    'content-type': target[1],
+    'content-length': content.length,
+    'cache-control': 'no-store',
+    'content-security-policy': "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'",
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+  });
+  response.end(content);
+  return true;
+}
+
+const server = http.createServer(async (request, response) => {
+  try {
+    const url = new URL(request.url, 'http://panel.local');
+    if (request.method === 'GET' && url.pathname === '/api/health') {
+      sendJson(response, 200, { status: 'ok' });
+      return;
+    }
+    if (!url.pathname.startsWith('/api/')) {
+      if (!await serveStatic(url.pathname, response)) sendJson(response, 404, { error: 'Not found' });
+      return;
+    }
+    if (!isAuthorized(request)) {
+      sendJson(response, 401, { error: 'Invalid panel token' });
+      return;
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/servers') {
+      sendJson(response, 200, { servers: await listServers(), portRange: [config.portStart, config.portEnd] });
+      return;
+    }
+    if (request.method === 'POST' && url.pathname === '/api/servers') {
+      sendJson(response, 201, await createServer(await readJson(request)));
+      return;
+    }
+
+    const actionMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/(start|stop|restart)$/);
+    if (request.method === 'POST' && actionMatch) {
+      const [, id, action] = actionMatch;
+      await assertControlled(id);
+      const suffix = action === 'stop' ? '/stop?t=30' : action === 'restart' ? '/restart?t=30' : '/start';
+      await docker.request('POST', `/containers/${id}${suffix}`);
+      sendJson(response, 200, { status: action });
+      return;
+    }
+
+    const logsMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/logs$/);
+    if (request.method === 'GET' && logsMatch) {
+      await assertControlled(logsMatch[1]);
+      const logs = await docker.request('GET', `/containers/${logsMatch[1]}/logs?stdout=1&stderr=1&timestamps=1&tail=250`);
+      sendJson(response, 200, { logs: demuxDockerStream(logs) });
+      return;
+    }
+
+    const adminsMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/admins$/);
+    if (adminsMatch && request.method === 'GET') {
+      const inspect = await requireRunning(adminsMatch[1]);
+      sendJson(response, 200, await readAdmins(adminsMatch[1], inspect));
+      return;
+    }
+    if (adminsMatch && request.method === 'PUT') {
+      const inspect = await requireRunning(adminsMatch[1]);
+      const admins = validateAdmins(await readJson(request));
+      sendJson(response, 200, await reloadAdmins(adminsMatch[1], inspect, admins, true));
+      return;
+    }
+    if (adminsMatch && request.method === 'DELETE') {
+      const inspect = await requireRunning(adminsMatch[1]);
+      const admins = parseAdminEntries(envValue(inspect, 'AMXX_ADMINS'));
+      sendJson(response, 200, await reloadAdmins(adminsMatch[1], inspect, admins, false));
+      return;
+    }
+
+    const deleteMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})$/);
+    if (request.method === 'DELETE' && deleteMatch) {
+      const inspect = await assertControlled(deleteMatch[1]);
+      if (inspect.Config?.Labels?.['com.cs16.managed-by'] !== 'panel') throw new Error('Compose-managed servers cannot be removed from the panel');
+      if (inspect.State?.Running) throw new Error('Stop the server before removing it');
+      await docker.request('DELETE', `/containers/${deleteMatch[1]}?v=0`);
+      sendJson(response, 200, { status: 'removed', volumesPreserved: true });
+      return;
+    }
+
+    sendJson(response, 404, { error: 'API route not found' });
+  } catch (error) {
+    console.error('[panel]', error);
+    const clientError = !(error instanceof DockerError) || (error.statusCode >= 400 && error.statusCode < 500);
+    sendJson(response, clientError ? 400 : 502, { error: error.details || error.message || 'Unexpected error' });
+  }
+});
+
+server.listen(config.listenPort, '0.0.0.0', () => {
+  console.log(`[panel] CS Control listening on port ${config.listenPort}; game ports ${config.portStart}-${config.portEnd}`);
+});
+
+function shutdown(signal) {
+  console.log(`[panel] ${signal} received, closing HTTP server`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 5000).unref();
+}
+
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGINT', () => shutdown('SIGINT'));

@@ -1,0 +1,28 @@
+services:
+  server:
+    environment:
+      DB_ENABLED: "1"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:11.8
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-cs16}
+      MARIADB_USER: ${DB_USER:-cs16}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-change-db-password}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change-root-password}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  mariadb_data:
+

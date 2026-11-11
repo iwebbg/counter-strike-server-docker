@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08100f">
+  <title>CS Control — Server Operations</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <section id="authView" class="auth-view">
+    <form id="authForm" class="auth-card">
+      <div class="brand-mark" aria-hidden="true"><span>CS</span></div>
+      <p class="eyebrow">LOCAL OPERATIONS CONSOLE</p>
+      <h1>CS Control</h1>
+      <p class="muted">Enter the private panel token configured on this Docker host.</p>
+      <label class="field">
+        <span>Panel token</span>
+        <input id="tokenInput" type="password" autocomplete="current-password" required minlength="16" autofocus>
+      </label>
+      <button class="button primary full" type="submit">Unlock dashboard <span>→</span></button>
+      <p id="authError" class="form-error" role="alert"></p>
+    </form>
+  </section>
+
+  <div id="appView" class="app-view hidden">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="CS Control home">
+        <span class="brand-icon">CS</span>
+        <span><strong>CS Control</strong><small>GoldSrc Fleet</small></span>
+      </a>
+      <div class="topbar-actions">
+        <span id="connectionState" class="connection"><i></i> Docker connected</span>
+        <button id="refreshButton" class="icon-button" type="button" title="Refresh servers" aria-label="Refresh servers">↻</button>
+        <button id="logoutButton" class="button ghost small" type="button">Lock</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">FLEET OVERVIEW</p>
+          <h1>Your servers.<br><em>One command center.</em></h1>
+          <p class="hero-copy">Launch, monitor and operate isolated Counter-Strike 1.6 instances without touching the terminal.</p>
+        </div>
+        <button id="openCreateButton" class="button primary create-button" type="button"><span>＋</span> New server</button>
+      </section>
+
+      <section class="metrics" aria-label="Fleet metrics">
+        <article><span class="metric-label">Total servers</span><strong id="totalMetric">0</strong><small>controlled instances</small></article>
+        <article><span class="metric-label">Online</span><strong id="onlineMetric">0</strong><small><i class="live-dot"></i> accepting players</small></article>
+        <article><span class="metric-label">Players</span><strong id="playersMetric">0</strong><small id="capacityMetric">0 total slots</small></article>
+        <article><span class="metric-label">Port pool</span><strong id="portsMetric">—</strong><small>automatic allocation</small></article>
+      </section>
+
+      <section class="fleet-section">
+        <div class="section-heading">
+          <div><p class="eyebrow">INSTANCES</p><h2>Server fleet</h2></div>
+          <div class="filters" role="group" aria-label="Filter servers">
+            <button class="filter active" data-filter="all" type="button">All</button>
+            <button class="filter" data-filter="running" type="button">Online</button>
+            <button class="filter" data-filter="exited" type="button">Stopped</button>
+          </div>
+        </div>
+        <div id="serverGrid" class="server-grid" aria-live="polite"></div>
+        <div id="emptyState" class="empty-state hidden">
+          <div class="empty-radar"><i></i></div>
+          <h3>No servers in this view</h3>
+          <p>Create a server or change the active filter.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="createDialog" class="panel-dialog">
+    <form id="createForm" method="dialog">
+      <header class="dialog-header">
+        <div><p class="eyebrow">DEPLOY INSTANCE</p><h2>New CS server</h2></div>
+        <button class="close-button" type="button" data-close-create aria-label="Close">×</button>
+      </header>
+      <div class="dialog-body">
+        <label class="field wide"><span>Server name</span><input name="name" required minlength="2" maxlength="48" value="Friday Night Arena"></label>
+
+        <fieldset class="mode-picker wide">
+          <legend>Game mode</legend>
+          <label><input type="radio" name="mode" value="classic" checked><span><b>Classic</b><small>Competitive CS 1.6</small></span></label>
+          <label><input type="radio" name="mode" value="gungame"><span><b>GunGame</b><small>Progressive weapons</small></span></label>
+        </fieldset>
+
+        <label class="field"><span>Max players <output id="playersOutput">24</output></span><input id="playersRange" name="maxPlayers" type="range" min="2" max="32" value="24"></label>
+        <label class="field"><span>Start map</span><input id="startMapInput" name="startMap" value="de_dust2" list="mapOptions" pattern="[a-zA-Z0-9_]+" required><datalist id="mapOptions"></datalist></label>
+        <label class="field"><span>Host port <small>blank = automatic</small></span><input name="port" inputmode="numeric" placeholder="Automatic"></label>
+        <label class="field"><span>Server password <small>optional</small></span><input name="serverPassword" type="password" maxlength="64"></label>
+        <label class="field wide"><span>RCON password <small>blank = securely generated</small></span><input name="rconPassword" type="password" maxlength="64"></label>
+        <label class="field wide"><span>Full admin Steam IDs <small>optional, comma separated</small></span><input name="adminSteamIds" placeholder="STEAM_0:1:123456, STEAM_0:0:654321"></label>
+        <label class="toggle wide"><input name="startImmediately" type="checkbox" checked><i></i><span><b>Start immediately</b><small>Create and boot the server in one step</small></span></label>
+      </div>
+      <footer class="dialog-footer">
+        <button class="button ghost" type="button" data-close-create>Cancel</button>
+        <button id="createSubmit" class="button primary" type="submit">Create server <span>→</span></button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="logsDialog" class="logs-dialog">
+    <header class="dialog-header">
+      <div><p class="eyebrow">LIVE OUTPUT</p><h2 id="logsTitle">Server logs</h2></div>
+      <div class="dialog-tools"><button id="refreshLogsButton" class="icon-button" type="button">↻</button><button class="close-button" data-close-logs aria-label="Close">×</button></div>
+    </header>
+    <pre id="logsOutput">Loading…</pre>
+  </dialog>
+
+  <dialog id="adminsDialog" class="admins-dialog">
+    <form id="adminsForm">
+      <header class="dialog-header">
+        <div><p class="eyebrow">LIVE AMX MOD X ACCESS</p><h2 id="adminsTitle">Server admins</h2></div>
+        <button class="close-button" type="button" data-close-admins aria-label="Close">×</button>
+      </header>
+      <div class="admins-body">
+        <div class="admins-summary"><p>Add a Steam ID and choose a role. Changes apply immediately—no restart needed.</p><span id="adminsSource" class="badge"></span></div>
+        <div id="adminRows" class="admin-rows"></div>
+        <button id="addAdminButton" class="button ghost" type="button">＋ Add admin</button>
+        <p class="admin-hint">Players can type <code>status</code> in the game console to find their Steam ID. Full admins open the menu with <code>amxmodmenu</code>.</p>
+      </div>
+      <footer class="dialog-footer admins-footer">
+        <button id="resetAdminsButton" class="button ghost danger" type="button">Reset to .env</button>
+        <span></span>
+        <button class="button ghost" type="button" data-close-admins>Cancel</button>
+        <button id="saveAdminsButton" class="button primary" type="submit">Save &amp; reload</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="credentialDialog" class="credential-dialog">
+    <div class="success-icon">✓</div>
+    <p class="eyebrow">SERVER CREATED</p>
+    <h2>Instance is ready</h2>
+    <p class="muted">Save this RCON password now. It is shown only once in the panel.</p>
+    <div class="credential"><code id="rconCredential"></code><button id="copyCredential" type="button">Copy</button></div>
+    <p id="connectHint" class="connect-hint"></p>
+    <button class="button primary full" data-close-credential type="button">Done</button>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

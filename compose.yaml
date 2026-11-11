@@ -1,0 +1,76 @@
+name: cs16
+
+services:
+  server:
+    build:
+      context: .
+    image: cs16-server:local
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SERVER_MODE: ${SERVER_MODE:-classic}
+      SERVER_NAME: ${SERVER_NAME:-My CS 1.6 Server}
+      MAX_PLAYERS: ${MAX_PLAYERS:-24}
+      START_MAP: ${START_MAP:-}
+      MAPCYCLE: ${MAPCYCLE:-}
+      RCON_PASSWORD: ${RCON_PASSWORD:-change-me-now}
+      SERVER_PASSWORD: ${SERVER_PASSWORD:-}
+      SV_LAN: ${SV_LAN:-0}
+      REGION: ${REGION:-3}
+      WELCOME_MESSAGE: ${WELCOME_MESSAGE:-Welcome to our CS 1.6 server!}
+      GG_DOUBLEJUMP_ENABLED: ${GG_DOUBLEJUMP_ENABLED:-1}
+      GG_DOUBLEJUMP_VELOCITY: ${GG_DOUBLEJUMP_VELOCITY:-350.0}
+      AMXX_ADMINS: ${AMXX_ADMINS:-}
+      DB_ENABLED: ${DB_ENABLED:-0}
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_NAME: ${DB_NAME:-cs16}
+      DB_USER: ${DB_USER:-cs16}
+      DB_PASSWORD: ${DB_PASSWORD:-change-db-password}
+      SERVER_ID: ${SERVER_ID:-cs16-1}
+    ports:
+      - "${SERVER_PORT:-27015}:27015/udp"
+      - "${SERVER_PORT:-27015}:27015/tcp"
+    volumes:
+      - cs16_logs:/opt/hlds/cstrike/logs
+      - cs16_amxx_data:/opt/hlds/cstrike/addons/amxmodx/data
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -x hlds_linux >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    stop_grace_period: 30s
+    labels:
+      com.cs16.controlled: "true"
+      com.cs16.managed-by: compose
+      com.cs16.instance-id: primary
+      com.cs16.display-name: ${SERVER_NAME:-My CS 1.6 Server}
+
+  panel:
+    profiles: ["panel"]
+    build:
+      context: ./panel
+    image: cs16-control-panel:local
+    restart: unless-stopped
+    environment:
+      PANEL_TOKEN: ${PANEL_TOKEN:-}
+      SERVER_IMAGE: cs16-server:local
+      PANEL_NETWORK: cs16_default
+      PORT_RANGE_START: ${PORT_RANGE_START:-27015}
+      PORT_RANGE_END: ${PORT_RANGE_END:-27115}
+    ports:
+      - "${PANEL_BIND_IP:-127.0.0.1}:${PANEL_PORT:-8080}:8080/tcp"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  cs16_logs:
+  cs16_amxx_data:
+
