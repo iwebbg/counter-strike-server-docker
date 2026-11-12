@@ -26,6 +26,24 @@ build сваля официалния HLDS през SteamCMD и може да о
 TB месечен трафик. Бюджетен VPS с 2 бързи vCPU и 6 GB RAM също може да започне
 с две инстанции, но трябва да бъде валидиран под реален player load.
 
+Най-лесният старт е чрез Compose selector-а. Той избира server/panel/database
+stack и генерира липсващите secrets:
+
+```bash
+./docker/compose setup
+./docker/compose up -d --build
+./docker/compose ps
+```
+
+За non-interactive full stack:
+
+```bash
+./docker/compose setup full
+./docker/compose up -d --build
+```
+
+Стандартният Docker Compose workflow също остава поддържан:
+
 ```bash
 cp .env.example .env
 # задължително сменете RCON_PASSWORD в .env преди публичен сървър
@@ -312,6 +330,7 @@ docker compose up -d --build
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — реализиран пакет и бъдещи product идеи.
 - [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) — hardware, VPS sizing и bandwidth оценки.
 - [`docs/DATABASE.md`](docs/DATABASE.md) — MariaDB схема, dashboard, backup и restore.
+- [`docs/COMPOSE-LAUNCHER.md`](docs/COMPOSE-LAUNCHER.md) — интерактивен stack selector и единни команди.
 
 ## Проверка и диагностика
 

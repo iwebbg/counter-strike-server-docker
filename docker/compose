@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+docker_directory="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+project_directory="$(dirname -- "$docker_directory")"
+environment_file="${CS16_ENV_FILE:-$project_directory/.env}"
+example_file="$project_directory/.env.example"
+
+die() {
+  printf 'CS16 Compose: %s\n' "$*" >&2
+  exit 1
+}
+
+env_value() {
+  local key="$1"
+  sed -n "s/^${key}=//p" "$environment_file" 2>/dev/null | tail -n 1 | tr -d '\r'
+}
+
+set_env_value() {
+  local key="$1" value="$2"
+  if grep -q "^${key}=" "$environment_file"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "$environment_file"
+  else
+    printf '\n%s=%s\n' "$key" "$value" >> "$environment_file"
+  fi
+}
+
+random_secret() {
+  command -v openssl >/dev/null 2>&1 || die 'openssl is required to generate secure secrets.'
+  openssl rand -hex 32
+}
+
+stack_description() {
+  case "$1" in
+    server) printf 'Game server only' ;;
+    panel) printf 'Game server + CS Control Panel' ;;
+    database) printf 'Game server + MariaDB fleet data' ;;
+    full) printf 'Game server + Control Panel + MariaDB' ;;
+  esac
+}
+
+configure_stack() {
+  local requested="${1:-}"
+  if [[ ! -f "$environment_file" ]]; then
+    [[ -f "$example_file" ]] || die '.env.example is missing.'
+    cp "$example_file" "$environment_file"
+    printf 'Created .env from .env.example.\n'
+  fi
+
+  if [[ -z "$requested" ]]; then
+    [[ -t 0 ]] || die 'Non-interactive setup requires: ./docker/compose setup server|panel|database|full'
+    printf '\nChoose a deployment stack:\n'
+    printf '  1) Full stack (recommended)\n'
+    printf '  2) Game server + Control Panel\n'
+    printf '  3) Game server + MariaDB\n'
+    printf '  4) Game server only\n\n'
+    read -r -p 'Selection [1]: ' requested
+    case "${requested:-1}" in
+      1|full) requested=full ;;
+      2|panel) requested=panel ;;
+      3|database) requested=database ;;
+      4|server) requested=server ;;
+      *) die 'Choose 1, 2, 3, 4 or a stack name.' ;;
+    esac
+  fi
+
+  case "$requested" in
+    server|panel|database|full) ;;
+    *) die 'Stack must be server, panel, database or full.' ;;
+  esac
+
+  set_env_value CS16_STACK "$requested"
+
+  local rcon_password panel_token database_password root_password
+  rcon_password="$(env_value RCON_PASSWORD)"
+  if [[ -z "$rcon_password" || "$rcon_password" == change-me-now ]]; then
+    set_env_value RCON_PASSWORD "$(random_secret)"
+  fi
+
+  if [[ "$requested" == panel || "$requested" == full ]]; then
+    panel_token="$(env_value PANEL_TOKEN)"
+    if [[ ${#panel_token} -lt 16 ]]; then
+      set_env_value PANEL_TOKEN "$(random_secret)"
+    fi
+  fi
+
+  if [[ "$requested" == database || "$requested" == full ]]; then
+    database_password="$(env_value DB_PASSWORD)"
+    root_password="$(env_value DB_ROOT_PASSWORD)"
+    if [[ -z "$database_password" || "$database_password" == change-db-password ]]; then
+      set_env_value DB_PASSWORD "$(random_secret)"
+    fi
+    if [[ -z "$root_password" || "$root_password" == change-root-password ]]; then
+      set_env_value DB_ROOT_PASSWORD "$(random_secret)"
+    fi
+  fi
+
+  printf '\nConfigured: %s\n' "$(stack_description "$requested")"
+  printf 'Secrets were generated when missing; their values were not printed.\n'
+  printf 'Start with: ./docker/compose up -d --build\n\n'
+}
+
+show_help() {
+  cat <<'EOF'
+CS 1.6 Docker Compose selector
+
+Usage:
+  ./docker/compose setup [server|panel|database|full]
+  ./docker/compose show
+  ./docker/compose doctor
+  ./docker/compose <docker compose arguments...>
+
+Examples:
+  ./docker/compose setup
+  ./docker/compose up -d --build
+  ./docker/compose ps
+  ./docker/compose logs -f server panel mariadb
+  ./docker/compose down
+
+The selected stack is stored as CS16_STACK in .env. Advanced users can still
+use docker compose -f compose.yaml -f compose.database.yaml --profile panel.
+Set CS16_ENV_FILE=/path/to/file to use a different environment file in CI.
+EOF
+}
+
+case "${1:-}" in
+  setup)
+    shift
+    configure_stack "${1:-}"
+    exit 0
+    ;;
+  help|-h|--help)
+    show_help
+    exit 0
+    ;;
+esac
+
+[[ -f "$environment_file" ]] || die 'Run ./docker/compose setup first.'
+
+stack="$(env_value CS16_STACK)"
+stack="${stack:-server}"
+case "$stack" in
+  server|panel|database|full) ;;
+  *) die 'CS16_STACK in .env must be server, panel, database or full.' ;;
+esac
+
+compose_arguments=(
+  --project-directory "$project_directory"
+  --env-file "$environment_file"
+  --file "$project_directory/compose.yaml"
+)
+
+if [[ "$stack" == database || "$stack" == full ]]; then
+  compose_arguments+=(--file "$project_directory/compose.database.yaml")
+fi
+if [[ "$stack" == panel || "$stack" == full ]]; then
+  compose_arguments+=(--profile panel)
+fi
+
+if [[ "${1:-}" == show ]]; then
+  compose_files='compose.yaml'
+  if [[ "$stack" == database || "$stack" == full ]]; then
+    compose_files+=' + compose.database.yaml'
+  fi
+  printf 'Selected stack: %s\n' "$stack"
+  printf 'Services: %s\n' "$(stack_description "$stack")"
+  printf 'Environment: %s\n' "$environment_file"
+  printf 'Compose files: %s\n' "$compose_files"
+  exit 0
+fi
+
+if [[ "${1:-}" == doctor ]]; then
+  command -v docker >/dev/null 2>&1 || die 'docker is not installed or not in PATH.'
+  docker compose version >/dev/null || die 'Docker Compose plugin is unavailable.'
+  docker info >/dev/null || die 'Docker Engine is unavailable or permission is denied.'
+  [[ "$(env_value RCON_PASSWORD)" != change-me-now ]] || die 'RCON_PASSWORD still uses the example value. Run setup again.'
+  if [[ "$stack" == panel || "$stack" == full ]]; then
+    panel_token="$(env_value PANEL_TOKEN)"
+    [[ ${#panel_token} -ge 16 ]] || die 'PANEL_TOKEN is missing or too short. Run setup again.'
+  fi
+  if [[ "$stack" == database || "$stack" == full ]]; then
+    [[ "$(env_value DB_PASSWORD)" != change-db-password ]] || die 'DB_PASSWORD still uses the example value. Run setup again.'
+    [[ "$(env_value DB_ROOT_PASSWORD)" != change-root-password ]] || die 'DB_ROOT_PASSWORD still uses the example value. Run setup again.'
+  fi
+  docker compose "${compose_arguments[@]}" config >/dev/null
+  printf 'OK: Docker, secrets and %s stack configuration are ready.\n' "$stack"
+  exit 0
+fi
+
+[[ $# -gt 0 ]] || { show_help; exit 0; }
+exec docker compose "${compose_arguments[@]}" "$@"
