@@ -11,10 +11,12 @@ import {
   syncServerRegistry,
 } from "../../stats/services/StatsService.mjs";
 import {
+  modeMaps,
   parseAdminEntries,
   parseInteger,
   validateAdmins,
   validateCreateInput,
+  validateEditInput,
   validateModerationInput,
 } from "./schemas.mjs";
 const config = {
@@ -48,6 +50,7 @@ const managedMapcycleFile = "/opt/hlds/cstrike/addons/amxmodx/data/panel_mapcycl
 const mapcycleFile = "/opt/hlds/cstrike/mapcycle.txt";
 const amxxMapsFile = "/opt/hlds/cstrike/addons/amxmodx/configs/maps.ini";
 const moderationLog = "/opt/hlds/cstrike/addons/amxmodx/data/panel_moderation.log";
+const dataMountTarget = "/opt/hlds/cstrike/addons/amxmodx/data";
 
 function envValue(inspect, name, fallback = "") {
   const prefix = `${name}=`;
@@ -77,6 +80,12 @@ async function assertControlled(id) {
   if (inspect.Config?.Labels?.["com.cs16.controlled"] !== "true")
     throw new Error("Container is not managed by CS Control");
   return inspect;
+}
+
+function assertPanelManaged(inspect) {
+  if (inspect.Config?.Labels?.["com.cs16.managed-by"] !== "panel") {
+    throw new Error("Compose-managed servers cannot be edited from the panel");
+  }
 }
 
 async function runExec(containerId, command) {
@@ -320,10 +329,12 @@ async function listServers() {
   return servers;
 }
 
-async function usedPorts() {
+async function usedPorts(excludedContainerId = null) {
   const containers = await docker.request("GET", "/containers/json?all=1");
   const inspections = await Promise.all(
-    containers.map((container) => docker.request("GET", `/containers/${container.Id}/json`)),
+    containers
+      .filter((container) => container.Id !== excludedContainerId)
+      .map((container) => docker.request("GET", `/containers/${container.Id}/json`)),
   );
   const ports = inspections.flatMap((inspect) =>
     Object.values(inspect.HostConfig?.PortBindings || {}).flatMap((bindings) =>
@@ -333,8 +344,8 @@ async function usedPorts() {
   return new Set(ports);
 }
 
-async function selectPort(requested) {
-  const used = await usedPorts();
+async function selectPort(requested, excludedContainerId = null) {
+  const used = await usedPorts(excludedContainerId);
   if (requested !== null) {
     if (used.has(requested)) throw new Error(`Port ${requested} is already in use by Docker`);
     return requested;
@@ -343,6 +354,101 @@ async function selectPort(requested) {
     if (!used.has(port)) return port;
   }
   throw new Error("No free game ports remain in the configured range");
+}
+
+function environmentMap(inspect) {
+  return new Map(
+    (inspect.Config?.Env || []).map((entry) => {
+      const separator = entry.indexOf("=");
+      return separator === -1 ? [entry, ""] : [entry.slice(0, separator), entry.slice(separator + 1)];
+    }),
+  );
+}
+
+function normalizedMounts(inspect) {
+  return (inspect.Mounts || []).map((mount) => ({
+    Type: mount.Type,
+    Source: mount.Name || mount.Source,
+    Target: mount.Destination,
+    ReadOnly: mount.RW === false,
+  }));
+}
+
+function networkConfig(inspect) {
+  const names = Object.keys(inspect.NetworkSettings?.Networks || {});
+  const networks = names.length ? names : [config.network];
+  return { EndpointsConfig: Object.fromEntries(networks.map((name) => [name, {}])) };
+}
+
+function containerPayload(inspect, { env, labels, port }) {
+  const currentBindings = inspect.HostConfig?.PortBindings || {};
+  const hostIp = currentBindings["27015/udp"]?.[0]?.HostIp || "0.0.0.0";
+  return {
+    Image: inspect.Config.Image,
+    Env: [...env].map(([key, value]) => `${key}=${value}`),
+    Labels: labels,
+    ExposedPorts: inspect.Config.ExposedPorts || { "27015/udp": {}, "27015/tcp": {} },
+    Healthcheck: inspect.Config.Healthcheck,
+    HostConfig: {
+      PortBindings: {
+        "27015/udp": [{ HostIp: hostIp, HostPort: String(port) }],
+        "27015/tcp": [{ HostIp: hostIp, HostPort: String(port) }],
+      },
+      RestartPolicy: inspect.HostConfig?.RestartPolicy || { Name: "unless-stopped", MaximumRetryCount: 0 },
+      StopTimeout: inspect.Config?.StopTimeout ?? inspect.HostConfig?.StopTimeout ?? 30,
+      Mounts: normalizedMounts(inspect),
+    },
+    NetworkingConfig: networkConfig(inspect),
+  };
+}
+
+function dataVolume(inspect) {
+  const mount = (inspect.Mounts || []).find(
+    (entry) => entry.Type === "volume" && entry.Destination === dataMountTarget,
+  );
+  if (!mount?.Name) throw new Error("The server AMXX data volume could not be found");
+  return mount.Name;
+}
+
+async function volumeCommand(volume, script, args = []) {
+  const helperName = `cs16-volume-helper-${crypto.randomUUID().slice(0, 8)}`;
+  let helper = null;
+  try {
+    helper = await docker.request("POST", `/containers/create?name=${helperName}`, {
+      Image: config.image,
+      User: "hlds",
+      Entrypoint: ["sh", "-c"],
+      Cmd: [script, "volume-helper", ...args],
+      Labels: { "com.cs16.temporary": "true" },
+      HostConfig: {
+        Mounts: [{ Type: "volume", Source: volume, Target: "/data" }],
+      },
+    });
+    await docker.request("POST", `/containers/${helper.Id}/start`);
+    const result = await docker.request("POST", `/containers/${helper.Id}/wait?condition=not-running`);
+    const logs = await docker.request("GET", `/containers/${helper.Id}/logs?stdout=1&stderr=1`);
+    const output = demuxDockerStream(logs);
+    if (result.StatusCode !== 0) throw new Error(output.trim() || `Volume helper failed (${result.StatusCode})`);
+    return output;
+  } finally {
+    if (helper?.Id) await docker.request("DELETE", `/containers/${helper.Id}?force=1&v=0`).catch(() => {});
+  }
+}
+
+async function readPersistentMapcycle(inspect) {
+  return volumeCommand(
+    dataVolume(inspect),
+    "if [ -f /data/panel_mapcycle.txt ]; then cat /data/panel_mapcycle.txt; fi",
+  );
+}
+
+async function writePersistentMapcycle(inspect, maps) {
+  await volumeCommand(dataVolume(inspect), "printf '%s' \"$1\" > /data/panel_mapcycle.txt", [`${maps.join("\n")}\n`]);
+}
+
+async function restorePersistentMapcycle(inspect, content) {
+  const script = content ? "printf '%s' \"$1\" > /data/panel_mapcycle.txt" : "rm -f /data/panel_mapcycle.txt";
+  await volumeCommand(dataVolume(inspect), script, content ? [content] : []);
 }
 
 async function ensureVolume(name) {
@@ -432,6 +538,122 @@ async function createServer(input) {
 
   if (values.startImmediately) await docker.request("POST", `/containers/${container.Id}/start`);
   return { id: container.Id, instanceId, port, rconPassword, started: values.startImmediately };
+}
+
+export async function getServerConfiguration(id) {
+  const inspect = await assertControlled(id);
+  assertPanelManaged(inspect);
+  const mode = envValue(inspect, "SERVER_MODE", "classic");
+  const persistent = await readPersistentMapcycle(inspect);
+  const storedMaps = persistent
+    .split("\n")
+    .map((map) => map.trim())
+    .filter(Boolean);
+  const environmentMaps = envValue(inspect, "MAPCYCLE")
+    .split(",")
+    .map((map) => map.trim())
+    .filter(Boolean);
+  const allowedMaps = mode === "gungame" || mode === "classic" ? modeMaps[mode] : [];
+  const maps = (storedMaps.length ? storedMaps : environmentMaps).filter((map) => allowedMaps.includes(map));
+  const selectedMaps = maps.length ? maps : allowedMaps;
+  const configuredStartMap = envValue(inspect, "START_MAP", selectedMaps[0]);
+
+  return {
+    id: inspect.Id,
+    name: inspect.Config?.Labels?.["com.cs16.display-name"] || envValue(inspect, "SERVER_NAME"),
+    mode,
+    maxPlayers: Number(envValue(inspect, "MAX_PLAYERS", 24)),
+    startMap: selectedMaps.includes(configuredStartMap) ? configuredStartMap : selectedMaps[0],
+    maps: selectedMaps,
+    port: publishedPort(inspect),
+    hasRconPassword: Boolean(envValue(inspect, "RCON_PASSWORD")),
+    hasServerPassword: Boolean(envValue(inspect, "SERVER_PASSWORD")),
+    running: Boolean(inspect.State?.Running),
+    volumes: normalizedMounts(inspect)
+      .filter((mount) => mount.Type === "volume")
+      .map((mount) => mount.Source),
+  };
+}
+
+export async function updateServer(id, input) {
+  const inspect = await assertControlled(id);
+  assertPanelManaged(inspect);
+  const values = validateEditInput(input, config.portStart, config.portEnd);
+  const oldPort = publishedPort(inspect);
+  const port = await selectPort(values.port ?? oldPort, inspect.Id);
+  const wasRunning = Boolean(inspect.State?.Running);
+  const originalName = inspect.Name.replace(/^\//, "");
+  const temporaryName = `${originalName}-edit-${crypto.randomUUID().slice(0, 8)}`;
+  const originalEnv = environmentMap(inspect);
+  const originalLabels = { ...(inspect.Config?.Labels || {}) };
+  const originalPayload = containerPayload(inspect, {
+    env: originalEnv,
+    labels: originalLabels,
+    port: oldPort,
+  });
+  const previousMapcycle = await readPersistentMapcycle(inspect);
+  const nextEnv = new Map(originalEnv);
+  nextEnv.set("SERVER_NAME", values.name);
+  nextEnv.set("SERVER_MODE", values.mode);
+  nextEnv.set("MAX_PLAYERS", String(values.maxPlayers));
+  nextEnv.set("START_MAP", values.startMap);
+  nextEnv.set("MAPCYCLE", values.maps.join(","));
+  nextEnv.set("SPAWN_PROTECTION_ENABLED", values.mode === "gungame" ? "1" : "0");
+  if (values.rconPassword) nextEnv.set("RCON_PASSWORD", values.rconPassword);
+  if (values.clearServerPassword) nextEnv.set("SERVER_PASSWORD", "");
+  else if (values.serverPassword) nextEnv.set("SERVER_PASSWORD", values.serverPassword);
+  const nextLabels = { ...originalLabels, "com.cs16.display-name": values.name };
+  const nextPayload = containerPayload(inspect, { env: nextEnv, labels: nextLabels, port });
+  let replacement = null;
+  let oldRemoved = false;
+
+  try {
+    replacement = await docker.request(
+      "POST",
+      `/containers/create?name=${encodeURIComponent(temporaryName)}`,
+      nextPayload,
+    );
+    await writePersistentMapcycle(inspect, values.maps);
+    if (wasRunning) await docker.request("POST", `/containers/${inspect.Id}/stop?t=30`);
+    await docker.request("DELETE", `/containers/${inspect.Id}?v=0`);
+    oldRemoved = true;
+    await docker.request("POST", `/containers/${replacement.Id}/rename?name=${encodeURIComponent(originalName)}`);
+    if (wasRunning) await docker.request("POST", `/containers/${replacement.Id}/start`);
+    return {
+      id: replacement.Id,
+      serverId: serverKey({
+        ...inspect,
+        Config: { ...inspect.Config, Env: [...nextEnv].map(([key, value]) => `${key}=${value}`) },
+      }),
+      port,
+      restarted: wasRunning,
+      volumesPreserved: true,
+    };
+  } catch (error) {
+    if (replacement?.Id) {
+      await docker.request("DELETE", `/containers/${replacement.Id}?force=1&v=0`).catch(() => {});
+    }
+    if (!oldRemoved) {
+      await restorePersistentMapcycle(inspect, previousMapcycle).catch(() => {});
+      if (wasRunning) await docker.request("POST", `/containers/${inspect.Id}/start`).catch(() => {});
+      throw error;
+    }
+
+    let rollbackMessage = "";
+    try {
+      await restorePersistentMapcycle(inspect, previousMapcycle);
+      const restored = await docker.request(
+        "POST",
+        `/containers/create?name=${encodeURIComponent(originalName)}`,
+        originalPayload,
+      );
+      if (wasRunning) await docker.request("POST", `/containers/${restored.Id}/start`);
+      rollbackMessage = " The original server configuration was restored.";
+    } catch (rollbackError) {
+      rollbackMessage = ` Automatic rollback failed: ${rollbackError.message}.`;
+    }
+    throw new Error(`${error.message}.${rollbackMessage}`);
+  }
 }
 
 export const portRange = () => [config.portStart, config.portEnd];

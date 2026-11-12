@@ -5,6 +5,7 @@ import {
   parseAdminEntries,
   validateAdmins,
   validateCreateInput,
+  validateEditInput,
   validateMapList,
   validateModerationInput,
 } from "../src/controllers/servers/services/schemas.mjs";
@@ -84,6 +85,28 @@ test("validates optional admin Steam IDs", () => {
       validateCreateInput({ name: "Bad admin", mode: "classic", maxPlayers: 16, adminSteamIds: "root" }, 27015, 27115),
     /Admin Steam IDs/,
   );
+});
+
+test("validates editable server settings without changing blank passwords", () => {
+  const value = validateEditInput(
+    {
+      name: "Edited Arena",
+      mode: "gungame",
+      maxPlayers: 18,
+      startMap: "gg_3way",
+      maps: ["gg_3way", "gg_buzz"],
+      port: 27016,
+      rconPassword: "",
+      serverPassword: "",
+      clearServerPassword: true,
+    },
+    27015,
+    27115,
+  );
+  assert.equal(value.maxPlayers, 18);
+  assert.equal(value.rconPassword, "");
+  assert.equal(value.clearServerPassword, true);
+  assert.deepEqual(value.maps, ["gg_3way", "gg_buzz"]);
 });
 
 test("demultiplexes Docker stdout frames", () => {

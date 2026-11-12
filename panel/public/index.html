@@ -313,6 +313,79 @@
       </form>
     </dialog>
 
+    <dialog id="editDialog" class="panel-dialog">
+      <form id="editForm" method="dialog">
+        <header class="dialog-header">
+          <div>
+            <p class="eyebrow">EDIT INSTANCE</p>
+            <h2 id="editTitle">Edit CS server</h2>
+          </div>
+          <button class="close-button" type="button" data-close-edit aria-label="Close">×</button>
+        </header>
+        <div class="dialog-body">
+          <p class="edit-warning wide">
+            Saving safely recreates the container with the same data and log volumes. A running server will restart and
+            connected players will be disconnected.
+          </p>
+          <label class="field wide"
+            ><span>Server name</span><input name="name" required minlength="2" maxlength="48"
+          /></label>
+
+          <fieldset class="mode-picker wide">
+            <legend>Game mode</legend>
+            <label
+              ><input type="radio" name="mode" value="classic" /><span
+                ><b>Classic</b><small>Competitive CS 1.6</small></span
+              ></label
+            >
+            <label
+              ><input type="radio" name="mode" value="gungame" /><span
+                ><b>GunGame</b><small>Progressive weapons</small></span
+              ></label
+            >
+          </fieldset>
+
+          <label class="field"
+            ><span>Max players <output id="editPlayersOutput">24</output></span
+            ><input id="editPlayersRange" name="maxPlayers" type="range" min="2" max="32" value="24"
+          /></label>
+          <label class="field"
+            ><span>Start map</span
+            ><select id="editStartMapInput" name="startMap" required></select
+          ></label>
+          <fieldset class="create-maps wide">
+            <div class="map-section-head">
+              <div>
+                <span id="editMapCategory" class="map-legend">Classic map rotation</span
+                ><small>Only maps for the selected game mode are shown.</small>
+              </div>
+              <div>
+                <button class="text-button" type="button" data-edit-maps="all">Select all</button
+                ><button class="text-button" type="button" data-edit-maps="none">Clear</button>
+              </div>
+            </div>
+            <div id="editMapGrid" class="map-check-grid"></div>
+          </fieldset>
+          <label class="field"><span>Host port</span><input name="port" inputmode="numeric" required /></label>
+          <label class="field"
+            ><span>New server password <small>blank = unchanged</small></span
+            ><input name="serverPassword" type="password" maxlength="64"
+          /></label>
+          <label class="password-clear wide"
+            ><input name="clearServerPassword" type="checkbox" /> Remove the current server password</label
+          >
+          <label class="field wide"
+            ><span>New RCON password <small>blank = unchanged</small></span
+            ><input name="rconPassword" type="password" maxlength="64"
+          /></label>
+        </div>
+        <footer class="dialog-footer">
+          <button class="button ghost" type="button" data-close-edit>Cancel</button>
+          <button id="editSubmit" class="button primary" type="submit">Save &amp; recreate <span>→</span></button>
+        </footer>
+      </form>
+    </dialog>
+
     <dialog id="logsDialog" class="logs-dialog">
       <header class="dialog-header">
         <div>

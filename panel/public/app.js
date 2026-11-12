@@ -13,6 +13,7 @@ const state = {
   mapsPayload: null,
   playersServer: null,
   playersTimer: null,
+  editServer: null,
   statsLoading: false,
   databaseConnected: false,
 };
@@ -23,6 +24,7 @@ const appView = $("#appView");
 const serverGrid = $("#serverGrid");
 const emptyState = $("#emptyState");
 const createDialog = $("#createDialog");
+const editDialog = $("#editDialog");
 const logsDialog = $("#logsDialog");
 const credentialDialog = $("#credentialDialog");
 const adminsDialog = $("#adminsDialog");
@@ -146,6 +148,7 @@ function serverCard(server) {
             : `<button class="button primary" data-action="start">▶ ${t("start")}</button>`
         }
         <button class="button ghost" data-action="logs">${t("logs")}</button>
+        ${server.managedBy === "panel" ? `<button class="button ghost" data-action="edit">${t("edit")}</button>` : ""}
         <button class="button ghost" data-action="players" ${online ? "" : `disabled title="${t("viewPlayersHint")}"`}>${t("players")}</button>
         <button class="button ghost" data-action="maps" ${online ? "" : `disabled title="${t("manageMapsHint")}"`}>${t("maps")}</button>
         <button class="button ghost" data-action="admins" ${online ? "" : `disabled title="${t("manageAdminsHint")}"`}>${t("admins")}</button>
@@ -245,9 +248,15 @@ document.querySelectorAll(".filter").forEach((button) =>
   }),
 );
 
-document.querySelectorAll('input[name="mode"]').forEach((input) =>
+document.querySelectorAll('#createForm input[name="mode"]').forEach((input) =>
   input.addEventListener("change", () => {
     renderCreateMaps(input.value);
+  }),
+);
+
+document.querySelectorAll('#editForm input[name="mode"]').forEach((input) =>
+  input.addEventListener("change", () => {
+    renderEditMaps(input.value);
   }),
 );
 
@@ -322,6 +331,110 @@ $("#createForm").addEventListener("submit", async (event) => {
   }
 });
 
+function selectedEditMaps() {
+  return [...document.querySelectorAll("[data-edit-map]:checked")].map((input) => input.value);
+}
+
+function syncEditStartMap(preferred = $("#editStartMapInput").value) {
+  const selected = selectedEditMaps();
+  const next = selected.includes(preferred) ? preferred : selected[0] || "";
+  $("#editStartMapInput").innerHTML = selected
+    .map((map) => `<option value="${escapeHtml(map)}" ${map === next ? "selected" : ""}>${escapeHtml(map)}</option>`)
+    .join("");
+}
+
+function renderEditMaps(mode, selected = maps[mode], preferred = null) {
+  const selectedSet = new Set(selected);
+  $("#editMapCategory").textContent = t("mapRotation", {
+    mode: mode === "gungame" ? "GunGame" : "Classic",
+    count: maps[mode].length,
+  });
+  $("#editMapGrid").innerHTML = maps[mode]
+    .map(
+      (map) =>
+        `<label class="map-check"><input type="checkbox" data-edit-map value="${escapeHtml(map)}" ${selectedSet.has(map) ? "checked" : ""}><span>${escapeHtml(map)}</span></label>`,
+    )
+    .join("");
+  syncEditStartMap(preferred || (mode === "gungame" ? "gg_3way" : "de_dust2"));
+}
+
+$("#editMapGrid").addEventListener("change", () => syncEditStartMap());
+document.querySelectorAll("[data-edit-maps]").forEach((button) =>
+  button.addEventListener("click", () => {
+    const checked = button.dataset.editMaps === "all";
+    document.querySelectorAll("[data-edit-map]").forEach((input) => {
+      input.checked = checked;
+    });
+    syncEditStartMap();
+  }),
+);
+
+$("#editPlayersRange").addEventListener("input", (event) => {
+  $("#editPlayersOutput").value = event.target.value;
+});
+
+async function openEdit(server) {
+  state.editServer = server;
+  const form = $("#editForm");
+  form.reset();
+  $("#editTitle").textContent = t("editServer", { name: server.name });
+  $("#editSubmit").disabled = true;
+  editDialog.showModal();
+  try {
+    const configuration = await api(`/api/servers/${server.id}/configuration`);
+    if (state.editServer?.id !== server.id) return;
+    form.elements.name.value = configuration.name;
+    form.elements.mode.value = configuration.mode;
+    form.elements.maxPlayers.value = configuration.maxPlayers;
+    $("#editPlayersOutput").value = configuration.maxPlayers;
+    form.elements.port.value = configuration.port;
+    form.elements.serverPassword.placeholder = configuration.hasServerPassword
+      ? t("passwordConfigured")
+      : t("noPasswordConfigured");
+    form.elements.rconPassword.placeholder = t("passwordConfigured");
+    renderEditMaps(configuration.mode, configuration.maps, configuration.startMap);
+    $("#editSubmit").disabled = false;
+  } catch (error) {
+    editDialog.close();
+    state.editServer = null;
+    notify(error.message, true);
+  }
+}
+
+$("#editForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (!form.reportValidity() || !state.editServer) return;
+  const selectedMaps = selectedEditMaps();
+  if (!selectedMaps.length) {
+    notify(t("selectMap"), true);
+    return;
+  }
+  if (state.editServer.state === "running" && !confirm(t("editRestartConfirm", { name: state.editServer.name }))) {
+    return;
+  }
+  const values = Object.fromEntries(new FormData(form));
+  values.maxPlayers = Number(values.maxPlayers);
+  values.port = Number(values.port);
+  values.maps = selectedMaps;
+  values.clearServerPassword = form.elements.clearServerPassword.checked;
+  const submit = $("#editSubmit");
+  submit.disabled = true;
+  submit.textContent = t("savingServer");
+  try {
+    await api(`/api/servers/${state.editServer.id}`, { method: "PUT", body: JSON.stringify(values) });
+    editDialog.close();
+    notify(t("serverUpdated"));
+    state.editServer = null;
+    await refresh(true);
+  } catch (error) {
+    notify(error.message, true);
+  } finally {
+    submit.disabled = false;
+    submit.innerHTML = `${t("saveRecreate")} <span>→</span>`;
+  }
+});
+
 serverGrid.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action]");
   const card = event.target.closest(".server-card");
@@ -329,6 +442,11 @@ serverGrid.addEventListener("click", async (event) => {
   const server = state.servers.find((entry) => entry.id === card.dataset.id);
   if (!server) return;
   const action = button.dataset.action;
+
+  if (action === "edit") {
+    await openEdit(server);
+    return;
+  }
 
   if (action === "logs") {
     state.logsServer = server;
@@ -883,6 +1001,12 @@ $("#refreshLogsButton").addEventListener("click", loadLogs);
 document
   .querySelectorAll("[data-close-create]")
   .forEach((button) => button.addEventListener("click", () => createDialog.close()));
+document.querySelectorAll("[data-close-edit]").forEach((button) =>
+  button.addEventListener("click", () => {
+    editDialog.close();
+    state.editServer = null;
+  }),
+);
 document.querySelector("[data-close-credential]").addEventListener("click", () => credentialDialog.close());
 $("#copyCredential").addEventListener("click", async () => {
   await navigator.clipboard.writeText($("#rconCredential").textContent);
@@ -895,8 +1019,12 @@ setInterval(() => {
 
 window.addEventListener("i18n:change", () => {
   render();
-  const mode = document.querySelector('input[name="mode"]:checked')?.value || "classic";
+  const mode = document.querySelector('#createForm input[name="mode"]:checked')?.value || "classic";
   renderCreateMaps(mode);
+  if (editDialog.open) {
+    const editMode = document.querySelector('#editForm input[name="mode"]:checked')?.value || "classic";
+    renderEditMaps(editMode, selectedEditMaps(), $("#editStartMapInput").value);
+  }
   if (state.mapsPayload) {
     const category = state.mapsPayload.mode === "gungame" ? "GUNGAME" : "CLASSIC";
     $("#mapCategoryHint").textContent = t("categoryMaps", { category });

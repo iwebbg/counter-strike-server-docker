@@ -79,6 +79,8 @@ Docker Compose, така и с опционален интерактивен CS 
 - автоматичен свободен host port или ръчно избран порт;
 - автоматично генерирана и еднократно показана RCON парола;
 - start, stop, restart, live logs и remove за спрени panel-managed containers;
+- Edit wizard с controlled recreate за име, режим, max players, port, passwords,
+  start map и rotation, който запазва същите logs/data volumes;
 - map rotation checklist при create и live map manager с search/select all;
 - persistent mapcycle override и проверен `changelevel` чрез RCON;
 - синхронизиран AMXX `maps.ini` и custom `mapsmenu.amxx`, който презарежда
@@ -162,21 +164,20 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 - Remove запазва volumes по дизайн; автоматичен lifecycle/cleanup UI още няма;
 - MariaDB статистиката има dashboard в панела; остават допълнителни audit и
   operator-management екрани;
-- няма backup/restore, map uploader, update/migrate action или audit log;
+- няма backup/restore, map uploader, image update/migrate action или audit log;
 - hardcoded default network `cs16_default` трябва да се конфигурира при различно
   Compose project name.
 
 ## Следващи логични задачи
 
-1. Edit server wizard за име, max players, пароли, mode/mapcycle и controlled recreate.
-2. Update/migrate action за panel-created containers със запазване на volumes.
-3. Map uploader и безопасен workflow за добавяне/премахване на map packages.
-4. Разширен operator/audit dashboard върху MariaDB.
-5. Backup/restore/export на AMXX data, logs и database.
-6. Audit log за panel действия и отделни panel operator роли.
-7. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
-8. Integration tests/CI за build, container boot, A2S, RCON и admin persistence.
-9. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
+1. Update/migrate action за panel-created containers със запазване на volumes.
+2. Map uploader и безопасен workflow за добавяне/премахване на map packages.
+3. Разширен operator/audit dashboard върху MariaDB.
+4. Backup/restore/export на AMXX data, logs и database.
+5. Audit log за panel действия и отделни panel operator роли.
+6. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
+7. Integration tests/CI за build, container boot, A2S, RCON и admin persistence.
+8. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
 
 ## Продължаване в следваща сесия
 

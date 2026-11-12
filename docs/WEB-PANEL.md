@@ -48,6 +48,7 @@ production deployment NGINX се активира изрично с `./docker/co
 - автоматично намиране на свободен порт в конфигуриран диапазон;
 - ръчно зададен порт с проверка за Docker конфликт;
 - start, stop, restart и live log viewer;
+- Edit wizard за име, режим, max players, порт, пароли и map rotation;
 - RCON password generation и еднократно показване след create;
 - optional full-admin Steam IDs още при създаването;
 - live AMXX admin editor с роли, custom flags и презареждане без рестарт;
@@ -63,6 +64,25 @@ production deployment NGINX се активира изрично с `./docker/co
 Primary Compose сървърът се вижда в панела, но не може да бъде изтрит от него.
 Само containers, създадени от панела, могат да бъдат премахнати. Remove запазва
 named volumes, така че данните остават възстановими.
+
+## Редакция на сървър
+
+Бутонът **Edit** е наличен само за инстанции, създадени от панела. Wizard-ът
+позволява промяна на име, Classic/GunGame режим, max players, host port, start
+map, rotation и пароли. Празно password поле запазва текущата стойност; server
+password може да бъде премахната с отделната отметка. Съществуващите пароли не
+се връщат към браузъра.
+
+При **Save & recreate** панелът създава проверен replacement container, спира
+работещия сървър, пресъздава го и го стартира отново в предишното му състояние.
+Същите named volumes за AMXX data и logs се монтират отново, затова админи,
+банове, статистика, persistent mapcycle и логове се запазват. Смяната на режим
+обновява и persistent mapcycle с карти само от новата категория. При грешка
+преди замяната оригиналният container се стартира отново; след премахването му
+панелът прави автоматичен rollback от запазената конфигурация.
+
+Compose-managed primary server умишлено няма **Edit**: неговата конфигурация
+остава собственост на Compose/`.env` и се променя чрез recreate на stack-а.
 
 ## Управление на администратори
 

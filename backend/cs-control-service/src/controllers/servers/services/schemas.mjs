@@ -151,3 +151,27 @@ export function validateCreateInput(input, portStart, portEnd) {
     startImmediately: input.startImmediately !== false,
   };
 }
+
+export function validateEditInput(input, portStart, portEnd) {
+  const values = validateCreateInput(
+    {
+      ...input,
+      adminSteamIds: "",
+      startImmediately: false,
+    },
+    portStart,
+    portEnd,
+  );
+
+  return {
+    name: values.name,
+    mode: values.mode,
+    maxPlayers: values.maxPlayers,
+    startMap: values.startMap,
+    maps: values.maps,
+    port: values.port,
+    rconPassword: values.rconPassword,
+    serverPassword: values.serverPassword,
+    clearServerPassword: input.clearServerPassword === true,
+  };
+}
