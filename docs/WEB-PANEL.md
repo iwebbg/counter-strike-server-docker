@@ -13,7 +13,12 @@ openssl rand -hex 24
 docker compose --profile panel up -d --build
 ```
 
-Отворете `http://127.0.0.1:8080`. Спиране само на UI/control-plane слоя:
+При panel/full stack NGINX предоставя HTTPS на конфигурируемия
+`PANEL_HTTPS_PORT` и proxy-ва към вътрешния `panel:8080`. Default локалният URL
+е `https://localhost:8443`; директният `http://127.0.0.1:8080` остава само като
+diagnostic fallback. Вижте [`HTTPS-PROXY.md`](HTTPS-PROXY.md).
+
+Спиране само на UI/control-plane слоя:
 
 ```bash
 docker compose --profile panel stop panel
@@ -92,6 +97,10 @@ PANEL_BIND_IP=127.0.0.1
 PANEL_PORT=8080
 PORT_RANGE_START=27015
 PORT_RANGE_END=27115
+PANEL_TLS_MODE=selfsigned
+PANEL_DOMAIN=localhost
+PANEL_HTTP_PORT=80
+PANEL_HTTPS_PORT=8443
 ```
 
 `PANEL_TOKEN` под 16 символа прекратява старта на панела. API заявките използват

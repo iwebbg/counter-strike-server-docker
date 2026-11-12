@@ -118,6 +118,9 @@ docker system df
 
 - Изберете доставчик, който позволява game servers и има DDoS защита.
 - Отворете само game портовете и защитения порт на Control Panel.
+- За автоматичен Let's Encrypt сертификат оставете публичен TCP `80` достъпен
+  за HTTP-01 проверката; HTTPS може да бъде публикуван на `443`, `8443` или друг
+  избран host port.
 - Оставете MariaDB без публично публикуван host port.
 - Използвайте силни уникални RCON, panel и database пароли.
 - Дръжте Control Panel зад VPN, SSH tunnel или TLS reverse proxy с допълнителна

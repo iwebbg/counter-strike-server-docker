@@ -14,8 +14,8 @@
 
 | Stack | Услуги |
 |---|---|
-| `full` | Game server, CS Control Panel и MariaDB |
-| `panel` | Game server и Control Panel |
+| `full` | Game server, CS Control Panel, HTTPS proxy и MariaDB |
+| `panel` | Game server, Control Panel и HTTPS proxy |
 | `database` | Game server и MariaDB |
 | `server` | Само game server |
 
@@ -34,6 +34,15 @@ CI може да използва отделен environment файл, без д
 ```bash
 CS16_ENV_FILE=/run/secrets/cs16.env ./docker/compose config
 ```
+
+TLS режимът, domain-ът и публичният HTTPS port се задават без ръчно редактиране:
+
+```bash
+./docker/compose tls selfsigned localhost 8443
+./docker/compose tls letsencrypt panel.example.com 8443 admin@example.com
+```
+
+Подробности: [`HTTPS-PROXY.md`](HTTPS-PROXY.md).
 
 ## Ежедневни команди
 

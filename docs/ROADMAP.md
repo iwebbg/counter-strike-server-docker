@@ -56,7 +56,9 @@
 - [ ] автоматична retention политика за demos и logs;
 - [ ] SafeNameAndChat или еквивалентна validation защита;
 - [ ] rate limits за moderation endpoints и login attempts;
-- [ ] reverse proxy пример с HTTPS, VPN/SSO и trusted proxy настройки.
+- [x] NGINX reverse proxy с автоматичен self-signed/Let's Encrypt TLS и
+  конфигурируем външен HTTPS порт;
+- [ ] VPN/SSO, identity provider и trusted proxy hardening за remote оператори.
 
 ## FragZone Server Link
 

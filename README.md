@@ -31,6 +31,7 @@ stack и генерира липсващите secrets:
 
 ```bash
 ./docker/compose setup
+./docker/compose tls selfsigned localhost 8443
 ./docker/compose up -d --build
 ./docker/compose ps
 ```
@@ -332,6 +333,7 @@ docker compose up -d --build
 - [`docs/DATABASE.md`](docs/DATABASE.md) — MariaDB схема, dashboard, backup и restore.
 - [`docs/COMPOSE-LAUNCHER.md`](docs/COMPOSE-LAUNCHER.md) — интерактивен stack selector и единни команди.
 - [`docs/FRAGZONE-INTEGRATION.md`](docs/FRAGZONE-INTEGRATION.md) — бъдеща read-only интеграция с FragZone Web.
+- [`docs/HTTPS-PROXY.md`](docs/HTTPS-PROXY.md) — NGINX, автоматичен TLS и нестандартни HTTPS ports.
 
 ## Проверка и диагностика
 

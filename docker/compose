@@ -33,9 +33,9 @@ random_secret() {
 stack_description() {
   case "$1" in
     server) printf 'Game server only' ;;
-    panel) printf 'Game server + CS Control Panel' ;;
+    panel) printf 'Game server + CS Control Panel + HTTPS proxy' ;;
     database) printf 'Game server + MariaDB fleet data' ;;
-    full) printf 'Game server + Control Panel + MariaDB' ;;
+    full) printf 'Game server + Control Panel + HTTPS proxy + MariaDB' ;;
   esac
 }
 
@@ -100,12 +100,36 @@ configure_stack() {
   printf 'Start with: ./docker/compose up -d --build\n\n'
 }
 
+configure_tls() {
+  [[ -f "$environment_file" ]] || die 'Run ./docker/compose setup first.'
+  local mode="${1:-}" domain="${2:-}" port="${3:-8443}" email="${4:-}"
+  case "$mode" in
+    selfsigned|letsencrypt) ;;
+    *) die 'TLS mode must be selfsigned or letsencrypt.' ;;
+  esac
+  [[ "$domain" =~ ^[a-zA-Z0-9.-]+$ ]] || die 'Provide a valid domain or localhost.'
+  [[ "$port" =~ ^[0-9]+$ ]] && (( port >= 1 && port <= 65535 )) || die 'HTTPS port must be between 1 and 65535.'
+  if [[ "$mode" == letsencrypt && "$domain" == localhost ]]; then
+    die 'Let’s Encrypt requires a public DNS name, not localhost.'
+  fi
+  set_env_value PANEL_TLS_MODE "$mode"
+  set_env_value PANEL_DOMAIN "$domain"
+  set_env_value PANEL_HTTPS_PORT "$port"
+  if [[ -n "$email" ]]; then set_env_value PANEL_SSL_EMAIL "$email"; fi
+  printf 'Configured %s TLS for https://%s%s\n' "$mode" "$domain" "$([[ "$port" == 443 ]] || printf ':%s' "$port")"
+  if [[ "$mode" == letsencrypt ]]; then
+    printf 'Public TCP port 80 must reach PANEL_HTTP_PORT=80 for the ACME HTTP-01 challenge.\n'
+  fi
+}
+
 show_help() {
   cat <<'EOF'
 CS 1.6 Docker Compose selector
 
 Usage:
   ./docker/compose setup [server|panel|database|full]
+  ./docker/compose tls selfsigned [domain] [https-port]
+  ./docker/compose tls letsencrypt <domain> [https-port] [email]
   ./docker/compose show
   ./docker/compose doctor
   ./docker/compose <docker compose arguments...>
@@ -127,6 +151,11 @@ case "${1:-}" in
   setup)
     shift
     configure_stack "${1:-}"
+    exit 0
+    ;;
+  tls)
+    shift
+    configure_tls "${1:-}" "${2:-localhost}" "${3:-8443}" "${4:-}"
     exit 0
     ;;
   help|-h|--help)

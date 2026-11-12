@@ -135,13 +135,16 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 - реален live admin save/reset връща `[AMXX] Loaded 1 admin from file`;
 - реален map smoke test открива installed maps, запазва rotation и сменя карта
   чрез RCON върху изолирана временна инстанция;
+- изолиран NGINX smoke test потвърждава автоматичен self-signed сертификат,
+  HTTPS proxy към `panel:8080` и redirect към нестандартен host port;
 - panel auth е проверен с валиден и невалиден token;
 - динамично създадена тестова инстанция е проверена и премахната след smoke test.
 
 ## Важни ограничения
 
-- Docker socket е силно привилегирован; за remote достъп се препоръчва SSH
-  tunnel/VPN, не `PANEL_BIND_IP=0.0.0.0` без TLS и допълнителна identity система;
+- Docker socket е силно привилегирован; вграденият NGINX добавя TLS, но за
+  публичен remote достъп все още се препоръчва VPN/identity provider и силен
+  `PANEL_API_TOKEN`;
 - admin editor работи само при стартиран server, защото трябва да изпълни live
   RCON reload;
 - вече съществуващ container трябва еднократно да бъде recreate-нат с новия
@@ -160,7 +163,7 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 4. Stats dashboard върху MariaDB с per-server ranking и history.
 5. Backup/restore/export на AMXX data, logs и database.
 6. Audit log за panel действия и отделни panel operator роли.
-7. Reverse-proxy пример с HTTPS и identity provider за безопасен remote достъп.
+7. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
 8. Integration tests/CI за build, container boot, A2S, RCON и admin persistence.
 9. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
 
