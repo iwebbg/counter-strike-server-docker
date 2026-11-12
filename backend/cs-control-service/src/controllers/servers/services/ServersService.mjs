@@ -34,6 +34,9 @@ const config = {
   killstreakHud: process.env.KILLSTREAK_HUD_ENABLED || "1",
   killstreakGlobal: process.env.KILLSTREAK_GLOBAL || "1",
   killstreakWindow: process.env.KILLSTREAK_MULTI_WINDOW || "4.0",
+  amxxBrandingMessage: process.env.AMXX_BRANDING_MESSAGE || "%hostname% is powered by CS 1.6 Server CP | interweb.bg",
+  amxxBrandingInterval: process.env.AMXX_BRANDING_INTERVAL || "600",
+  amxxBrandingColor: process.env.AMXX_BRANDING_COLOR || "201255074",
 };
 
 if (config.portStart > config.portEnd) {
@@ -499,6 +502,9 @@ async function createServer(input) {
       `KILLSTREAK_HUD_ENABLED=${config.killstreakHud}`,
       `KILLSTREAK_GLOBAL=${config.killstreakGlobal}`,
       `KILLSTREAK_MULTI_WINDOW=${config.killstreakWindow}`,
+      `AMXX_BRANDING_MESSAGE=${config.amxxBrandingMessage}`,
+      `AMXX_BRANDING_INTERVAL=${config.amxxBrandingInterval}`,
+      `AMXX_BRANDING_COLOR=${config.amxxBrandingColor}`,
       `AMXX_ADMINS=${serializeAdmins(initialAdmins)}`,
       `DB_ENABLED=${config.dbEnabled ? 1 : 0}`,
       `DB_HOST=${config.dbHost}`,

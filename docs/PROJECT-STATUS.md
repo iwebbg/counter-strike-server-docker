@@ -24,6 +24,7 @@ Docker Compose, така и с опционален интерактивен CS 
 - един image с runtime избор `SERVER_MODE=classic|gungame`;
 - настройки през `.env`: име, порт, слотове, начална карта, mapcycle, пароли,
   регион, LAN режим, welcome message и GunGame double jump;
+- configurable AMXX scroll/HUD branding вместо стандартната AMX Mod X реклама;
 - persistent volumes за AMXX data и logs;
 - отделен Compose override за опционална MariaDB без публичен database port;
 - структуриран Express/Knex backend с REST descriptors, AJV validation,

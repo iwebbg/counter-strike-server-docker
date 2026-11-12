@@ -79,9 +79,15 @@ done
 spawn_seconds=${SPAWN_PROTECTION_SECONDS:-3.0}
 rtv_ratio=${RTV_RATIO:-0.60}
 killstreak_window=${KILLSTREAK_MULTI_WINDOW:-4.0}
+amxx_branding_message=${AMXX_BRANDING_MESSAGE:-%hostname% is powered by CS 1.6 Server CP | interweb.bg}
+amxx_branding_interval=${AMXX_BRANDING_INTERVAL:-600}
+amxx_branding_color=${AMXX_BRANDING_COLOR:-201255074}
 [[ ${spawn_seconds} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "SPAWN_PROTECTION_SECONDS must be positive"
 [[ ${rtv_ratio} =~ ^(0([.][0-9]+)?|1([.]0+)?)$ ]] || die "RTV_RATIO must be between 0 and 1"
 [[ ${killstreak_window} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "KILLSTREAK_MULTI_WINDOW must be positive"
+is_uint "${amxx_branding_interval}" || die "AMXX_BRANDING_INTERVAL must be a non-negative integer"
+(( amxx_branding_interval >= 30 )) || die "AMXX_BRANDING_INTERVAL must be at least 30 seconds"
+[[ ${amxx_branding_color} =~ ^[0-9]{9}$ ]] || die "AMXX_BRANDING_COLOR must contain 9 digits (RRRGGGBBB)"
 
 cp "${HLDS_DIR}/presets/plugins/${mode}.ini" \
    "${CSTRIKE_DIR}/addons/amxmodx/configs/plugins.ini"
@@ -91,6 +97,18 @@ if [[ ${db_enabled} == 1 ]]; then
   printf '\n%s\n' 'docker_sql_stats.amxx' >> \
     "${CSTRIKE_DIR}/addons/amxmodx/configs/plugins.ini"
 fi
+
+amxx_config="${CSTRIKE_DIR}/addons/amxmodx/configs/amxx.cfg"
+sed -i \
+  -e '/^[[:space:]]*amx_scrollmsg[[:space:]]/d' \
+  -e '/^[[:space:]]*amx_imessage[[:space:]]/d' \
+  "${amxx_config}"
+{
+  printf '\n// Managed by CS 1.6 Server CP.\n'
+  printf 'amx_scrollmsg "%s" %s\n' "$(cfg_escape "${amxx_branding_message}")" "${amxx_branding_interval}"
+  printf 'amx_imessage "%s" "%s"\n' "$(cfg_escape "${amxx_branding_message}")" "${amxx_branding_color}"
+} >> "${amxx_config}"
+echo "[entrypoint] Applied CS 1.6 Server CP branding messages"
 
 admins_file="${CSTRIKE_DIR}/addons/amxmodx/configs/users.ini"
 managed_admins_file="${CSTRIKE_DIR}/addons/amxmodx/data/panel_admins.txt"

@@ -131,7 +131,15 @@ Welcome съобщението и списъкът с команди се пок
 
 ```dotenv
 WELCOME_MESSAGE=Welcome to our CS 1.6 server!
+AMXX_BRANDING_MESSAGE=%hostname% is powered by CS 1.6 Server CP | interweb.bg
+AMXX_BRANDING_INTERVAL=600
+AMXX_BRANDING_COLOR=201255074
 ```
+
+`AMXX_BRANDING_MESSAGE` заменя стандартните AMX Mod X scroll/HUD реклами,
+включително „This server is using AMX Mod X“. `%hostname%` се заменя от AMXX с
+името на сървъра. Цветът е във формат `RRRGGGBBB` с три цифри за всеки RGB
+канал.
 
 ## Recommended gameplay pack
 
