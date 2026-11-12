@@ -800,6 +800,73 @@ export async function migrateFleetImages() {
   };
 }
 
+export async function restoreServerConfiguration(id, storedEnvironment, startAfterRestore = false) {
+  const inspect = await assertControlled(id);
+  assertPanelManaged(inspect);
+  if (!Array.isArray(storedEnvironment) || !storedEnvironment.length) throw new Error("Backup environment is missing");
+  const originalEnv = environmentMap(inspect);
+  const restoredEnv = new Map(
+    storedEnvironment.map((entry) => {
+      const separator = String(entry).indexOf("=");
+      if (separator < 1) throw new Error("Backup environment contains an invalid entry");
+      return [String(entry).slice(0, separator), String(entry).slice(separator + 1)];
+    }),
+  );
+  for (const key of ["SERVER_ID", "DB_ENABLED", "DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD"]) {
+    if (originalEnv.has(key)) restoredEnv.set(key, originalEnv.get(key));
+  }
+
+  const originalName = inspect.Name.replace(/^\//, "");
+  const temporaryName = `${originalName}-restore-${crypto.randomUUID().slice(0, 8)}`;
+  const port = publishedPort(inspect);
+  const originalLabels = { ...(inspect.Config?.Labels || {}) };
+  const restoredName = restoredEnv.get("SERVER_NAME") || originalLabels["com.cs16.display-name"] || originalName;
+  const restoredLabels = { ...originalLabels, "com.cs16.display-name": restoredName };
+  const originalPayload = containerPayload(inspect, { env: originalEnv, labels: originalLabels, port });
+  const restoredPayload = containerPayload(inspect, {
+    env: restoredEnv,
+    labels: restoredLabels,
+    port,
+    image: config.image,
+  });
+  let replacement = null;
+  let oldRemoved = false;
+
+  try {
+    replacement = await docker.request(
+      "POST",
+      `/containers/create?name=${encodeURIComponent(temporaryName)}`,
+      restoredPayload,
+    );
+    await docker.request("DELETE", `/containers/${inspect.Id}?v=0`);
+    oldRemoved = true;
+    await docker.request("POST", `/containers/${replacement.Id}/rename?name=${encodeURIComponent(originalName)}`);
+    if (startAfterRestore) await docker.request("POST", `/containers/${replacement.Id}/start`);
+    return { id: replacement.Id, name: restoredName, started: startAfterRestore };
+  } catch (error) {
+    if (replacement?.Id) {
+      await docker.request("DELETE", `/containers/${replacement.Id}?force=1&v=0`).catch(() => {});
+    }
+    if (!oldRemoved) throw error;
+    try {
+      const restored = await docker.request(
+        "POST",
+        `/containers/create?name=${encodeURIComponent(originalName)}`,
+        originalPayload,
+      );
+      if (startAfterRestore) await docker.request("POST", `/containers/${restored.Id}/start`);
+      throw new Error(`${error.message}. The original container configuration was restored.`);
+    } catch (rollbackError) {
+      if (rollbackError.message.includes("original container configuration")) throw rollbackError;
+      throw new Error(`${error.message}. Automatic container rollback failed: ${rollbackError.message}.`);
+    }
+  }
+}
+
+export async function controlledServerInspect(id) {
+  return assertControlled(id);
+}
+
 export const portRange = () => [config.portStart, config.portEnd];
 export { createServer, listServers };
 

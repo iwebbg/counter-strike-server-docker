@@ -36,3 +36,34 @@ export function createTar(files) {
   chunks.push(Buffer.alloc(1024));
   return Buffer.concat(chunks);
 }
+
+export function parseTar(archive, limits = {}) {
+  const maxFiles = limits.maxFiles ?? 32;
+  const maxBytes = limits.maxBytes ?? 512 * 1024 * 1024;
+  if (!Buffer.isBuffer(archive) || archive.length > maxBytes) throw new Error("Backup archive is too large");
+  const files = new Map();
+  let offset = 0;
+  while (offset + 512 <= archive.length) {
+    const header = archive.subarray(offset, offset + 512);
+    if (header.every((byte) => byte === 0)) break;
+    const name = header.subarray(0, 100).toString("utf8").replace(/\0.*$/, "");
+    const sizeText = header.subarray(124, 136).toString("ascii").replace(/\0.*$/, "").trim();
+    const size = Number.parseInt(sizeText || "0", 8);
+    const type = String.fromCharCode(header[156] || 48);
+    if (!name || name.startsWith("/") || name.split("/").some((part) => part === "..")) {
+      throw new Error(`Unsafe backup archive path: ${name || "(empty)"}`);
+    }
+    if (!Number.isSafeInteger(size) || size < 0 || offset + 512 + size > archive.length) {
+      throw new Error(`Invalid TAR entry size for ${name}`);
+    }
+    if (type === "0" || type === "\0") {
+      if (files.has(name)) throw new Error(`Duplicate backup archive entry: ${name}`);
+      files.set(name, Buffer.from(archive.subarray(offset + 512, offset + 512 + size)));
+      if (files.size > maxFiles) throw new Error("Backup archive contains too many files");
+    } else if (type !== "5") {
+      throw new Error(`Unsupported backup archive entry type for ${name}`);
+    }
+    offset += 512 + Math.ceil(size / 512) * 512;
+  }
+  return files;
+}

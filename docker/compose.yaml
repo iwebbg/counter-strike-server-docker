@@ -113,11 +113,14 @@ services:
       API_RATE_LIMIT_WINDOW_MS: ${API_RATE_LIMIT_WINDOW_MS:-60000}
       API_RATE_LIMIT_MAX: ${API_RATE_LIMIT_MAX:-600}
       REQUEST_BODY_LIMIT: ${REQUEST_BODY_LIMIT:-48mb}
+      BACKUP_DIR: /backups
+      DB_BACKUP_IMAGE: mariadb:11.8
       SWAGGER_UI_ENABLED: ${SWAGGER_UI_ENABLED:-false}
     expose:
       - "8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - panel_backups:/backups
     read_only: true
     tmpfs:
       - /tmp
@@ -133,3 +136,4 @@ services:
 volumes:
   cs16_logs:
   cs16_amxx_data:
+  panel_backups:
