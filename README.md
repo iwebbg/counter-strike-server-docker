@@ -136,8 +136,9 @@ WELCOME_MESSAGE=Welcome to our CS 1.6 server!
 ## Recommended gameplay pack
 
 И двата режима включват configurable warmup, teammate semiclip, AFK manager и
-community map commands. GunGame включва и spawn protection, която се прекратява
-веднага при стрелба. Основни команди:
+community map commands. Добавени са и звукови/HUD известия за First Blood,
+multi-kill и kill-streak събития. GunGame включва и spawn protection, която се
+прекратява веднага при стрелба. Основни команди:
 
 ```text
 /rtv
@@ -150,7 +151,9 @@ AFK играчите получават предупреждение, преме
 да бъдат kick-нати. Администраторите с immunity не се засягат.
 
 Всички времена и switches са в `.env.example`: `WARMUP_*`,
-`SPAWN_PROTECTION_*`, `SEMICLIP_ENABLED`, `AFK_*`, `RTV_*` и `RECENT_MAPS`.
+`SPAWN_PROTECTION_*`, `SEMICLIP_ENABLED`, `AFK_*`, `RTV_*`, `RECENT_MAPS` и
+`KILLSTREAK_*`. Подробните прагове и настройките за звуците са описани в
+[`docs/KILLSTREAKS.md`](docs/KILLSTREAKS.md).
 Пълният списък с бъдещи идеи е в [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ### GunGame карти
@@ -346,6 +349,7 @@ docker compose up -d --build
 - [`docs/COMPOSE-LAUNCHER.md`](docs/COMPOSE-LAUNCHER.md) — интерактивен stack selector и единни команди.
 - [`docs/FRAGZONE-INTEGRATION.md`](docs/FRAGZONE-INTEGRATION.md) — бъдеща read-only интеграция с FragZone Web.
 - [`docs/HTTPS-PROXY.md`](docs/HTTPS-PROXY.md) — NGINX, автоматичен TLS и нестандартни HTTPS ports.
+- [`docs/KILLSTREAKS.md`](docs/KILLSTREAKS.md) — multi-kill/streak прагове, настройки и звуков пакет.
 
 ## Проверка и диагностика
 

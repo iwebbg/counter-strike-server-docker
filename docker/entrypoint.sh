@@ -47,7 +47,11 @@ warmup_enabled=${WARMUP_ENABLED:-1}
 semiclip_enabled=${SEMICLIP_ENABLED:-1}
 afk_enabled=${AFK_MANAGER_ENABLED:-1}
 rtv_enabled=${RTV_ENABLED:-1}
-for toggle in warmup_enabled semiclip_enabled afk_enabled rtv_enabled; do
+killstreak_enabled=${KILLSTREAK_ENABLED:-1}
+killstreak_sounds=${KILLSTREAK_SOUNDS_ENABLED:-1}
+killstreak_hud=${KILLSTREAK_HUD_ENABLED:-1}
+killstreak_global=${KILLSTREAK_GLOBAL:-1}
+for toggle in warmup_enabled semiclip_enabled afk_enabled rtv_enabled killstreak_enabled killstreak_sounds killstreak_hud killstreak_global; do
   [[ ${!toggle} == 0 || ${!toggle} == 1 ]] || die "${toggle} must be 0 or 1"
 done
 
@@ -74,8 +78,10 @@ done
 
 spawn_seconds=${SPAWN_PROTECTION_SECONDS:-3.0}
 rtv_ratio=${RTV_RATIO:-0.60}
+killstreak_window=${KILLSTREAK_MULTI_WINDOW:-4.0}
 [[ ${spawn_seconds} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "SPAWN_PROTECTION_SECONDS must be positive"
 [[ ${rtv_ratio} =~ ^(0([.][0-9]+)?|1([.]0+)?)$ ]] || die "RTV_RATIO must be between 0 and 1"
+[[ ${killstreak_window} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "KILLSTREAK_MULTI_WINDOW must be positive"
 
 cp "${HLDS_DIR}/presets/plugins/${mode}.ini" \
    "${CSTRIKE_DIR}/addons/amxmodx/configs/plugins.ini"
@@ -211,6 +217,11 @@ docker_rtv_ratio "${rtv_ratio}"
 docker_rtv_min_votes "${rtv_min_votes}"
 docker_rtv_delay_seconds "${rtv_delay}"
 docker_recent_maps "${recent_maps}"
+docker_killstreak_enabled "${killstreak_enabled}"
+docker_killstreak_sounds_enabled "${killstreak_sounds}"
+docker_killstreak_hud_enabled "${killstreak_hud}"
+docker_killstreak_global "${killstreak_global}"
+docker_killstreak_multi_window "${killstreak_window}"
 exec banned.cfg
 EOF
 

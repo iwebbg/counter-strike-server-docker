@@ -24,6 +24,11 @@ const config = {
   dbName: process.env.DB_NAME || 'cs16',
   dbUser: process.env.DB_USER || 'cs16',
   dbPassword: process.env.DB_PASSWORD || '',
+  killstreakEnabled: process.env.KILLSTREAK_ENABLED || '1',
+  killstreakSounds: process.env.KILLSTREAK_SOUNDS_ENABLED || '1',
+  killstreakHud: process.env.KILLSTREAK_HUD_ENABLED || '1',
+  killstreakGlobal: process.env.KILLSTREAK_GLOBAL || '1',
+  killstreakWindow: process.env.KILLSTREAK_MULTI_WINDOW || '4.0',
 };
 
 if (config.token.length < 16) {
@@ -363,6 +368,11 @@ async function createServer(input) {
       'RTV_MIN_VOTES=2',
       'RTV_DELAY_SECONDS=120',
       'RECENT_MAPS=3',
+      `KILLSTREAK_ENABLED=${config.killstreakEnabled}`,
+      `KILLSTREAK_SOUNDS_ENABLED=${config.killstreakSounds}`,
+      `KILLSTREAK_HUD_ENABLED=${config.killstreakHud}`,
+      `KILLSTREAK_GLOBAL=${config.killstreakGlobal}`,
+      `KILLSTREAK_MULTI_WINDOW=${config.killstreakWindow}`,
       `AMXX_ADMINS=${serializeAdmins(initialAdmins)}`,
       `DB_ENABLED=${config.dbEnabled ? 1 : 0}`,
       `DB_HOST=${config.dbHost}`,

@@ -49,6 +49,8 @@ Docker Compose, така и с опционален интерактивен CS 
 - автоматично компилиране на всички `addons/scripting/docker_*.sma` при build;
 - `/rank`, `/stats`, `/statsme`, `/top15` и `/level` според активните plugins.
 - `docker_gameplay.sma` — warmup, spawn protection, semiclip и AFK manager;
+- `docker_killstreak.sma` — First Blood, multi-kill и no-death streak HUD/sound
+  announcements с отделни runtime switches;
 - `docker_mapvote.sma` — RTV, nominations, map listing и recent-map protection;
 - deterministic StatsX defaults за `/stats`, `/statsme`, `/rankstats`, `/rank`
   и `/top15` в Classic и GunGame;

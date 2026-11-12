@@ -16,6 +16,7 @@
 - [x] persistent `banned.cfg` и moderation audit log;
 - [x] deterministic StatsX public commands;
 - [x] live AMXX admins и категоризиран map manager.
+- [x] optional First Blood, multi-kill и kill-streak HUD/sound announcements;
 - [x] MariaDB fleet schema, automatic migrations и legacy stats import;
 - [x] detailed player/map/session/GunGame statistics и name history;
 - [x] web leaderboard, player profiles, achievements и seasonal ranking;
@@ -43,7 +44,7 @@
 - [ ] MVP на карта;
 - [x] player profile и name/session history;
 - [ ] revenge/nemesis система;
-- [ ] optional kill-streak announcements без прекомерни sounds;
+- [x] optional kill-streak announcements с малък оригинален sound pack;
 - [x] web ranking и per-server history;
 - [ ] scheduled events, например Friday Night GunGame;
 - [ ] Discord webhook за server state, bans, crashes и events;

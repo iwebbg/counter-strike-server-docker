@@ -73,6 +73,7 @@ RUN chmod 0755 /usr/local/bin/patch-amxx-mapsmenu \
 COPY configs/plugins/ "${HLDS_DIR}/presets/plugins/"
 COPY configs/maps/ "${HLDS_DIR}/presets/maps/"
 COPY configs/stats.ini "${HLDS_DIR}/presets/stats.ini"
+COPY assets/sounds/killstreak/ "${HLDS_DIR}/cstrike/sound/cs16/killstreak/"
 COPY gungame_maps/ /tmp/gungame_maps/
 COPY classic_maps/ /tmp/classic_maps/
 COPY docker/install_map_packages.sh /usr/local/bin/install-map-packages
