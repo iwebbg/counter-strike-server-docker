@@ -25,7 +25,9 @@ Docker Compose, така и с опционален интерактивен CS 
 - настройки през `.env`: име, порт, слотове, начална карта, mapcycle, пароли,
   регион, LAN режим, welcome message и GunGame double jump;
 - persistent volumes за AMXX data и logs;
-- отделен Compose override за опционална MariaDB без публичен database port.
+- отделен Compose override за опционална MariaDB без публичен database port;
+- deployment и capacity planning guide с минимални изисквания, препоръчани VPS
+  профили, базови idle измервания и bandwidth формула.
 
 ### Карти и режими
 
@@ -41,9 +43,15 @@ Docker Compose, така и с опционален интерактивен CS 
 - `docker_gungame.sma` — 21 weapon levels, kills per level, respawn и knife финал;
 - `docker_double_jump.sma` — втори скок във въздуха с configurable velocity;
 - `docker_welcome.sma` — welcome и кратка помощ за chat командите;
-- `docker_sql_stats.sma` — опционални MariaDB kills/deaths/last-seen данни;
+- `docker_sql_stats.sma` — threaded MariaDB fleet collector за players, names,
+  sessions, combat/playtime/map statistics, GunGame progress, seasons,
+  achievements и database ban enforcement;
 - автоматично компилиране на всички `addons/scripting/docker_*.sma` при build;
 - `/rank`, `/stats`, `/statsme`, `/top15` и `/level` според активните plugins.
+- `docker_gameplay.sma` — warmup, spawn protection, semiclip и AFK manager;
+- `docker_mapvote.sma` — RTV, nominations, map listing и recent-map protection;
+- deterministic StatsX defaults за `/stats`, `/statsme`, `/rankstats`, `/rank`
+  и `/top15` в Classic и GunGame;
 
 ### AMXX администрация
 
@@ -66,10 +74,19 @@ Docker Compose, така и с опционален интерактивен CS 
 - автоматичен свободен host port или ръчно избран порт;
 - автоматично генерирана и еднократно показана RCON парола;
 - start, stop, restart, live logs и remove за спрени panel-managed containers;
+- map rotation checklist при create и live map manager с search/select all;
+- persistent mapcycle override и проверен `changelevel` чрез RCON;
+- синхронизиран AMXX `maps.ini` и custom `mapsmenu.amxx`, който презарежда
+  списъка при всяко отваряне на admin/vote менюто;
 - отделни logs/data volumes и labels за всяка динамична инстанция;
 - Compose-managed primary server се вижда и управлява, но не може да бъде изтрит;
 - allowlisted Docker Engine API client без generic Docker proxy или arbitrary exec;
 - fixed container commands единствено за синхронизиране на admin файловете.
+- Live Players, validated kick/ban, persistent `banned.cfg` и moderation audit.
+- MariaDB dashboard с leaderboard, player profiles, map/session activity,
+  achievements, seasonal filters, active bans/revoke и moderation history;
+- fleet-wide admin lists и автоматично inheritance за нови/стартирани servers;
+- idempotent `db-migrate` service, 15-table schema и legacy stats import.
 
 ## Архитектура накратко
 
@@ -116,6 +133,8 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 - Compose server и panel са наблюдавани в `healthy` състояние;
 - реална A2S заявка връща карта и player slots;
 - реален live admin save/reset връща `[AMXX] Loaded 1 admin from file`;
+- реален map smoke test открива installed maps, запазва rotation и сменя карта
+  чрез RCON върху изолирана временна инстанция;
 - panel auth е проверен с валиден и невалиден token;
 - динамично създадена тестова инстанция е проверена и премахната след smoke test.
 
@@ -137,7 +156,7 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 
 1. Edit server wizard за име, max players, пароли, mode/mapcycle и controlled recreate.
 2. Update/migrate action за panel-created containers със запазване на volumes.
-3. Map manager: налични карти, map change, map vote и безопасен upload workflow.
+3. Map uploader и безопасен workflow за добавяне/премахване на map packages.
 4. Stats dashboard върху MariaDB с per-server ranking и history.
 5. Backup/restore/export на AMXX data, logs и database.
 6. Audit log за panel действия и отделни panel operator роли.

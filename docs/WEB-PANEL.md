@@ -34,8 +34,14 @@ docker compose --profile panel stop panel
 - RCON password generation и еднократно показване след create;
 - optional full-admin Steam IDs още при създаването;
 - live AMXX admin editor с роли, custom flags и презареждане без рестарт;
+- checklist за map rotation при създаване и live map manager за работещ сървър;
+- Live Players с score/ping/time, kick и Steam-ID ban;
 - отделни named volumes за logs и AMXX data;
 - responsive интерфейс за desktop и телефон.
+- MariaDB analytics dashboard с all-time/season/server filters;
+- leaderboard, player profiles, name history, map activity и achievements;
+- active fleet/server bans, revoke и moderation audit;
+- fleet-wide admin list и създаване на нов active season.
 
 Primary Compose сървърът се вижда в панела, но не може да бъде изтрит от него.
 Само containers, създадени от панела, могат да бъдат премахнати. Remove запазва
@@ -53,6 +59,31 @@ data volume и изпълнява `amx_reloadadmins` през RCON, така ч�
 конфигурацията на container-а. Сървърът трябва да е стартиран, за да може AMXX
 да презареди достъпа.
 
+**Use as fleet admin list** записва списъка в MariaDB, прилага го live към
+всички работещи инстанции и го наследява при създаване или стартиране на
+сървър. Тази опция изисква database override-а.
+
+## Управление на карти
+
+При създаване на сървър секцията **Map rotation** определя кои карти могат да се
+избират от mapcycle и map vote. Start map се избира само измежду маркираните
+карти.
+
+При работещ сървър бутонът **Maps** показва инсталираните `.bsp` карти за режима.
+Checkbox-ите определят бъдещия rotation, а **Save rotation** записва избора в
+persistent AMXX data volume, синхронизира `mapcycle.txt` и AMXX `maps.ini`, след
+което custom build-ът на `mapsmenu.amxx` прочита файла при всяко отваряне на
+`amx_mapmenu`/`amx_votemapmenu`. `mapchooser.amxx` го прочита при следващата
+карта. Така admin менюто, map vote и автоматичният rotation използват един и същ
+филтриран списък. Търсачката и Select all/Clear улесняват по-големи колекции.
+**Play now** изпълнява проверен `changelevel` през RCON и сменя картата веднага
+след потвърждение.
+
+Списъкът е ограничен според `SERVER_MODE`: GunGame показва само картите от
+`configs/maps/gungame.txt` (пакетите в `gungame_maps/`), а Classic показва само
+официалния и custom Classic rotation от `configs/maps/classic.txt`. Backend-ът
+налага същото правило и не позволява карта от друга категория чрез API.
+
 ## Настройки
 
 ```dotenv
@@ -65,6 +96,26 @@ PORT_RANGE_END=27115
 
 `PANEL_TOKEN` под 16 символа прекратява старта на панела. API заявките използват
 Bearer token, пазен от browser-а само в `sessionStorage`.
+
+## Live Players и moderation
+
+Бутонът **Players** показва nickname, Steam ID, score, ping и connect time чрез
+валидирана GoldSource RCON `status` заявка. Kick използва numeric userid, а Ban
+валидира Steam ID, продължителност, scope и безопасна причина. При включена
+MariaDB ban-ът се записва като fleet-wide или server-scoped central ban и може
+да се revoke-не от dashboard-а. Без MariaDB се използва `banned.cfg` fallback.
+Всяко действие се добавя и като JSON line в `panel_moderation.log`.
+
+Duration `0` означава permanent ban. Database collector-ът проверява активните
+банове при Steam authorization и отчита expiry/revoke без рестарт.
+
+## Statistics dashboard
+
+С `compose.database.yaml` панелът показва database status, all-time или seasonal
+ranking и филтър по server. Таблиците включват K/D, headshots, playtime,
+GunGame wins, popular maps, sessions, achievements и moderation audit. Click
+върху ranking ред отваря player profile. **+ Season** приключва текущия активен
+сезон и стартира нов, без да изтрива all-time statistics.
 
 ## Security boundary
 
@@ -90,6 +141,15 @@ Control panel container-ът има write достъп до Docker socket, ко�
 - `POST /api/servers/:id/start|stop|restart`;
 - `GET /api/servers/:id/logs`;
 - `GET|PUT|DELETE /api/servers/:id/admins`;
+- `GET|PUT /api/servers/:id/maps`;
+- `POST /api/servers/:id/maps/change`;
+- `GET /api/servers/:id/players`;
+- `POST /api/servers/:id/players/:userid/kick|ban`;
+- `GET /api/database/status`;
+- `GET /api/stats/overview` и `GET /api/stats/players/:steamId`;
+- `GET /api/bans` и `POST /api/bans/:id/revoke`;
+- `GET /api/moderation/history`;
+- `POST /api/seasons`;
 - `DELETE /api/servers/:id` само за panel-managed stopped containers.
 
 Health endpoint-ът `GET /api/health` е единственият route без token.

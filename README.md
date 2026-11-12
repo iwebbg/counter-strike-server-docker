@@ -8,15 +8,23 @@ AMX Mod X, два режима и опционална MariaDB статисти�
 - `classic` — стандартен CS 1.6 с AMX Mod X администрация и статистики;
 - `gungame` — прогресия през 21 оръжия, автоматичен respawn и knife финал;
 - избор на режима само чрез `SERVER_MODE` в `.env`;
-- опционална MariaDB таблица с убийства, смърти и последно посещение;
+- опционална MariaDB fleet база с подробни статистики, seasons, achievements,
+  shared admins, bans и moderation history;
 - непривилегирован game container, healthcheck и постоянни AMXX данни/логове;
 - порт, име, карта, mapcycle, слотове и пароли, управлявани от `.env`.
 
 ## Бърз старт
 
-Изисквания: Docker Engine с Compose plugin и поне около 2 GB свободно място.
-Първият build сваля официалния HLDS през SteamCMD и може да отнеме няколко
-минути.
+Минимално са нужни 64-bit Linux `x86_64/amd64`, Docker Engine с Compose plugin
+и поне около 2 GB свободно място за готовия game image. За публичен сървър
+предвидете допълнително място за build cache, logs, volumes и backups. Първият
+build сваля официалния HLDS през SteamCMD и може да отнеме няколко минути.
+
+Подробните VPS профили, реалните idle измервания и bandwidth калкулаторът са в
+[`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md). Като практичен старт за две
+инстанции по 24 слота препоръчваме 4 vCPU, 6–8 GB RAM, 80–120 GB SSD и 5–10+
+TB месечен трафик. Бюджетен VPS с 2 бързи vCPU и 6 GB RAM също може да започне
+с две инстанции, но трябва да бъде валидиран под реален player load.
 
 ```bash
 cp .env.example .env
@@ -75,6 +83,9 @@ GunGame команди:
 - `gg_kills_per_level 2` — нужни убийства на ниво (RCON/server console);
 - `gg_respawn_delay 2.0` — забавяне преди respawn.
 
+StatsX public командите `/stats`, `/statsme`, `/rankstats`, `/rank` и `/top15`
+са включени по подразбиране чрез `configs/stats.ini` и работят и в двата режима.
+
 GunGame има double jump: второ натискане на `Space` във въздуха дава още един,
 по-висок скок. Настройва се от `.env`:
 
@@ -89,6 +100,26 @@ Welcome съобщението и списъкът с команди се пок
 ```dotenv
 WELCOME_MESSAGE=Welcome to our CS 1.6 server!
 ```
+
+## Recommended gameplay pack
+
+И двата режима включват configurable warmup, teammate semiclip, AFK manager и
+community map commands. GunGame включва и spawn protection, която се прекратява
+веднага при стрелба. Основни команди:
+
+```text
+/rtv
+/nominate gg_3way
+/maps
+```
+
+По време на warmup играчите respawn-ват, а GunGame убийствата не дават нива.
+AFK играчите получават предупреждение, преместват се в Spectator и накрая могат
+да бъдат kick-нати. Администраторите с immunity не се засягат.
+
+Всички времена и switches са в `.env.example`: `WARMUP_*`,
+`SPAWN_PROTECTION_*`, `SEMICLIP_ENABLED`, `AFK_*`, `RTV_*` и `RECENT_MAPS`.
+Пълният списък с бъдещи идеи е в [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ### GunGame карти
 
@@ -106,7 +137,7 @@ WELCOME_MESSAGE=Welcome to our CS 1.6 server!
 skybox и `.res` файлове. Те се нормализират със същия проверен installer и се
 добавят след стандартните карти в [`configs/maps/classic.txt`](configs/maps/classic.txt).
 
-## MariaDB статистика
+## MariaDB fleet data
 
 MariaDB не е нужна за самата игра. За да записвате статистика, задайте силни
 `DB_PASSWORD` и `DB_ROOT_PASSWORD` в `.env`, след което:
@@ -115,9 +146,12 @@ MariaDB не е нужна за самата игра. За да записва�
 docker compose -f compose.yaml -f compose.database.yaml up -d --build
 ```
 
-AMXX plugin-ът създава автоматично таблицата `cs_player_stats`. Тя пази
-`server_id`, Steam ID, убийства, смърти и `last_seen`. Паролите не се публикуват
-като портове извън вътрешната Docker мрежа.
+One-shot migration услугата създава централната схема, а AMXX collector-ът
+записва players, name history, sessions, kills/deaths/headshots, damage,
+playtime, map activity, GunGame progress, seasons и achievements. Control Panel
+добавя fleet admins, shared bans, revoke и moderation audit. MariaDB не се
+публикува като host port. Пълното описание, backup и restore процедурите са в
+[`docs/DATABASE.md`](docs/DATABASE.md).
 
 ## Повече от един сървър
 
@@ -165,10 +199,12 @@ docker compose --profile panel up -d --build
 - Classic/GunGame и начална карта;
 - max players от 2 до 32;
 - автоматичен свободен порт или ръчен порт;
+- избор с checkbox-и кои карти участват в rotation-а;
 - start/stop/restart и live logs;
 - health, текуща карта и A2S player count;
 - автоматично генерирана RCON парола;
 - live редактор за AMXX администратори без рестарт;
+- live map manager с rotation и безопасен `Play now` през RCON;
 - отделни persistent volumes за всяка динамична инстанция.
 
 Изключване на панела, без спиране на game servers:
@@ -221,7 +257,9 @@ bind "F3" "amxmodmenu"
 
 Полезни преки менюта са `amx_kickmenu`, `amx_banmenu`, `amx_mapmenu` и
 `amx_votemapmenu`. `mapchooser.amxx` автоматично предлага вот за следваща карта
-към края на текущата карта и използва mapcycle-а на активния режим.
+към края на текущата карта. `mapcycle.txt` и AMXX `configs/maps.ini` се
+генерират от един и същ списък за активния режим, така че admin менюто и map
+vote не показват карти от другата категория.
 
 Основни access flags:
 
@@ -271,6 +309,9 @@ docker compose up -d --build
 - [`addons/scripting`](addons/scripting) — Pawn source на custom plugins;
 - [`docker/entrypoint.sh`](docker/entrypoint.sh) — проверка на env и runtime cfg.
 - [`docs/PROJECT-STATUS.md`](docs/PROJECT-STATUS.md) — handoff, проверки и следващи задачи.
+- [`docs/ROADMAP.md`](docs/ROADMAP.md) — реализиран пакет и бъдещи product идеи.
+- [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) — hardware, VPS sizing и bandwidth оценки.
+- [`docs/DATABASE.md`](docs/DATABASE.md) — MariaDB схема, dashboard, backup и restore.
 
 ## Проверка и диагностика
 
