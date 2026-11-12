@@ -5,15 +5,19 @@ export default {
   route: "/v1/users/signin",
   method: "POST",
   bearerAuth: false,
-  validation: { query: {}, path: {}, body: {
-    type: "object",
-    properties: {
-      email: { type: "string", format: "email", maxLength: 254 },
-      password: { type: "string", minLength: 1, maxLength: 128 },
+  validation: {
+    query: {},
+    path: {},
+    body: {
+      type: "object",
+      properties: {
+        email: { type: "string", format: "email", maxLength: 254 },
+        password: { type: "string", minLength: 1, maxLength: 128 },
+      },
+      required: ["email", "password"],
+      additionalProperties: false,
     },
-    required: ["email", "password"],
-    additionalProperties: false,
-  } },
+  },
   docs: { tags: ["Users"], description: "Create an access and refresh session." },
   middlewares: [],
   entryPoint: async (req, res) => {

@@ -5,7 +5,9 @@ const ajv = new Ajv({ allErrors: true, strict: true });
 addFormats(ajv);
 
 function fieldFromError(error) {
-  const parent = String(error.instancePath ?? "").replace(/^\//, "").replaceAll("/", ".");
+  const parent = String(error.instancePath ?? "")
+    .replace(/^\//, "")
+    .replaceAll("/", ".");
   return error.params?.missingProperty
     ? [parent, error.params.missingProperty].filter(Boolean).join(".")
     : parent || "input";

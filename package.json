@@ -1,0 +1,21 @@
+{
+  "name": "counter-strike-server-docker-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=24.12.1 <25"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "format": "prettier --write --no-error-on-unmatched-pattern \"backend/**/*.{js,mjs,cjs,json}\" \"panel/**/*.{js,mjs,cjs,json,css,html}\"",
+    "format:check": "prettier --check --no-error-on-unmatched-pattern \"backend/**/*.{js,mjs,cjs,json}\" \"panel/**/*.{js,mjs,cjs,json,css,html}\""
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,jsx,ts,tsx,json,jsonc,css,md,yml,yaml,html}": "prettier --write --ignore-unknown"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.10"
+  }
+}

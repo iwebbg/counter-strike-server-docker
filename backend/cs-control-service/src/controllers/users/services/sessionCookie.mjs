@@ -9,16 +9,24 @@ export const sessionCookieOptions = (req) => ({
 });
 
 export function setSessionCookie(req, res, session) {
-  res.cookie(authConfig.cookieName, JSON.stringify({
-    access_token: session.accessToken,
-    access_token_expires_at: session.accessTokenExpiresAt,
-    refresh_token: session.refreshToken,
-    refresh_token_expires_at: session.refreshTokenExpiresAt,
-  }), sessionCookieOptions(req));
+  res.cookie(
+    authConfig.cookieName,
+    JSON.stringify({
+      access_token: session.accessToken,
+      access_token_expires_at: session.accessTokenExpiresAt,
+      refresh_token: session.refreshToken,
+      refresh_token_expires_at: session.refreshTokenExpiresAt,
+    }),
+    sessionCookieOptions(req),
+  );
 }
 
 export function cookieSession(req) {
   const value = req.cookies?.[authConfig.cookieName];
   if (!value) return null;
-  try { return JSON.parse(value); } catch { return null; }
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }

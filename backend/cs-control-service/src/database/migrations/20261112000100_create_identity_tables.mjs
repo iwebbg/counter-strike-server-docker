@@ -25,7 +25,12 @@ export const up = async (knex) => {
       table.timestamp("created_at").notNullable().defaultTo(knex.fn.now());
       table.timestamp("updated_at").notNullable().defaultTo(knex.fn.now());
     });
-    await knex("oauth_clients").insert({ id: 1, provider: "users", name: "CS Control password client", revoked: false });
+    await knex("oauth_clients").insert({
+      id: 1,
+      provider: "users",
+      name: "CS Control password client",
+      revoked: false,
+    });
   }
   if (!(await knex.schema.hasTable("oauth_access_tokens"))) {
     await knex.schema.createTable("oauth_access_tokens", (table) => {
@@ -42,7 +47,12 @@ export const up = async (knex) => {
   if (!(await knex.schema.hasTable("oauth_refresh_tokens"))) {
     await knex.schema.createTable("oauth_refresh_tokens", (table) => {
       table.string("id", 64).primary();
-      table.string("access_token_id", 64).notNullable().references("id").inTable("oauth_access_tokens").onDelete("CASCADE");
+      table
+        .string("access_token_id", 64)
+        .notNullable()
+        .references("id")
+        .inTable("oauth_access_tokens")
+        .onDelete("CASCADE");
       table.boolean("revoked").notNullable().defaultTo(false).index();
       table.timestamp("expires_at").notNullable().index();
       table.timestamp("created_at").notNullable().defaultTo(knex.fn.now());

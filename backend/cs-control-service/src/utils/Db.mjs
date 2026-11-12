@@ -31,7 +31,9 @@ class Db {
   async status() {
     if (!Db.enabled) return { enabled: false, connected: false };
     try {
-      const result = await (await this.db()).raw("SELECT DATABASE() AS databaseName, VERSION() AS version, UTC_TIMESTAMP() AS checkedAt");
+      const result = await (
+        await this.db()
+      ).raw("SELECT DATABASE() AS databaseName, VERSION() AS version, UTC_TIMESTAMP() AS checkedAt");
       return { enabled: true, connected: true, ...result[0][0] };
     } catch (error) {
       return { enabled: true, connected: false, error: error.message };
@@ -44,9 +46,11 @@ class Db {
   }
 
   async transaction(callback) {
-    return (await this.db()).transaction((trx) => callback({
-      query: async (sql, parameters = []) => (await trx.raw(sql, parameters))[0],
-    }));
+    return (await this.db()).transaction((trx) =>
+      callback({
+        query: async (sql, parameters = []) => (await trx.raw(sql, parameters))[0],
+      }),
+    );
   }
 
   static async stop() {

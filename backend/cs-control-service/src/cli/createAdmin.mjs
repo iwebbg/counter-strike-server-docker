@@ -8,7 +8,9 @@ const email = normalizedEmail(process.env.BOOTSTRAP_ADMIN_EMAIL);
 const password = String(process.env.BOOTSTRAP_ADMIN_PASSWORD ?? "");
 
 if (name.length < 2 || !email.includes("@") || password.length < 12) {
-  console.error("BOOTSTRAP_ADMIN_NAME, BOOTSTRAP_ADMIN_EMAIL and a 12+ character BOOTSTRAP_ADMIN_PASSWORD are required.");
+  console.error(
+    "BOOTSTRAP_ADMIN_NAME, BOOTSTRAP_ADMIN_EMAIL and a 12+ character BOOTSTRAP_ADMIN_PASSWORD are required.",
+  );
   process.exitCode = 1;
 } else {
   try {

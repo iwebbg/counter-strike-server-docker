@@ -17,7 +17,9 @@ class Redis {
       return null;
     }
   }
-  async client() { return Redis.redisClient ?? Redis.init(); }
+  async client() {
+    return Redis.redisClient ?? Redis.init();
+  }
   async set(key, data, ttlSeconds) {
     const client = await this.client();
     if (!client) return false;

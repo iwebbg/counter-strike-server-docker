@@ -4,7 +4,10 @@ import authConfig from "../../../config/auth.mjs";
 import Db from "../../../utils/Db.mjs";
 import Redis from "../../../utils/Redis.mjs";
 
-export const normalizedEmail = (value) => String(value ?? "").trim().toLowerCase();
+export const normalizedEmail = (value) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
 const token = () => crypto.randomBytes(32).toString("hex");
 const expiresAt = (seconds) => new Date(Date.now() + seconds * 1000);
 export const publicUser = (user) => ({
@@ -22,7 +25,11 @@ export class UserService {
   }
 
   async findByEmail(email) {
-    return (await this.db.db())("users").where({ normalized_email: normalizedEmail(email) }).first() ?? null;
+    return (
+      (await this.db.db())("users")
+        .where({ normalized_email: normalizedEmail(email) })
+        .first() ?? null
+    );
   }
 
   async authenticate(email, password) {
@@ -103,7 +110,11 @@ export class UserService {
   async getUserCache(accessToken) {
     const value = await this.redis.get(`userSession_${accessToken}`);
     if (!value) return null;
-    try { return JSON.parse(value); } catch { return null; }
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
   }
   async deleteUserCache(accessToken) {
     return this.redis.delete(`userSession_${accessToken}`);
