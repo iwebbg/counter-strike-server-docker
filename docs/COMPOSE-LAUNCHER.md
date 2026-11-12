@@ -44,6 +44,13 @@ CS16_ENV_FILE=/run/secrets/cs16.env ./docker/compose config
 ./docker/compose unpublish
 ```
 
+За преглед през вече съществуващ reverse proxy и Docker network:
+
+```bash
+./docker/compose external server1_net cs16-panel
+./docker/compose up -d --build
+```
+
 Подробности: [`HTTPS-PROXY.md`](HTTPS-PROXY.md).
 
 ## Ежедневни команди
@@ -91,6 +98,7 @@ Wrapper-ът не скрива Docker Compose. Напредналите потр
 ```bash
 docker compose up -d --build
 docker compose -f compose.yaml -f compose.local.yaml --profile panel up -d --build
+docker compose -f compose.yaml -f compose.external.yaml --profile panel up -d --build
 docker compose -f compose.yaml -f compose.database.yaml -f compose.production.yaml --profile panel up -d --build
 ```
 

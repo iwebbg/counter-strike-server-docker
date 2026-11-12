@@ -137,6 +137,8 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
   чрез RCON върху изолирана временна инстанция;
 - изолиран NGINX smoke test потвърждава proxy към `panel:8080`; local и
   production използват отделни Compose overlays и NGINX конфигурации;
+- external overlay публикува NGINX само чрез alias в existing Docker network,
+  без host port и без директно излагане на `panel:8080`;
 - panel auth е проверен с валиден и невалиден token;
 - динамично създадена тестова инстанция е проверена и премахната след smoke test.
 

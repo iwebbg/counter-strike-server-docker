@@ -18,6 +18,13 @@ production deployment NGINX се активира изрично с `./docker/co
 издава Let’s Encrypt сертификат за избрания domain и proxy-ва към вътрешния
 `panel:8080`. Вижте [`HTTPS-PROXY.md`](HTTPS-PROXY.md).
 
+За existing reverse proxy може да се избере external overlay без host ports:
+
+```bash
+./docker/compose external server1_net cs16-panel
+./docker/compose up -d --build
+```
+
 Спиране само на UI/control-plane слоя:
 
 ```bash
@@ -102,6 +109,8 @@ PANEL_DOMAIN=panel.example.com
 PANEL_SSL_EMAIL=
 PANEL_HTTP_PORT=80
 PANEL_HTTPS_PORT=443
+PANEL_EXTERNAL_NETWORK=server1_net
+PANEL_EXTERNAL_ALIAS=cs16-panel
 ```
 
 `PANEL_TOKEN` под 16 символа прекратява старта на панела. API заявките използват

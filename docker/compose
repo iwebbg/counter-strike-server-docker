@@ -121,6 +121,20 @@ configure_unpublish() {
   printf 'Switched to local NGINX without SSL on http://127.0.0.1:%s.\n' "$(env_value PANEL_PORT)"
 }
 
+configure_external() {
+  [[ -f "$environment_file" ]] || die 'Run ./docker/compose setup first.'
+  local network="${1:-}" alias="${2:-cs16-panel}" selected_stack
+  selected_stack="$(env_value CS16_STACK)"
+  [[ "$selected_stack" == panel || "$selected_stack" == full ]] || die 'External mode requires the panel or full stack.'
+  [[ "$network" =~ ^[a-zA-Z0-9_.-]+$ ]] || die 'Provide an existing Docker network name.'
+  [[ "$alias" =~ ^[a-zA-Z0-9_.-]+$ ]] || die 'Provide a valid Docker network alias.'
+  set_env_value CS16_DEPLOYMENT external
+  set_env_value PANEL_EXTERNAL_NETWORK "$network"
+  set_env_value PANEL_EXTERNAL_ALIAS "$alias"
+  printf 'External NGINX enabled on network %s with alias %s.\n' "$network" "$alias"
+  printf 'No panel host port will be published; route the upstream proxy to http://%s:80.\n' "$alias"
+}
+
 show_help() {
   cat <<'EOF'
 CS 1.6 Docker Compose selector
@@ -128,6 +142,7 @@ CS 1.6 Docker Compose selector
 Usage:
   ./docker/compose setup [server|panel|database|full]
   ./docker/compose publish <domain> [https-port] [email]
+  ./docker/compose external <docker-network> [network-alias]
   ./docker/compose unpublish
   ./docker/compose show
   ./docker/compose doctor
@@ -157,6 +172,11 @@ case "${1:-}" in
     configure_publish "${1:-}" "${2:-443}" "${3:-}"
     exit 0
     ;;
+  external)
+    shift
+    configure_external "${1:-}" "${2:-cs16-panel}"
+    exit 0
+    ;;
   unpublish)
     configure_unpublish
     exit 0
@@ -178,8 +198,8 @@ esac
 deployment="$(env_value CS16_DEPLOYMENT)"
 deployment="${deployment:-local}"
 case "$deployment" in
-  local|production) ;;
-  *) die 'CS16_DEPLOYMENT in .env must be local or production.' ;;
+  local|production|external) ;;
+  *) die 'CS16_DEPLOYMENT in .env must be local, production or external.' ;;
 esac
 
 compose_arguments=(
@@ -211,6 +231,8 @@ if [[ "${1:-}" == show ]]; then
   printf 'Deployment: %s\n' "$deployment"
   if [[ "$deployment" == production && ( "$stack" == panel || "$stack" == full ) ]]; then
     printf 'Public panel: https://%s%s\n' "$(env_value PANEL_DOMAIN)" "$([[ "$(env_value PANEL_HTTPS_PORT)" == 443 ]] || printf ':%s' "$(env_value PANEL_HTTPS_PORT)")"
+  elif [[ "$deployment" == external && ( "$stack" == panel || "$stack" == full ) ]]; then
+    printf 'External panel: http://%s:80 on Docker network %s\n' "$(env_value PANEL_EXTERNAL_ALIAS)" "$(env_value PANEL_EXTERNAL_NETWORK)"
   elif [[ "$stack" == panel || "$stack" == full ]]; then
     printf 'Panel URL: http://127.0.0.1:%s\n' "$(env_value PANEL_PORT)"
   else

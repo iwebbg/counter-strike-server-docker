@@ -1,0 +1,25 @@
+services:
+  panel-proxy:
+    profiles: ["panel"]
+    build:
+      context: .
+      dockerfile: docker/nginx/external/Dockerfile
+    image: cs16-panel-nginx:external
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      panel:
+        condition: service_healthy
+    networks:
+      default: {}
+      external-proxy:
+        aliases:
+          - ${PANEL_EXTERNAL_ALIAS:-cs16-panel}
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  external-proxy:
+    name: ${PANEL_EXTERNAL_NETWORK:?Set PANEL_EXTERNAL_NETWORK with ./docker/compose external}
+    external: true

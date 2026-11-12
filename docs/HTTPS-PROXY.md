@@ -1,4 +1,4 @@
-# NGINX: local и production
+# NGINX: local, external и production
 
 Control Panel винаги минава през NGINX и винаги използва един backend:
 `panel:8080`. Подобно на `counter-strike-web-laravel`, средата избира отделен
@@ -7,10 +7,12 @@ Compose overlay и отделна NGINX конфигурация, без да п
 | Среда | Compose overlay | NGINX | Browser URL |
 |---|---|---|---|
 | Local | `compose.local.yaml` | HTTP, без сертификат | `http://127.0.0.1:8080` |
+| External | `compose.external.yaml` | HTTP в existing Docker network | URL-ът на upstream proxy-то |
 | Production | `compose.production.yaml` | HTTPS + автоматичен Certbot | domain на `443` или избран port |
 
 ```text
 Local:      Browser -> 127.0.0.1:PANEL_PORT -> NGINX:80 -> panel:8080
+External:   Upstream proxy -> external network alias:80 -> NGINX -> panel:8080
 Production: Browser -> domain:PANEL_HTTPS_PORT -> NGINX:443 -> panel:8080
 ```
 
@@ -28,6 +30,26 @@ Certbot. Host port-ът се контролира от `PANEL_PORT`, а bind а�
 подразбиране е само `127.0.0.1`.
 
 Local NGINX конфигурацията е в `docker/nginx/local.conf`.
+
+## Existing Docker network / external proxy
+
+Този режим е за преглед през вече работещ Traefik, NGINX Proxy Manager,
+Caddy или друг reverse proxy. External NGINX няма host port и се включва към
+зададена existing Docker network:
+
+```bash
+docker network ls
+./docker/compose external server1_net cs16-panel
+./docker/compose up -d --build
+```
+
+В upstream proxy-то използвайте target `http://cs16-panel:80`. Alias-ът се
+вижда само от containers в `server1_net`. `panel:8080` остава достъпен само във
+вътрешната Compose network.
+
+Overlay-ът следва `docker-compose.external.yaml` модела от Laravel проекта:
+отделен minimal NGINX image, без публикувани ports, с application и external
+network едновременно.
 
 ## Production с автоматичен SSL
 
@@ -81,6 +103,8 @@ PANEL_SSL_EMAIL=admin@example.com
 PANEL_PROXY_BIND_IP=0.0.0.0
 PANEL_HTTP_PORT=80
 PANEL_HTTPS_PORT=443
+PANEL_EXTERNAL_NETWORK=server1_net
+PANEL_EXTERNAL_ALIAS=cs16-panel
 ```
 
 ## Volumes и сигурност
@@ -90,6 +114,8 @@ PANEL_HTTPS_PORT=443
 - `docker compose down` ги запазва, а `down -v` ги изтрива;
 - HTTPS не замества силния `PANEL_TOKEN`;
 - NGINX няма Docker socket; само backend panel-ът има контролирания достъп;
+- при external mode само trusted upstream proxy containers трябва да участват
+  в зададената network;
 - MariaDB и `panel:8080` не се публикуват директно на production host-а.
 
 ## Диагностика

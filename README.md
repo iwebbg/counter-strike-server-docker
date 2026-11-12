@@ -49,6 +49,13 @@ stack и генерира липсващите secrets:
 ./docker/compose up -d --build
 ```
 
+За existing reverse proxy в обща Docker network:
+
+```bash
+./docker/compose external server1_net cs16-panel
+./docker/compose up -d --build
+```
+
 Стандартният Docker Compose workflow също остава поддържан:
 
 ```bash
