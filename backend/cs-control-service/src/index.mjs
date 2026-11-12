@@ -1,0 +1,36 @@
+import globalConfig from "./config/global.mjs";
+import Db from "./utils/Db.mjs";
+import Redis from "./utils/Redis.mjs";
+import Server from "./utils/Server.mjs";
+
+const lifecycle = [];
+
+async function start() {
+  await Db.init();
+  lifecycle.push(() => Db.stop());
+  await Redis.init();
+  lifecycle.unshift(() => Redis.stop());
+  if (globalConfig.processRole === "api") {
+    const server = new Server();
+    await server.init();
+    lifecycle.unshift(() => server.stop());
+    return;
+  }
+  throw new Error(`Unsupported PROCESS_ROLE: ${globalConfig.processRole}`);
+}
+
+let stopping = false;
+async function stop(signal, error = null) {
+  if (stopping) return;
+  stopping = true;
+  if (error) console.error(error);
+  for (const close of lifecycle) await close().catch((closeError) => console.error(closeError));
+  process.exitCode = error ? 1 : 0;
+  if (signal) console.log(`Stopped after ${signal}`);
+}
+
+for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => stop(signal));
+process.once("uncaughtException", (error) => stop("uncaughtException", error));
+process.once("unhandledRejection", (error) => stop("unhandledRejection", error));
+
+await start();

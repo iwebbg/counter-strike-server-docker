@@ -1,0 +1,44 @@
+{
+  "name": "cs-control-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CS 1.6 fleet control API",
+  "main": "src/index.mjs",
+  "engines": {
+    "node": ">=24.12.1 <25"
+  },
+  "scripts": {
+    "start": "node src/index.mjs",
+    "start:api": "PROCESS_ROLE=api node src/index.mjs",
+    "start:dev": "NODE_ENV=development nodemon --config nodemon.json",
+    "migrate": "knex migrate:latest --knexfile=src/config/db.mjs",
+    "migrate:rollback": "knex migrate:rollback --knexfile=src/config/db.mjs",
+    "admin:create": "node src/cli/createAdmin.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "bcrypt": "^6.0.0",
+    "body-parser": "^2.2.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "express-winston": "^4.2.0",
+    "glob": "^14.0.6",
+    "helmet": "^8.2.0",
+    "knex": "^3.3.0",
+    "mariadb": "^3.5.4",
+    "passport": "^0.7.0",
+    "passport-http-bearer": "^1.0.1",
+    "redis": "^6.0.0",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
