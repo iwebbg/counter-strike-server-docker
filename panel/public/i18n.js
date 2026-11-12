@@ -11,7 +11,7 @@ const bg = {
   "Docker connected": "Docker е свързан",
   "Refresh servers": "Обнови сървърите",
   "Sign out": "Изход",
-  "FLEET OVERVIEW": "ПРЕГЛЕД НА МРЕЖАТА",
+  "SERVERS OVERVIEW": "ПРЕГЛЕД НА СЪРВЪРИТЕ",
   "Your servers.": "Твоите сървъри.",
   "One command center.": "Един команден център.",
   "Launch, monitor and operate isolated Counter-Strike 1.6 instances without touching the terminal.":
