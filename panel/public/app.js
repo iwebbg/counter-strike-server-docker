@@ -218,11 +218,19 @@ $("#authForm").addEventListener("submit", async (event) => {
 });
 
 $("#logoutButton").addEventListener("click", async () => {
-  await api("/api/v1/users/signout", { method: "POST" }, false).catch(() => {});
-  state.authenticated = false;
-  state.user = null;
-  $("#passwordInput").value = "";
-  showAuth();
+  const button = $("#logoutButton");
+  button.disabled = true;
+  try {
+    await api("/api/v1/users/signout", { method: "POST" }, false);
+    state.authenticated = false;
+    state.user = null;
+    $("#passwordInput").value = "";
+    showAuth();
+  } catch (error) {
+    notify(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
 });
 
 $("#refreshButton").addEventListener("click", () => refresh());

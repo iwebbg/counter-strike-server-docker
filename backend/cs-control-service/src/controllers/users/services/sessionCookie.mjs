@@ -1,12 +1,18 @@
 import authConfig from "../../../config/auth.mjs";
 
-export const sessionCookieOptions = (req) => ({
+const sessionCookieSecurityOptions = (req) => ({
   httpOnly: true,
   path: "/",
   sameSite: "strict",
   secure: process.env.AUTH_COOKIE_SECURE === "true" || (process.env.AUTH_COOKIE_SECURE !== "false" && req.secure),
+});
+
+export const sessionCookieOptions = (req) => ({
+  ...sessionCookieSecurityOptions(req),
   maxAge: authConfig.cookieLifetime * 1000,
 });
+
+export const sessionCookieClearOptions = (req) => sessionCookieSecurityOptions(req);
 
 export function setSessionCookie(req, res, session) {
   res.cookie(

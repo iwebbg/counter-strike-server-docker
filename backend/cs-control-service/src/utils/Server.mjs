@@ -35,6 +35,21 @@ function jsonError(code = 400, message = "UNKNOWN_ERROR", extensions = []) {
   });
 }
 
+export function csrfRequestAllowed(req) {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return true;
+  if (!req.cookies?.[process.env.AUTH_COOKIE_NAME ?? "cs_control_session"]) return true;
+
+  const configuredOrigin = new URL(process.env.CORS_ORIGIN ?? process.env.APP_PUBLIC_URL ?? "http://localhost").origin;
+  const requestOrigin = `${req.protocol}://${req.get("host")}`;
+  const origin = req.get("origin");
+  const fetchSite = req.get("sec-fetch-site");
+
+  if (fetchSite === "cross-site") return false;
+  if (origin && ![configuredOrigin, requestOrigin].includes(origin)) return false;
+  if (!origin && process.env.NODE_ENV === "production") return false;
+  return true;
+}
+
 class Server {
   app = null;
   server = null;
@@ -90,23 +105,7 @@ class Server {
       }),
     );
     this.app.use("/api", (req, res, next) => {
-      if (
-        ["GET", "HEAD", "OPTIONS"].includes(req.method) ||
-        !req.cookies?.[process.env.AUTH_COOKIE_NAME ?? "cs_control_session"]
-      )
-        return next();
-      const configuredOrigin = new URL(process.env.CORS_ORIGIN ?? process.env.APP_PUBLIC_URL ?? "http://localhost")
-        .origin;
-      const requestOrigin = `${req.protocol}://${req.get("host")}`;
-      const origin = req.get("origin");
-      const fetchSite = req.get("sec-fetch-site");
-      if (
-        fetchSite === "cross-site" ||
-        (origin && ![configuredOrigin, requestOrigin].includes(origin)) ||
-        (!origin && process.env.NODE_ENV === "production")
-      )
-        return res.jsonError(403, "CSRF_ORIGIN_REJECTED");
-      return next();
+      return csrfRequestAllowed(req) ? next() : res.jsonError(403, "CSRF_ORIGIN_REJECTED");
     });
     configurePassport();
     this.app.use(passport.initialize());

@@ -95,13 +95,21 @@ export class UserService {
     return result;
   }
 
-  async signout(accessToken) {
+  async signout(accessToken, refreshToken = null) {
     const db = await this.db.db();
+    const accessTokens = new Set(accessToken ? [accessToken] : []);
     await db.transaction(async (trx) => {
-      await trx("oauth_refresh_tokens").where({ access_token_id: accessToken }).update({ revoked: true });
-      await trx("oauth_access_tokens").where({ id: accessToken }).update({ revoked: true });
+      if (refreshToken) {
+        const refresh = await trx("oauth_refresh_tokens").where({ id: refreshToken }).first();
+        if (refresh?.access_token_id) accessTokens.add(refresh.access_token_id);
+        await trx("oauth_refresh_tokens").where({ id: refreshToken }).update({ revoked: true });
+      }
+      for (const tokenId of accessTokens) {
+        await trx("oauth_refresh_tokens").where({ access_token_id: tokenId }).update({ revoked: true });
+        await trx("oauth_access_tokens").where({ id: tokenId }).update({ revoked: true });
+      }
     });
-    await this.deleteUserCache(accessToken);
+    await Promise.all([...accessTokens].map((tokenId) => this.deleteUserCache(tokenId)));
   }
 
   async setUserCache(accessToken, user) {
