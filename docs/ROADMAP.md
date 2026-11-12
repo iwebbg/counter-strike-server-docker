@@ -58,6 +58,20 @@
 - [ ] rate limits за moderation endpoints и login attempts;
 - [ ] reverse proxy пример с HTTPS, VPN/SSO и trusted proxy настройки.
 
+## FragZone Server Link
+
+Концепцията е описана в [`FRAGZONE-INTEGRATION.md`](FRAGZONE-INTEGRATION.md) и
+не е част от текущия runtime scope.
+
+- [ ] отделен read-only Stats API container без Docker socket и RCON;
+- [ ] `CS Fleet Telemetry API v1` contract и capability discovery;
+- [ ] dedicated scoped integration tokens;
+- [ ] FragZone Web Docker provider и server import;
+- [ ] scheduler/cache синхронизация с A2S fallback;
+- [ ] публични leaderboard, profiles, seasons и achievements;
+- [ ] privacy/retention controls и SSRF защита;
+- [ ] подписани webhooks като отделен бъдещ етап.
+
 ## ReHLDS migration track
 
 Това е отделен experimental image, не директна подмяна на стабилния HLDS image:

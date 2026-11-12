@@ -331,6 +331,7 @@ docker compose up -d --build
 - [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) — hardware, VPS sizing и bandwidth оценки.
 - [`docs/DATABASE.md`](docs/DATABASE.md) — MariaDB схема, dashboard, backup и restore.
 - [`docs/COMPOSE-LAUNCHER.md`](docs/COMPOSE-LAUNCHER.md) — интерактивен stack selector и единни команди.
+- [`docs/FRAGZONE-INTEGRATION.md`](docs/FRAGZONE-INTEGRATION.md) — бъдеща read-only интеграция с FragZone Web.
 
 ## Проверка и диагностика
 
