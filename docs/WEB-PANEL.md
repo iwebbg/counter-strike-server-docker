@@ -100,6 +100,30 @@ date** или **Update available** badge. Потвърждението пред�
 останалите и резултатът показва успешните и неуспешните имена. Compose-managed
 primary server се обновява чрез Compose, не от панела.
 
+## Backup и Restore
+
+**Backups** е наличен за panel-managed инстанции. Всеки versioned
+`.cs16-backup.tar.gz` съдържа manifest с image/configuration, AMXX data volume и
+custom map resources. Logs и пълен MariaDB dump са опционални. Архивите се пазят
+с mode `0600` в отделния persistent `panel_backups` volume и могат да бъдат
+изтеглени или изтрити от history списъка. Те съдържат server/RCON пароли и трябва
+да се съхраняват като секрети.
+
+Restore приема само backup със същия `SERVER_ID`, проверява version, allowlisted
+outer paths, nested Docker TAR paths и SHA-256 checksums. Преди промяна винаги
+създава автоматичен safety backup, спира сървъра, заменя избраните volumes,
+възстановява environment настройките върху текущия game image и връща предишното
+running/stopped състояние. Database restore е отделно потвърждение: временно
+спира всички контролирани game servers и може да възстанови по-стари operator
+акаунти и пароли. При такъв restore може да е необходим нов login.
+
+Backup на host ниво:
+
+```bash
+docker run --rm -v cs16_panel_backups:/source -v "$PWD":/backup \
+  alpine tar -czf /backup/cs16-panel-backups.tar.gz -C /source .
+```
+
 ## Управление на администратори
 
 При работещ сървър натиснете **Admins** в неговата карта. Можете да добавяте и

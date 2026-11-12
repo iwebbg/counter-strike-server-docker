@@ -502,6 +502,46 @@
       </div>
     </dialog>
 
+    <dialog id="backupsDialog" class="backups-dialog">
+      <form id="backupForm">
+        <header class="dialog-header">
+          <div>
+            <p class="eyebrow">RECOVERY CENTER</p>
+            <h2 id="backupsTitle">Backup &amp; restore</h2>
+          </div>
+          <button class="close-button" type="button" data-close-backups aria-label="Close">×</button>
+        </header>
+        <div class="backups-body">
+          <p class="edit-warning">
+            Backup archives contain server passwords and must be stored securely. AMXX data and custom maps are always
+            included.
+          </p>
+          <div class="backup-options">
+            <label class="toggle"
+              ><input id="backupIncludeLogs" type="checkbox" /><i></i
+              ><span><b>Include logs</b><small>Add the persistent game log volume</small></span></label
+            >
+            <label class="toggle"
+              ><input id="backupIncludeDatabase" type="checkbox" /><i></i
+              ><span><b>Include MariaDB</b><small>Fleet statistics, bans, seasons and operators</small></span></label
+            >
+          </div>
+          <button id="createBackupButton" class="button primary" type="submit">Create backup</button>
+          <div class="backup-history-head">
+            <div>
+              <span class="eyebrow">HISTORY</span>
+              <h3>Stored backups</h3>
+            </div>
+            <button id="refreshBackupsButton" class="icon-button" type="button" title="Refresh backups">↻</button>
+          </div>
+          <div id="backupRows" class="backup-rows"><p class="muted">Loading backups…</p></div>
+        </div>
+        <footer class="dialog-footer">
+          <button class="button ghost" type="button" data-close-backups>Close</button>
+        </footer>
+      </form>
+    </dialog>
+
     <dialog id="profileDialog" class="profile-dialog">
       <header class="dialog-header">
         <div>

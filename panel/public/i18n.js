@@ -152,6 +152,19 @@ const bg = {
   "With MariaDB enabled, bans use the central fleet database and can be revoked below. Without it they fall back to the server's persistent":
     "При включена MariaDB бановете използват централната база и могат да бъдат отменени по-долу. Без нея се използва постоянният файл на сървъра",
   "Duration 0 means permanent.": "Продължителност 0 означава постоянен бан.",
+  "RECOVERY CENTER": "ЦЕНТЪР ЗА ВЪЗСТАНОВЯВАНЕ",
+  "Backup & restore": "Backup и възстановяване",
+  "Backup archives contain server passwords and must be stored securely. AMXX data and custom maps are always included.":
+    "Backup архивите съдържат пароли за сървъра и трябва да се пазят сигурно. AMXX данните и custom картите винаги са включени.",
+  "Include logs": "Включи логовете",
+  "Add the persistent game log volume": "Добави persistent volume-а с game логове",
+  "Include MariaDB": "Включи MariaDB",
+  "Fleet statistics, bans, seasons and operators": "Fleet статистика, банове, сезони и оператори",
+  "Create backup": "Създай backup",
+  HISTORY: "ИСТОРИЯ",
+  "Stored backups": "Запазени backup-и",
+  "Refresh backups": "Обнови backup-ите",
+  "Loading backups…": "Зареждане на backup-и…",
 };
 
 const dynamic = {
@@ -169,6 +182,7 @@ const dynamic = {
     logs: "Logs",
     maps: "Maps",
     admins: "Admins",
+    backups: "Backups",
     edit: "Edit",
     update: "Update",
     updateAvailable: "UPDATE AVAILABLE",
@@ -293,6 +307,23 @@ const dynamic = {
     revoked: "Ban revoked. Existing local banned.cfg entries may require manual removal.",
     copied: "RCON password copied.",
     sessionExpired: "Session expired. Sign in again.",
+    serverBackups: "{name} backups",
+    noBackups: "No stored backups for this server.",
+    loadingBackups: "Loading backups…",
+    safetyBackup: "Automatic safety backup",
+    download: "Download",
+    restore: "Restore",
+    creatingBackup: "Creating backup…",
+    createBackup: "Create backup",
+    backupCreated: "Backup created and stored successfully.",
+    deleteBackupConfirm: "Delete the backup from {date}?",
+    backupDeleted: "Backup deleted.",
+    restoreDatabaseConfirm:
+      "Restore the MariaDB snapshot too? Every controlled game server will be stopped during database recovery, and operator accounts may change.",
+    restoreBackupConfirm:
+      "Restore {name} from this backup? Current AMXX data will be replaced after an automatic safety backup is created.",
+    restoring: "Restoring…",
+    backupRestored: "Restore completed. Safety backup: {safety}",
   },
   bg: {
     requestFailed: "Заявката е неуспешна ({status})",
@@ -308,6 +339,7 @@ const dynamic = {
     logs: "Логове",
     maps: "Карти",
     admins: "Админи",
+    backups: "Backup",
     edit: "Редакция",
     update: "Обнови",
     updateAvailable: "ИМА ОБНОВЛЕНИЕ",
@@ -433,6 +465,23 @@ const dynamic = {
     revoked: "Банът е отменен. Локални banned.cfg записи може да изискват ръчно премахване.",
     copied: "RCON паролата е копирана.",
     sessionExpired: "Сесията е изтекла. Въведи token-а отново.",
+    serverBackups: "Backup-и на {name}",
+    noBackups: "Няма запазени backup-и за този сървър.",
+    loadingBackups: "Зареждане на backup-и…",
+    safetyBackup: "Автоматичен safety backup",
+    download: "Изтегли",
+    restore: "Възстанови",
+    creatingBackup: "Създаване на backup…",
+    createBackup: "Създай backup",
+    backupCreated: "Backup-ът е създаден и запазен успешно.",
+    deleteBackupConfirm: "Да се изтрие ли backup-ът от {date}?",
+    backupDeleted: "Backup-ът е изтрит.",
+    restoreDatabaseConfirm:
+      "Да се възстанови ли и MariaDB snapshot-ът? Всички контролирани game сървъри ще бъдат спрени по време на database recovery и operator акаунтите може да се променят.",
+    restoreBackupConfirm:
+      "Да се възстанови ли {name} от този backup? Текущите AMXX данни ще бъдат заменени след автоматично създаване на safety backup.",
+    restoring: "Възстановяване…",
+    backupRestored: "Възстановяването завърши. Safety backup: {safety}",
   },
 };
 

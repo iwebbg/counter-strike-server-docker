@@ -228,6 +228,11 @@ Docker Compose не може надеждно сам да открива и ре
 За автоматично поредни портове използвайте опционалния
 [CS Control Panel](docs/WEB-PANEL.md).
 
+Panel-managed сървърите имат versioned Backup/Restore за AMXX data, custom
+карти, optional logs и MariaDB snapshot. Backup архивите се пазят в отделния
+`panel_backups` volume и могат да се изтеглят от панела. Архивите съдържат
+пароли и трябва да се третират като секрети.
+
 ## CS Control Panel (опционално)
 
 Интерактивният уеб контролен панел може да създава и управлява много CS 1.6

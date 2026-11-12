@@ -36,7 +36,8 @@
 - [x] image build IDs, Up to date status, player-aware warning и fleet Update all;
 - [x] extracted map package uploader с validation и persistent per-server resources;
 - [ ] ZIP upload и управление/премахване на качени map packages;
-- [ ] backup/restore/export на AMXX data, logs и database;
+- [x] versioned backup/download/restore на AMXX data, logs и MariaDB със safety backup;
+- [ ] scheduled retention и off-host backup destinations;
 - [ ] audit log екран и отделни panel operator роли.
 
 ## Community и progression

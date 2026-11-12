@@ -86,6 +86,8 @@ Docker Compose, така и с опционален интерактивен CS 
   confirmation и sequential Update all с per-server rollback;
 - map rotation checklist при create и live map manager с search/select all;
 - validated custom map folder upload с persistent resources и mode categories;
+- versioned Backup/Restore center за AMXX data, custom maps, optional logs и
+  MariaDB dump, със SHA-256 validation и automatic safety backup;
 - persistent mapcycle override и проверен `changelevel` чрез RCON;
 - синхронизиран AMXX `maps.ini` и custom `mapsmenu.amxx`, който презарежда
   списъка при всяко отваряне на admin/vote менюто;
@@ -168,15 +170,15 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 - Remove запазва volumes по дизайн; автоматичен lifecycle/cleanup UI още няма;
 - MariaDB статистиката има dashboard в панела; остават допълнителни audit и
   operator-management екрани;
-- няма backup/restore, ZIP uploader или audit log;
+- няма ZIP uploader, scheduled off-host backups или audit log;
 - hardcoded default network `cs16_default` трябва да се конфигурира при различно
   Compose project name.
 
 ## Следващи логични задачи
 
 1. Разширен operator/audit dashboard върху MariaDB.
-2. Backup/restore/export на AMXX data, logs и database.
-3. ZIP upload и управление/премахване на качени map packages.
+2. ZIP upload и управление/премахване на качени map packages.
+3. Scheduled retention и off-host backup destinations.
 4. Audit log за panel действия и отделни panel operator роли.
 5. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
 6. Integration tests/CI за build, container boot, A2S, RCON и admin persistence.

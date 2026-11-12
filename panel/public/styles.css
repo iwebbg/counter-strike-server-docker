@@ -1075,6 +1075,75 @@ dialog::backdrop {
   padding: 0;
   overflow: auto;
 }
+.backups-dialog {
+  width: min(820px, calc(100% - 28px));
+  max-height: calc(100vh - 28px);
+  padding: 0;
+  overflow: auto;
+}
+.backups-body {
+  padding: 24px 26px;
+}
+.backup-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.backup-options .toggle {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.12);
+}
+.backup-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 28px 0 12px;
+}
+.backup-history-head h3 {
+  margin: 4px 0 0;
+}
+.backup-rows {
+  display: grid;
+  gap: 10px;
+}
+.backup-row {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.1);
+}
+.backup-info {
+  min-width: 0;
+}
+.backup-info > strong,
+.backup-info > span {
+  display: block;
+}
+.backup-info > span {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.backup-actions {
+  display: flex;
+  gap: 7px;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.backup-actions .button {
+  padding: 7px 10px;
+  font-size: 10px;
+  text-decoration: none;
+}
 .players-body {
   padding: 20px 26px 24px;
 }
@@ -1631,6 +1700,16 @@ dialog::backdrop {
   }
   .card-actions {
     flex-wrap: wrap;
+  }
+  .backup-options {
+    grid-template-columns: 1fr;
+  }
+  .backup-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .backup-actions {
+    justify-content: flex-start;
   }
   .admin-row {
     grid-template-columns: 1fr;

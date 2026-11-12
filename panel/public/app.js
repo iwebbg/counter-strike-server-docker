@@ -15,6 +15,8 @@ const state = {
   playersTimer: null,
   editServer: null,
   uploadServer: null,
+  backupsServer: null,
+  backups: [],
   statsLoading: false,
   databaseConnected: false,
 };
@@ -31,6 +33,7 @@ const credentialDialog = $("#credentialDialog");
 const adminsDialog = $("#adminsDialog");
 const mapsDialog = $("#mapsDialog");
 const playersDialog = $("#playersDialog");
+const backupsDialog = $("#backupsDialog");
 const profileDialog = $("#profileDialog");
 const toast = $("#toast");
 const maps = {
@@ -164,6 +167,7 @@ function serverCard(server) {
         <button class="button ghost" data-action="maps" ${online ? "" : `disabled title="${t("manageMapsHint")}"`}>${t("maps")}</button>
         <button class="button ghost" data-action="upload-maps" ${server.updateAvailable ? `disabled title="${t("updateBeforeUpload")}"` : ""}>${t("uploadMaps")}</button>
         <button class="button ghost" data-action="admins" ${online ? "" : `disabled title="${t("manageAdminsHint")}"`}>${t("admins")}</button>
+        ${server.managedBy === "panel" ? `<button class="button ghost" data-action="backups">${t("backups")}</button>` : ""}
         ${canRemove ? `<button class="button ghost danger" data-action="remove">${t("remove")}</button>` : ""}
       </div>
     </article>`;
@@ -521,6 +525,11 @@ serverGrid.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "backups") {
+    await openBackups(server);
+    return;
+  }
+
   if (action === "logs") {
     state.logsServer = server;
     $("#logsTitle").textContent = t("serverLogs", { name: server.name });
@@ -794,6 +803,132 @@ function closeMaps() {
   state.mapsPayload = null;
   mapsDialog.close();
 }
+
+function formatBytes(value) {
+  const bytes = Number(value || 0);
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KiB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+}
+
+function renderBackups() {
+  const rows = $("#backupRows");
+  if (!state.backups.length) {
+    rows.innerHTML = `<p class="muted">${t("noBackups")}</p>`;
+    return;
+  }
+  rows.innerHTML = state.backups
+    .map((backup) => {
+      const flags = [
+        backup.includes?.data ? "AMXX" : null,
+        backup.includes?.logs ? "LOGS" : null,
+        backup.includes?.database ? "DB" : null,
+      ].filter(Boolean);
+      return `<article class="backup-row" data-backup="${escapeHtml(backup.filename)}">
+        <div class="backup-info"><strong>${escapeHtml(backup.kind === "safety" ? t("safetyBackup") : backup.name)}</strong><span>${escapeHtml(new Date(backup.createdAt).toLocaleString(getLocale()))} · ${formatBytes(backup.size)}</span><div class="badges">${flags.map((flag) => `<span class="badge">${flag}</span>`).join("")}</div></div>
+        <div class="backup-actions"><a class="button ghost" href="/api/backups/${encodeURIComponent(backup.filename)}/download" download>${t("download")}</a><button class="button ghost" type="button" data-restore-backup>${t("restore")}</button><button class="button ghost danger" type="button" data-delete-backup>${t("remove")}</button></div>
+      </article>`;
+    })
+    .join("");
+}
+
+async function loadBackups() {
+  if (!state.backupsServer) return;
+  $("#backupRows").innerHTML = `<p class="muted">${t("loadingBackups")}</p>`;
+  try {
+    const payload = await api(`/api/backups?serverId=${encodeURIComponent(state.backupsServer.serverId)}`);
+    state.backups = payload.backups;
+    renderBackups();
+  } catch (error) {
+    $("#backupRows").innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function openBackups(server) {
+  state.backupsServer = server;
+  state.backups = [];
+  $("#backupsTitle").textContent = t("serverBackups", { name: server.name });
+  $("#backupIncludeLogs").checked = false;
+  $("#backupIncludeDatabase").checked = false;
+  $("#backupIncludeDatabase").disabled = !state.databaseConnected;
+  backupsDialog.showModal();
+  await loadBackups();
+}
+
+function closeBackups() {
+  state.backupsServer = null;
+  state.backups = [];
+  backupsDialog.close();
+}
+
+$("#backupForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!state.backupsServer) return;
+  const button = $("#createBackupButton");
+  button.disabled = true;
+  button.textContent = t("creatingBackup");
+  try {
+    await api(`/api/servers/${state.backupsServer.id}/backups`, {
+      method: "POST",
+      body: JSON.stringify({
+        includeLogs: $("#backupIncludeLogs").checked,
+        includeDatabase: $("#backupIncludeDatabase").checked,
+      }),
+    });
+    notify(t("backupCreated"));
+    await loadBackups();
+  } catch (error) {
+    notify(error.message, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = t("createBackup");
+  }
+});
+
+$("#backupRows").addEventListener("click", async (event) => {
+  const row = event.target.closest("[data-backup]");
+  if (!row || !state.backupsServer) return;
+  const backup = state.backups.find((entry) => entry.filename === row.dataset.backup);
+  if (!backup) return;
+
+  if (event.target.closest("[data-delete-backup]")) {
+    if (!confirm(t("deleteBackupConfirm", { date: new Date(backup.createdAt).toLocaleString(getLocale()) }))) return;
+    try {
+      await api(`/api/backups/${encodeURIComponent(backup.filename)}`, { method: "DELETE" });
+      notify(t("backupDeleted"));
+      await loadBackups();
+    } catch (error) {
+      notify(error.message, true);
+    }
+    return;
+  }
+
+  const restoreButton = event.target.closest("[data-restore-backup]");
+  if (!restoreButton) return;
+  const restoreDatabase =
+    backup.includes?.database && confirm(t("restoreDatabaseConfirm", { name: state.backupsServer.name }));
+  if (!confirm(t("restoreBackupConfirm", { name: state.backupsServer.name }))) return;
+  restoreButton.disabled = true;
+  restoreButton.textContent = t("restoring");
+  try {
+    const result = await api(
+      `/api/servers/${state.backupsServer.id}/backups/${encodeURIComponent(backup.filename)}/restore`,
+      {
+        method: "POST",
+        body: JSON.stringify({ restoreLogs: backup.includes?.logs === true, restoreDatabase }),
+      },
+    );
+    notify(t("backupRestored", { safety: result.safetyBackup }));
+    closeBackups();
+    await refresh(true);
+  } catch (error) {
+    notify(error.message, true);
+    restoreButton.disabled = false;
+    restoreButton.textContent = t("restore");
+  }
+});
+
+$("#refreshBackupsButton").addEventListener("click", loadBackups);
+document.querySelectorAll("[data-close-backups]").forEach((button) => button.addEventListener("click", closeBackups));
 
 $("#mapSearch").addEventListener("input", (event) => {
   const query = event.target.value.trim().toLowerCase();
