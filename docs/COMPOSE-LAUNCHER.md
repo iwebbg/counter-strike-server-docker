@@ -14,8 +14,8 @@
 
 | Stack | Услуги |
 |---|---|
-| `full` | Game server, CS Control Panel, HTTPS proxy и MariaDB |
-| `panel` | Game server, Control Panel и HTTPS proxy |
+| `full` | Game server, локален CS Control Panel и MariaDB |
+| `panel` | Game server и локален Control Panel |
 | `database` | Game server и MariaDB |
 | `server` | Само game server |
 
@@ -35,11 +35,13 @@ CI може да използва отделен environment файл, без д
 CS16_ENV_FILE=/run/secrets/cs16.env ./docker/compose config
 ```
 
-TLS режимът, domain-ът и публичният HTTPS port се задават без ръчно редактиране:
+Локално panel-ът остава на `http://127.0.0.1:8080`. Production публикуването
+под domain се включва отделно, за да не се генерира SSL при local development:
 
 ```bash
-./docker/compose tls selfsigned localhost 8443
-./docker/compose tls letsencrypt panel.example.com 8443 admin@example.com
+./docker/compose publish panel.example.com 8443 admin@example.com
+./docker/compose up -d --build
+./docker/compose unpublish
 ```
 
 Подробности: [`HTTPS-PROXY.md`](HTTPS-PROXY.md).
@@ -88,7 +90,8 @@ Wrapper-ът не скрива Docker Compose. Напредналите потр
 
 ```bash
 docker compose up -d --build
-docker compose -f compose.yaml -f compose.database.yaml --profile panel up -d --build
+docker compose -f compose.yaml -f compose.local.yaml --profile panel up -d --build
+docker compose -f compose.yaml -f compose.database.yaml -f compose.production.yaml --profile panel up -d --build
 ```
 
 Това е полезно за CI, custom overrides и диагностика.

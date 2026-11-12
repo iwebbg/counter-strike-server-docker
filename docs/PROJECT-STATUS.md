@@ -135,8 +135,8 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 - реален live admin save/reset връща `[AMXX] Loaded 1 admin from file`;
 - реален map smoke test открива installed maps, запазва rotation и сменя карта
   чрез RCON върху изолирана временна инстанция;
-- изолиран NGINX smoke test потвърждава автоматичен self-signed сертификат,
-  HTTPS proxy към `panel:8080` и redirect към нестандартен host port;
+- изолиран NGINX smoke test потвърждава proxy към `panel:8080`; local и
+  production използват отделни Compose overlays и NGINX конфигурации;
 - panel auth е проверен с валиден и невалиден token;
 - динамично създадена тестова инстанция е проверена и премахната след smoke test.
 
@@ -173,7 +173,7 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 git status
 docker compose ps
 npm --prefix panel test
-docker compose --profile panel up -d --build
+./docker/compose up -d --build
 ```
 
 Преди тест на destructive операции трябва да се различават primary,

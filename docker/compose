@@ -33,9 +33,9 @@ random_secret() {
 stack_description() {
   case "$1" in
     server) printf 'Game server only' ;;
-    panel) printf 'Game server + CS Control Panel + HTTPS proxy' ;;
+    panel) printf 'Game server + CS Control Panel + NGINX' ;;
     database) printf 'Game server + MariaDB fleet data' ;;
-    full) printf 'Game server + Control Panel + HTTPS proxy + MariaDB' ;;
+    full) printf 'Game server + Control Panel + NGINX + MariaDB' ;;
   esac
 }
 
@@ -100,26 +100,25 @@ configure_stack() {
   printf 'Start with: ./docker/compose up -d --build\n\n'
 }
 
-configure_tls() {
+configure_publish() {
   [[ -f "$environment_file" ]] || die 'Run ./docker/compose setup first.'
-  local mode="${1:-}" domain="${2:-}" port="${3:-8443}" email="${4:-}"
-  case "$mode" in
-    selfsigned|letsencrypt) ;;
-    *) die 'TLS mode must be selfsigned or letsencrypt.' ;;
-  esac
-  [[ "$domain" =~ ^[a-zA-Z0-9.-]+$ ]] || die 'Provide a valid domain or localhost.'
+  local domain="${1:-}" port="${2:-443}" email="${3:-}" selected_stack
+  selected_stack="$(env_value CS16_STACK)"
+  [[ "$selected_stack" == panel || "$selected_stack" == full ]] || die 'Publishing requires the panel or full stack.'
+  [[ "$domain" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] || die 'Provide a public domain such as panel.example.com.'
   [[ "$port" =~ ^[0-9]+$ ]] && (( port >= 1 && port <= 65535 )) || die 'HTTPS port must be between 1 and 65535.'
-  if [[ "$mode" == letsencrypt && "$domain" == localhost ]]; then
-    die 'Let’s Encrypt requires a public DNS name, not localhost.'
-  fi
-  set_env_value PANEL_TLS_MODE "$mode"
+  set_env_value CS16_DEPLOYMENT production
   set_env_value PANEL_DOMAIN "$domain"
   set_env_value PANEL_HTTPS_PORT "$port"
-  if [[ -n "$email" ]]; then set_env_value PANEL_SSL_EMAIL "$email"; fi
-  printf 'Configured %s TLS for https://%s%s\n' "$mode" "$domain" "$([[ "$port" == 443 ]] || printf ':%s' "$port")"
-  if [[ "$mode" == letsencrypt ]]; then
-    printf 'Public TCP port 80 must reach PANEL_HTTP_PORT=80 for the ACME HTTP-01 challenge.\n'
-  fi
+  set_env_value PANEL_SSL_EMAIL "${email:-webmaster@${domain}}"
+  printf 'Production publishing enabled for https://%s%s\n' "$domain" "$([[ "$port" == 443 ]] || printf ':%s' "$port")"
+  printf 'Public TCP port 80 must reach this host for the Let’s Encrypt HTTP-01 challenge.\n'
+}
+
+configure_unpublish() {
+  [[ -f "$environment_file" ]] || die 'Run ./docker/compose setup first.'
+  set_env_value CS16_DEPLOYMENT local
+  printf 'Switched to local NGINX without SSL on http://127.0.0.1:%s.\n' "$(env_value PANEL_PORT)"
 }
 
 show_help() {
@@ -128,8 +127,8 @@ CS 1.6 Docker Compose selector
 
 Usage:
   ./docker/compose setup [server|panel|database|full]
-  ./docker/compose tls selfsigned [domain] [https-port]
-  ./docker/compose tls letsencrypt <domain> [https-port] [email]
+  ./docker/compose publish <domain> [https-port] [email]
+  ./docker/compose unpublish
   ./docker/compose show
   ./docker/compose doctor
   ./docker/compose <docker compose arguments...>
@@ -141,8 +140,8 @@ Examples:
   ./docker/compose logs -f server panel mariadb
   ./docker/compose down
 
-The selected stack is stored as CS16_STACK in .env. Advanced users can still
-use docker compose -f compose.yaml -f compose.database.yaml --profile panel.
+The selected stack and local/production environment are stored in .env.
+Advanced users can still use the Compose overlay files directly.
 Set CS16_ENV_FILE=/path/to/file to use a different environment file in CI.
 EOF
 }
@@ -153,9 +152,13 @@ case "${1:-}" in
     configure_stack "${1:-}"
     exit 0
     ;;
-  tls)
+  publish)
     shift
-    configure_tls "${1:-}" "${2:-localhost}" "${3:-8443}" "${4:-}"
+    configure_publish "${1:-}" "${2:-443}" "${3:-}"
+    exit 0
+    ;;
+  unpublish)
+    configure_unpublish
     exit 0
     ;;
   help|-h|--help)
@@ -172,6 +175,12 @@ case "$stack" in
   server|panel|database|full) ;;
   *) die 'CS16_STACK in .env must be server, panel, database or full.' ;;
 esac
+deployment="$(env_value CS16_DEPLOYMENT)"
+deployment="${deployment:-local}"
+case "$deployment" in
+  local|production) ;;
+  *) die 'CS16_DEPLOYMENT in .env must be local or production.' ;;
+esac
 
 compose_arguments=(
   --project-directory "$project_directory"
@@ -183,6 +192,7 @@ if [[ "$stack" == database || "$stack" == full ]]; then
   compose_arguments+=(--file "$project_directory/compose.database.yaml")
 fi
 if [[ "$stack" == panel || "$stack" == full ]]; then
+  compose_arguments+=(--file "$project_directory/compose.${deployment}.yaml")
   compose_arguments+=(--profile panel)
 fi
 
@@ -191,10 +201,21 @@ if [[ "${1:-}" == show ]]; then
   if [[ "$stack" == database || "$stack" == full ]]; then
     compose_files+=' + compose.database.yaml'
   fi
+  if [[ "$stack" == panel || "$stack" == full ]]; then
+    compose_files+=" + compose.${deployment}.yaml"
+  fi
   printf 'Selected stack: %s\n' "$stack"
   printf 'Services: %s\n' "$(stack_description "$stack")"
   printf 'Environment: %s\n' "$environment_file"
   printf 'Compose files: %s\n' "$compose_files"
+  printf 'Deployment: %s\n' "$deployment"
+  if [[ "$deployment" == production && ( "$stack" == panel || "$stack" == full ) ]]; then
+    printf 'Public panel: https://%s%s\n' "$(env_value PANEL_DOMAIN)" "$([[ "$(env_value PANEL_HTTPS_PORT)" == 443 ]] || printf ':%s' "$(env_value PANEL_HTTPS_PORT)")"
+  elif [[ "$stack" == panel || "$stack" == full ]]; then
+    printf 'Panel URL: http://127.0.0.1:%s\n' "$(env_value PANEL_PORT)"
+  else
+    printf 'Panel: not selected\n'
+  fi
   exit 0
 fi
 

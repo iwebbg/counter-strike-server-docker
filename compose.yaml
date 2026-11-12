@@ -79,8 +79,8 @@ services:
       DB_NAME: ${DB_NAME:-cs16}
       DB_USER: ${DB_USER:-cs16}
       DB_PASSWORD: ${DB_PASSWORD:-change-db-password}
-    ports:
-      - "${PANEL_BIND_IP:-127.0.0.1}:${PANEL_PORT:-8080}:8080/tcp"
+    expose:
+      - "8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     read_only: true
@@ -89,33 +89,7 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  panel-proxy:
-    profiles: ["panel"]
-    build:
-      context: .
-      dockerfile: docker/nginx/Dockerfile
-    image: cs16-panel-nginx:local
-    restart: unless-stopped
-    environment:
-      PANEL_TLS_MODE: ${PANEL_TLS_MODE:-selfsigned}
-      PANEL_DOMAIN: ${PANEL_DOMAIN:-localhost}
-      PANEL_SSL_EMAIL: ${PANEL_SSL_EMAIL:-}
-      PANEL_HTTPS_PORT: ${PANEL_HTTPS_PORT:-8443}
-    ports:
-      - "${PANEL_PROXY_BIND_IP:-0.0.0.0}:${PANEL_HTTP_PORT:-80}:80/tcp"
-      - "${PANEL_PROXY_BIND_IP:-0.0.0.0}:${PANEL_HTTPS_PORT:-8443}:443/tcp"
-    volumes:
-      - panel_certbot_www:/var/www/certbot
-      - panel_letsencrypt:/etc/letsencrypt
-    depends_on:
-      panel:
-        condition: service_healthy
-    security_opt:
-      - no-new-privileges:true
-
 volumes:
   cs16_logs:
   cs16_amxx_data:
-  panel_certbot_www:
-  panel_letsencrypt:
 

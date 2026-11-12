@@ -31,7 +31,6 @@ stack и генерира липсващите secrets:
 
 ```bash
 ./docker/compose setup
-./docker/compose tls selfsigned localhost 8443
 ./docker/compose up -d --build
 ./docker/compose ps
 ```
@@ -40,6 +39,13 @@ stack и генерира липсващите secrets:
 
 ```bash
 ./docker/compose setup full
+./docker/compose up -d --build
+```
+
+За production публикуване под domain активирайте отделно NGINX и Let’s Encrypt:
+
+```bash
+./docker/compose publish panel.example.com 443 admin@example.com
 ./docker/compose up -d --build
 ```
 
@@ -207,10 +213,8 @@ Docker Compose не може надеждно сам да открива и ре
 инстанции. Стандартният `docker compose up` не стартира панела. За включване:
 
 ```bash
-cp .env.example .env
-openssl rand -hex 24
-# поставете резултата като PANEL_TOKEN в .env
-docker compose --profile panel up -d --build
+./docker/compose setup panel
+./docker/compose up -d --build
 ```
 
 Отворете `http://127.0.0.1:8080` и въведете `PANEL_TOKEN`. Панелът предлага:
@@ -229,11 +233,11 @@ docker compose --profile panel up -d --build
 Изключване на панела, без спиране на game servers:
 
 ```bash
-docker compose --profile panel stop panel
+./docker/compose stop panel panel-proxy
 ```
 
-Панелът слуша само на `127.0.0.1` по подразбиране. За отдалечена администрация
-използвайте SSH tunnel вместо публично излагане:
+Local NGINX слуша само на `127.0.0.1` по подразбиране. За production domain
+използвайте `./docker/compose publish`; SSH tunnel остава удобен private вариант:
 
 ```bash
 ssh -L 8080:127.0.0.1:8080 user@docker-host

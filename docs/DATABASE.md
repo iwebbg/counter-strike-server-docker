@@ -23,7 +23,8 @@ docker compose -f compose.yaml -f compose.database.yaml up -d --build
 С Control Panel:
 
 ```bash
-docker compose -f compose.yaml -f compose.database.yaml --profile panel up -d --build
+./docker/compose setup full
+./docker/compose up -d --build
 ```
 
 `db-migrate` е краткотрайна one-shot услуга. Тя изчаква MariaDB, прилага

@@ -1,118 +1,104 @@
-# HTTPS reverse proxy за CS Control
+# NGINX: local и production
 
-Panel и `full` stack-овете включват NGINX reverse proxy с автоматично TLS
-управление. NGINX проксира към вътрешния адрес `panel:8080`; Node panel-ът не
-се променя и остава достъпен директно само през loopback bind-а
-`127.0.0.1:${PANEL_PORT}` за диагностика.
+Control Panel винаги минава през NGINX и винаги използва един backend:
+`panel:8080`. Подобно на `counter-strike-web-laravel`, средата избира отделен
+Compose overlay и отделна NGINX конфигурация, без да променя приложението.
+
+| Среда | Compose overlay | NGINX | Browser URL |
+|---|---|---|---|
+| Local | `compose.local.yaml` | HTTP, без сертификат | `http://127.0.0.1:8080` |
+| Production | `compose.production.yaml` | HTTPS + автоматичен Certbot | domain на `443` или избран port |
 
 ```text
-Browser -> host:PANEL_HTTPS_PORT -> NGINX:443 -> panel:8080
-                 |
-                 `-> TLS certificate and security headers
+Local:      Browser -> 127.0.0.1:PANEL_PORT -> NGINX:80 -> panel:8080
+Production: Browser -> domain:PANEL_HTTPS_PORT -> NGINX:443 -> panel:8080
 ```
 
-Външният HTTPS port не е задължително `443`. Например `8443:443` означава, че
-потребителят отваря `https://panel.example.com:8443`, а NGINX продължава да
-слуша на container port 443 и да proxy-ва към panel port 8080.
+## Local
 
-## Локален self-signed сертификат
-
-Това е default режимът и не изисква публичен domain:
+`setup panel` и `setup full` използват local overlay по подразбиране:
 
 ```bash
 ./docker/compose setup panel
-./docker/compose tls selfsigned localhost 8443
 ./docker/compose up -d --build
 ```
 
-Отворете:
+Отворете `http://127.0.0.1:8080`. Няма SSL, self-signed сертификати или
+Certbot. Host port-ът се контролира от `PANEL_PORT`, а bind адресът по
+подразбиране е само `127.0.0.1`.
 
-```text
-https://localhost:8443
-```
+Local NGINX конфигурацията е в `docker/nginx/local.conf`.
 
-Сертификатът се генерира автоматично с OpenSSL и се пази в persistent
-`panel_letsencrypt` volume. Browser-ът ще покаже предупреждение, докато
-сертификатът не бъде добавен към trusted certificates. Този режим е подходящ за
-localhost, LAN, VPN и development.
+## Production с автоматичен SSL
 
-## Let’s Encrypt
-
-Нужни са public DNS запис към VPS-а и публичен TCP port 80 за HTTP-01 challenge:
+Нужни са public DNS запис към VPS-а и публичен TCP port 80 за първоначалния
+Let's Encrypt HTTP-01 challenge:
 
 ```bash
 ./docker/compose setup full
-./docker/compose tls letsencrypt panel.example.com 8443 admin@example.com
+./docker/compose publish panel.example.com 443 admin@example.com
 ./docker/compose up -d --build
 ```
 
-Панелът ще бъде достъпен на:
+`publish` превключва `CS16_DEPLOYMENT=production`, след което wrapper-ът избира
+`compose.production.yaml`. Production image-ът и Certbot lifecycle-ът следват
+работещия шаблон от `counter-strike-web-laravel`:
 
-```text
-https://panel.example.com:8443
-```
+- Certbot standalone издава липсващия сертификат при първи старт;
+- certificates и ACME файловете са в persistent named volumes;
+- renewal се проверява на всеки 12 часа;
+- при renewal NGINX се reload-ва без спиране на panel-а.
 
-Сертификатът е валиден за domain-а независимо дали HTTPS използва host port
-443, 8443 или друг свободен port. За стандартен URL без `:port` използвайте:
+Връщане към local NGINX:
 
 ```bash
-./docker/compose tls letsencrypt panel.example.com 443 admin@example.com
+./docker/compose down
+./docker/compose unpublish
+./docker/compose up -d --build
 ```
 
-ACME HTTP-01 винаги проверява публичен port 80. Затова `PANEL_HTTP_PORT=80`
-трябва да бъде достижим отвън, дори когато HTTPS е на нестандартен port. Ако
-доставчикът или друга услуга вече използва port 80, ще е нужен външен reverse
-proxy, NAT правило или бъдещ DNS-01 provider.
+## Нестандартен HTTPS port
 
-NGINX проверява сертификата при старт и Certbot прави renewal проверка на всеки
-12 часа. При успешно обновяване NGINX се reload-ва без спиране на panel-а.
+Външният HTTPS port не е задължително `443`:
+
+```bash
+./docker/compose publish panel.example.com 8443 admin@example.com
+```
+
+Тогава URL-ът е `https://panel.example.com:8443`, host mapping-ът е
+`8443:443`, а NGINX продължава да proxy-ва към `panel:8080`. ACME HTTP-01 все
+още изисква публичен port 80.
 
 ## Настройки
 
 ```dotenv
-PANEL_TLS_MODE=selfsigned
-PANEL_DOMAIN=localhost
-PANEL_SSL_EMAIL=
+CS16_DEPLOYMENT=local
+PANEL_TOKEN=
+PANEL_BIND_IP=127.0.0.1
+PANEL_PORT=8080
+PANEL_DOMAIN=panel.example.com
+PANEL_SSL_EMAIL=admin@example.com
 PANEL_PROXY_BIND_IP=0.0.0.0
 PANEL_HTTP_PORT=80
-PANEL_HTTPS_PORT=8443
+PANEL_HTTPS_PORT=443
 ```
 
-| Променлива | Предназначение |
-|---|---|
-| `PANEL_TLS_MODE` | `selfsigned` или `letsencrypt` |
-| `PANEL_DOMAIN` | DNS name, използван от сертификата и NGINX |
-| `PANEL_SSL_EMAIL` | Let’s Encrypt account email |
-| `PANEL_PROXY_BIND_IP` | Host interface за HTTP/HTTPS ports |
-| `PANEL_HTTP_PORT` | Host port към NGINX container port 80 |
-| `PANEL_HTTPS_PORT` | Host port към NGINX container port 443 |
-| `PANEL_PORT` | Директен loopback diagnostic port към panel:8080 |
+## Volumes и сигурност
 
-## Volumes
-
-- `panel_letsencrypt` — certificates, renewal configuration и private keys;
-- `panel_certbot_www` — ACME webroot challenge файлове.
-
-`docker compose down` запазва сертификатите. `down -v` ги изтрива заедно с
-останалите persistent volumes.
-
-## Security
-
-- HTTPS защитава transport-а, но не замества силния `PANEL_TOKEN`.
-- Не публикувайте директния `PANEL_PORT=8080` на `0.0.0.0`; default bind-ът е
-  `127.0.0.1`.
-- Ограничете HTTPS port-а с firewall/VPN, когато панелът е само за оператори.
-- `panel-proxy` няма Docker socket; единствено backend panel container-ът има
-  allowlisted Docker Engine достъп.
-- Архивирайте private keys внимателно и не ги commit-вайте в repository.
+- `panel_letsencrypt` пази certificates, renewal config и private keys;
+- `panel_certbot_www` пази ACME webroot challenge файловете;
+- `docker compose down` ги запазва, а `down -v` ги изтрива;
+- HTTPS не замества силния `PANEL_TOKEN`;
+- NGINX няма Docker socket; само backend panel-ът има контролирания достъп;
+- MariaDB и `panel:8080` не се публикуват директно на production host-а.
 
 ## Диагностика
 
 ```bash
+./docker/compose show
 ./docker/compose ps
 ./docker/compose logs --tail=200 panel-proxy
-curl --insecure https://127.0.0.1:${PANEL_HTTPS_PORT}/api/health
 ```
 
-При Let’s Encrypt проблем проверете DNS, firewall и дали public port 80 достига
-точно тази NGINX инстанция.
+При Let's Encrypt проблем проверете DNS, firewall и дали public port 80 достига
+точно production NGINX контейнера.
