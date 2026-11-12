@@ -4,9 +4,11 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { queryA2S } from './a2s.mjs';
+import { createDatabase } from './database.mjs';
 import { DockerClient, DockerError, demuxDockerStream } from './docker.mjs';
-import { rconCommand } from './rcon.mjs';
-import { parseAdminEntries, parseInteger, validateAdmins, validateCreateInput } from './validation.mjs';
+import { parseStatusPlayers, rconCommand } from './rcon.mjs';
+import { activeBans, createSeason, globalAdmins, moderationHistory, playerProfile, recordModeration, revokeBan, statsOverview, syncDatabaseAdmins, syncGlobalAdmins, syncServerRegistry, validateStatsFilter } from './stats.mjs';
+import { parseAdminEntries, parseInteger, validateAdmins, validateCreateInput, validateMapList, validateModerationInput } from './validation.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = path.join(root, 'public');
@@ -17,6 +19,11 @@ const config = {
   network: process.env.PANEL_NETWORK || 'cs16_default',
   portStart: parseInteger(process.env.PORT_RANGE_START || 27015, 'PORT_RANGE_START', 1024, 65535),
   portEnd: parseInteger(process.env.PORT_RANGE_END || 27115, 'PORT_RANGE_END', 1024, 65535),
+  dbEnabled: process.env.DB_ENABLED === '1',
+  dbHost: process.env.DB_HOST || 'mariadb',
+  dbName: process.env.DB_NAME || 'cs16',
+  dbUser: process.env.DB_USER || 'cs16',
+  dbPassword: process.env.DB_PASSWORD || '',
 };
 
 if (config.token.length < 16) {
@@ -29,9 +36,14 @@ if (config.portStart > config.portEnd) {
 }
 
 const docker = new DockerClient();
+const database = createDatabase();
 const managedLabel = 'com.cs16.controlled=true';
 const managedAdminsFile = '/opt/hlds/cstrike/addons/amxmodx/data/panel_admins.txt';
 const usersFile = '/opt/hlds/cstrike/addons/amxmodx/configs/users.ini';
+const managedMapcycleFile = '/opt/hlds/cstrike/addons/amxmodx/data/panel_mapcycle.txt';
+const mapcycleFile = '/opt/hlds/cstrike/mapcycle.txt';
+const amxxMapsFile = '/opt/hlds/cstrike/addons/amxmodx/configs/maps.ini';
+const moderationLog = '/opt/hlds/cstrike/addons/amxmodx/data/panel_moderation.log';
 
 function sendJson(response, status, data) {
   const body = JSON.stringify(data);
@@ -69,6 +81,10 @@ function envValue(inspect, name, fallback = '') {
   const prefix = `${name}=`;
   const entry = (inspect.Config.Env || []).find((value) => value.startsWith(prefix));
   return entry ? entry.slice(prefix.length) : fallback;
+}
+
+function serverKey(inspect) {
+  return envValue(inspect, 'SERVER_ID') || inspect.Config?.Labels?.['com.cs16.instance-id'] || inspect.Id.slice(0, 12);
 }
 
 function publishedPort(inspect) {
@@ -119,8 +135,87 @@ function usersFileContent(admins) {
 
 async function requireRunning(id) {
   const inspect = await assertControlled(id);
-  if (!inspect.State?.Running) throw new Error('Start the server before managing admins');
+  if (!inspect.State?.Running) throw new Error('Start the server before using live management');
   return inspect;
+}
+
+async function installedMaps(id) {
+  const output = await runExec(id, ['sh', '-c', 'for file in /opt/hlds/cstrike/maps/*.bsp; do [ -f "$file" ] || continue; name=${file##*/}; printf "%s\\n" "${name%.bsp}"; done']);
+  return output.split('\n').map((map) => map.trim()).filter((map) => /^[a-zA-Z0-9_]+$/.test(map)).sort((left, right) => left.localeCompare(right));
+}
+
+async function categorizedMaps(id, inspect) {
+  const mode = envValue(inspect, 'SERVER_MODE', 'classic');
+  if (mode !== 'classic' && mode !== 'gungame') throw new Error(`Unsupported server mode: ${mode}`);
+  const presetFile = `/opt/hlds/presets/maps/${mode}.txt`;
+  const [installed, preset] = await Promise.all([
+    installedMaps(id),
+    runExec(id, ['sh', '-c', 'cat "$1"', 'map-category', presetFile]),
+  ]);
+  const category = preset.split('\n').map((map) => map.trim()).filter((map) => /^[a-zA-Z0-9_]+$/.test(map));
+  return { mode, available: category.filter((map) => installed.includes(map)) };
+}
+
+async function readMaps(id, inspect) {
+  const { mode, available } = await categorizedMaps(id, inspect);
+  const output = await runExec(id, ['sh', '-c', `if [ -f '${managedMapcycleFile}' ]; then printf 'panel\\n'; cat '${managedMapcycleFile}'; else printf 'runtime\\n'; cat '${mapcycleFile}'; fi`]);
+  const newline = output.indexOf('\n');
+  const source = newline === -1 ? 'runtime' : output.slice(0, newline).trim();
+  const selected = output.slice(newline + 1).split('\n').map((map) => map.trim()).filter((map) => available.includes(map));
+  const address = containerAddress(inspect);
+  const game = address ? await queryA2S(address, 27015).catch(() => null) : null;
+  return { source, mode, available, selected, current: game?.map || null };
+}
+
+async function saveMaps(id, inspect, maps) {
+  const { mode, available } = await categorizedMaps(id, inspect);
+  const missing = maps.filter((map) => !available.includes(map));
+  if (missing.length) throw new Error(`Maps do not belong to the ${mode} category or are not installed: ${missing.join(', ')}`);
+  const mapcycle = `${maps.join('\n')}\n`;
+  const script = `printf '%s' "$1" > '${managedMapcycleFile}' && printf '%s' "$1" > '${mapcycleFile}' && printf '%s' "$1" > '${amxxMapsFile}'`;
+  await runExec(id, ['sh', '-c', script, 'map-sync', mapcycle]);
+  return { source: 'panel', mode, available, selected: maps, synchronized: true };
+}
+
+async function livePlayers(inspect) {
+  const output = await rconCommand(containerAddress(inspect), 27015, envValue(inspect, 'RCON_PASSWORD'), 'status');
+  return parseStatusPlayers(output);
+}
+
+async function writeModerationAudit(id, event) {
+  const entry = JSON.stringify({ timestamp: new Date().toISOString(), ...event });
+  await runExec(id, ['sh', '-c', `printf '%s\\n' "$1" >> '${moderationLog}'`, 'moderation-audit', entry]);
+}
+
+async function moderatePlayer(id, inspect, userId, action, input) {
+  const player = (await livePlayers(inspect)).find((entry) => entry.userId === userId);
+  if (!player) throw new Error(`Player userid ${userId} is no longer connected`);
+  const values = validateModerationInput(input, action);
+  const address = containerAddress(inspect);
+  const password = envValue(inspect, 'RCON_PASSWORD');
+  if (action === 'ban' && !/^STEAM_[0-9]+:[01]:[0-9]+$/.test(player.steamId)) throw new Error('Player does not have a bannable Steam ID');
+  const centralBan = action === 'ban' && database.enabled;
+
+  if (centralBan) {
+    await recordModeration(database, { serverId: serverKey(inspect), action, steamId: player.steamId, name: player.name, ...values });
+  }
+
+  if (action === 'kick') {
+    await rconCommand(address, 27015, password, `amx_kick #${userId} "${values.reason}"`);
+  } else {
+    if (database.enabled) {
+      await rconCommand(address, 27015, password, `amx_kick #${userId} "${values.reason}"`);
+    } else {
+      await rconCommand(address, 27015, password, `amx_ban ${values.minutes} #${userId} "${values.reason}"`);
+      await rconCommand(address, 27015, password, 'writeid');
+    }
+  }
+
+  await writeModerationAudit(id, { action, userId, steamId: player.steamId, name: player.name, ...values });
+  if (!centralBan) {
+    await recordModeration(database, { serverId: serverKey(inspect), action, steamId: player.steamId, name: player.name, ...values });
+  }
+  return { status: action === 'kick' ? 'kicked' : 'banned', player: { name: player.name, steamId: player.steamId }, ...values };
 }
 
 async function readAdmins(id, inspect) {
@@ -141,14 +236,42 @@ async function reloadAdmins(id, inspect, admins, persist) {
   await runExec(id, ['sh', '-c', ...args]);
   const address = containerAddress(inspect);
   const reloadOutput = await rconCommand(address, 27015, envValue(inspect, 'RCON_PASSWORD'), 'amx_reloadadmins');
+  await syncDatabaseAdmins(database, serverKey(inspect), admins);
   return { source: persist ? 'panel' : 'environment', admins, reloaded: true, output: reloadOutput };
+}
+
+function mergeAdmins(...lists) {
+  return [...new Map(lists.flat().map((admin) => [admin.steamId, admin])).values()];
+}
+
+async function applyFleetAdmins(admins) {
+  await syncGlobalAdmins(database, admins);
+  const filters = encodeURIComponent(JSON.stringify({ label: [managedLabel] }));
+  const containers = await docker.request('GET', `/containers/json?filters=${filters}`);
+  let updated = 0;
+  for (const container of containers) {
+    const inspect = await docker.request('GET', `/containers/${container.Id}/json`);
+    if (!inspect.State?.Running) continue;
+    await reloadAdmins(container.Id, inspect, admins, true);
+    updated += 1;
+  }
+  return updated;
+}
+
+async function applyInheritedAdmins(id) {
+  if (!database.enabled) return;
+  const inspect = await requireRunning(id);
+  const inherited = await globalAdmins(database);
+  if (!inherited.length) return;
+  const current = await readAdmins(id, inspect);
+  await reloadAdmins(id, inspect, mergeAdmins(current.admins, inherited), true);
 }
 
 async function listServers() {
   const filters = encodeURIComponent(JSON.stringify({ label: [managedLabel] }));
   const containers = await docker.request('GET', `/containers/json?all=1&filters=${filters}`);
 
-  return Promise.all(containers.map(async (container) => {
+  const servers = await Promise.all(containers.map(async (container) => {
     const inspect = await docker.request('GET', `/containers/${container.Id}/json`);
     let game = null;
     if (inspect.State?.Running) {
@@ -157,6 +280,7 @@ async function listServers() {
     }
     return {
       id: container.Id,
+      serverId: serverKey(inspect),
       name: inspect.Config?.Labels?.['com.cs16.display-name'] || inspect.Name.replace(/^\//, ''),
       containerName: inspect.Name.replace(/^\//, ''),
       managedBy: inspect.Config?.Labels?.['com.cs16.managed-by'] || 'unknown',
@@ -172,6 +296,8 @@ async function listServers() {
       startedAt: inspect.State?.StartedAt || null,
     };
   }));
+  await syncServerRegistry(database, servers).catch((error) => console.error('[panel] registry sync failed:', error.message));
+  return servers;
 }
 
 async function usedPorts() {
@@ -205,6 +331,10 @@ async function createServer(input) {
   const containerName = `cs16-instance-${instanceId}`;
   const volumePrefix = `cs16_${instanceId}`;
   const rconPassword = values.rconPassword || crypto.randomBytes(18).toString('base64url');
+  const inheritedAdmins = await globalAdmins(database);
+  const requestedAdmins = values.adminSteamIds.map((steamId) => ({ steamId, flags: 'abcdefghijklmnopqrstu' }));
+  const adminMap = new Map([...inheritedAdmins, ...requestedAdmins].map((admin) => [admin.steamId, admin]));
+  const initialAdmins = [...adminMap.values()];
 
   await ensureVolume(`${volumePrefix}_logs`);
   await ensureVolume(`${volumePrefix}_data`);
@@ -216,11 +346,29 @@ async function createServer(input) {
       `SERVER_NAME=${values.name}`,
       `MAX_PLAYERS=${values.maxPlayers}`,
       `START_MAP=${values.startMap}`,
-      'MAPCYCLE=',
+      `MAPCYCLE=${values.maps.join(',')}`,
       `RCON_PASSWORD=${rconPassword}`,
       `SERVER_PASSWORD=${values.serverPassword}`,
-      `AMXX_ADMINS=${values.adminSteamIds.map((steamId) => `${steamId}|abcdefghijklmnopqrstu`).join(';')}`,
-      'DB_ENABLED=0',
+      'WARMUP_ENABLED=1',
+      'WARMUP_SECONDS=45',
+      `SPAWN_PROTECTION_ENABLED=${values.mode === 'gungame' ? 1 : 0}`,
+      'SPAWN_PROTECTION_SECONDS=3.0',
+      'SEMICLIP_ENABLED=1',
+      'AFK_MANAGER_ENABLED=1',
+      'AFK_WARN_SECONDS=60',
+      'AFK_SPECTATOR_SECONDS=90',
+      'AFK_KICK_SECONDS=180',
+      'RTV_ENABLED=1',
+      'RTV_RATIO=0.60',
+      'RTV_MIN_VOTES=2',
+      'RTV_DELAY_SECONDS=120',
+      'RECENT_MAPS=3',
+      `AMXX_ADMINS=${serializeAdmins(initialAdmins)}`,
+      `DB_ENABLED=${config.dbEnabled ? 1 : 0}`,
+      `DB_HOST=${config.dbHost}`,
+      `DB_NAME=${config.dbName}`,
+      `DB_USER=${config.dbUser}`,
+      `DB_PASSWORD=${config.dbPassword}`,
       `SERVER_ID=${instanceId}`,
     ],
     Labels: {
@@ -293,6 +441,37 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/database/status') {
+      sendJson(response, 200, await database.status());
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/api/stats/overview') {
+      sendJson(response, 200, await statsOverview(database, validateStatsFilter(url)));
+      return;
+    }
+    const playerStatsMatch = url.pathname.match(/^\/api\/stats\/players\/(STEAM_[0-9]+:[01]:[0-9]+)$/);
+    if (request.method === 'GET' && playerStatsMatch) {
+      sendJson(response, 200, await playerProfile(database, playerStatsMatch[1]));
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/api/moderation/history') {
+      sendJson(response, 200, { actions: await moderationHistory(database) });
+      return;
+    }
+    if (request.method === 'GET' && url.pathname === '/api/bans') {
+      sendJson(response, 200, { bans: await activeBans(database) });
+      return;
+    }
+    const revokeBanMatch = url.pathname.match(/^\/api\/bans\/(\d+)\/revoke$/);
+    if (request.method === 'POST' && revokeBanMatch) {
+      sendJson(response, 200, await revokeBan(database, Number(revokeBanMatch[1])));
+      return;
+    }
+    if (request.method === 'POST' && url.pathname === '/api/seasons') {
+      sendJson(response, 201, await createSeason(database, await readJson(request)));
+      return;
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/servers') {
       sendJson(response, 200, { servers: await listServers(), portRange: [config.portStart, config.portEnd] });
       return;
@@ -308,6 +487,7 @@ const server = http.createServer(async (request, response) => {
       await assertControlled(id);
       const suffix = action === 'stop' ? '/stop?t=30' : action === 'restart' ? '/restart?t=30' : '/start';
       await docker.request('POST', `/containers/${id}${suffix}`);
+      if (action === 'start') await applyInheritedAdmins(id);
       sendJson(response, 200, { status: action });
       return;
     }
@@ -328,14 +508,59 @@ const server = http.createServer(async (request, response) => {
     }
     if (adminsMatch && request.method === 'PUT') {
       const inspect = await requireRunning(adminsMatch[1]);
-      const admins = validateAdmins(await readJson(request));
-      sendJson(response, 200, await reloadAdmins(adminsMatch[1], inspect, admins, true));
+      const input = await readJson(request);
+      const admins = validateAdmins(input);
+      if (input.scope === 'fleet') {
+        const updatedServers = await applyFleetAdmins(admins);
+        sendJson(response, 200, { source: 'database-fleet', admins, reloaded: true, updatedServers });
+      } else {
+        sendJson(response, 200, await reloadAdmins(adminsMatch[1], inspect, admins, true));
+      }
       return;
     }
     if (adminsMatch && request.method === 'DELETE') {
       const inspect = await requireRunning(adminsMatch[1]);
       const admins = parseAdminEntries(envValue(inspect, 'AMXX_ADMINS'));
       sendJson(response, 200, await reloadAdmins(adminsMatch[1], inspect, admins, false));
+      return;
+    }
+
+    const mapsMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/maps$/);
+    if (mapsMatch && request.method === 'GET') {
+      const inspect = await requireRunning(mapsMatch[1]);
+      sendJson(response, 200, await readMaps(mapsMatch[1], inspect));
+      return;
+    }
+    if (mapsMatch && request.method === 'PUT') {
+      const inspect = await requireRunning(mapsMatch[1]);
+      const maps = validateMapList((await readJson(request)).maps, 'Map rotation');
+      sendJson(response, 200, await saveMaps(mapsMatch[1], inspect, maps));
+      return;
+    }
+
+    const changeMapMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/maps\/change$/);
+    if (changeMapMatch && request.method === 'POST') {
+      const inspect = await requireRunning(changeMapMatch[1]);
+      const map = validateMapList([(await readJson(request)).map], 'Map selection')[0];
+      const { mode, available } = await categorizedMaps(changeMapMatch[1], inspect);
+      if (!available.includes(map)) throw new Error(`Map does not belong to the ${mode} category or is not installed: ${map}`);
+      const output = await rconCommand(containerAddress(inspect), 27015, envValue(inspect, 'RCON_PASSWORD'), `changelevel ${map}`);
+      sendJson(response, 200, { status: 'changing', mode, map, output });
+      return;
+    }
+
+    const playersMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/players$/);
+    if (playersMatch && request.method === 'GET') {
+      const inspect = await requireRunning(playersMatch[1]);
+      sendJson(response, 200, { players: await livePlayers(inspect) });
+      return;
+    }
+
+    const moderationMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/players\/(\d+)\/(kick|ban)$/);
+    if (moderationMatch && request.method === 'POST') {
+      const [, id, rawUserId, action] = moderationMatch;
+      const inspect = await requireRunning(id);
+      sendJson(response, 200, await moderatePlayer(id, inspect, Number(rawUserId), action, await readJson(request)));
       return;
     }
 
@@ -363,7 +588,10 @@ server.listen(config.listenPort, '0.0.0.0', () => {
 
 function shutdown(signal) {
   console.log(`[panel] ${signal} received, closing HTTP server`);
-  server.close(() => process.exit(0));
+  server.close(async () => {
+    await database.close();
+    process.exit(0);
+  });
   setTimeout(() => process.exit(1), 5000).unref();
 }
 

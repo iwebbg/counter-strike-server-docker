@@ -1,13 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { demuxDockerStream } from '../src/docker.mjs';
-import { parseAdminEntries, validateAdmins, validateCreateInput } from '../src/validation.mjs';
+import { parseAdminEntries, validateAdmins, validateCreateInput, validateMapList, validateModerationInput } from '../src/validation.mjs';
 
 test('validates a GunGame server and applies its default map', () => {
   const value = validateCreateInput({ name: 'Arena One', mode: 'gungame', maxPlayers: 20 }, 27015, 27115);
   assert.equal(value.startMap, 'gg_3way');
   assert.equal(value.maxPlayers, 20);
   assert.equal(value.port, null);
+  assert.ok(value.maps.includes('gg_3way'));
+});
+
+test('validates moderation reasons and ban durations', () => {
+  assert.deepEqual(validateModerationInput({ reason: 'Repeated team killing', minutes: 60 }, 'ban'), { reason: 'Repeated team killing', minutes: 60, scope: 'fleet' });
+  assert.equal(validateModerationInput({ reason: 'Map exploit', minutes: 30, scope: 'server' }, 'ban').scope, 'server');
+  assert.throws(() => validateModerationInput({ reason: 'bad; quit', minutes: 10 }, 'ban'), /safe printable/);
+  assert.throws(() => validateModerationInput({ reason: 'Cheating', minutes: -1 }, 'ban'), /between 0 and 525600/);
+  assert.throws(() => validateModerationInput({ reason: 'Cheating', minutes: 60, scope: 'planet' }, 'ban'), /scope/);
+});
+
+test('validates map rotations and requires the start map', () => {
+  assert.deepEqual(validateMapList(['de_dust2', 'de_nuke']), ['de_dust2', 'de_nuke']);
+  assert.throws(() => validateMapList([]), /between 1 and 128/);
+  assert.throws(() => validateMapList(['de_dust2', 'de_dust2']), /duplicate/);
+  assert.throws(() => validateCreateInput({
+    name: 'Map server', mode: 'classic', maxPlayers: 16, startMap: 'de_dust2', maps: ['de_nuke'],
+  }, 27015, 27115), /Start map must be selected/);
+  assert.throws(() => validateCreateInput({
+    name: 'Mixed server', mode: 'gungame', maxPlayers: 16, startMap: 'gg_3way', maps: ['gg_3way', 'de_dust2'],
+  }, 27015, 27115), /do not belong to the gungame category/);
 });
 
 test('rejects max players outside the GoldSrc limit', () => {

@@ -30,6 +30,25 @@ export function parseRconChallenge(response) {
   return match[1];
 }
 
+export function parseStatusPlayers(response) {
+  const players = [];
+  for (const line of String(response).split('\n')) {
+    const match = line.match(/^#\s*\d+\s+"([^"]*)"\s+(\d+)\s+(\S+)\s+(-?\d+)\s+(\S+)\s+(\d+)\s+(\d+)(?:\s+(.+))?$/);
+    if (!match) continue;
+    players.push({
+      name: match[1],
+      userId: Number(match[2]),
+      steamId: match[3],
+      frags: Number(match[4]),
+      time: match[5],
+      ping: Number(match[6]),
+      loss: Number(match[7]),
+      address: match[8] || '',
+    });
+  }
+  return players;
+}
+
 export async function rconCommand(host, port, password, command) {
   if (!host) throw new Error('Server network address is unavailable');
   if (!password) throw new Error('RCON password is not configured');

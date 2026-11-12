@@ -72,6 +72,58 @@
           <p>Create a server or change the active filter.</p>
         </div>
       </section>
+
+      <section id="analyticsSection" class="analytics-section">
+        <div class="section-heading analytics-heading">
+          <div><p class="eyebrow">COMMUNITY DATA</p><h2>Stats &amp; moderation</h2></div>
+          <div class="analytics-tools">
+            <span id="databaseState" class="database-state">Checking MariaDB…</span>
+            <select id="statsServerFilter" aria-label="Filter statistics by server"><option value="">All servers</option></select>
+            <select id="statsSeasonFilter" aria-label="Filter statistics by season"><option value="">All time</option></select>
+            <button id="newSeasonButton" class="button ghost small" type="button">＋ Season</button>
+            <button id="refreshStatsButton" class="icon-button" type="button" title="Refresh statistics">↻</button>
+          </div>
+        </div>
+        <div id="databaseDisabled" class="database-disabled hidden">
+          <strong>MariaDB analytics are optional.</strong>
+          <span>Start with <code>compose.database.yaml</code> to enable fleet stats, shared bans, seasons and achievements.</span>
+        </div>
+        <div id="analyticsContent" class="hidden">
+          <div class="analytics-metrics">
+            <article><span>Players</span><strong id="statsPlayers">0</strong><small>unique Steam IDs</small></article>
+            <article><span>Kills</span><strong id="statsKills">0</strong><small id="statsKd">0.00 fleet K/D</small></article>
+            <article><span>Headshots</span><strong id="statsHeadshots">0</strong><small id="statsHsRate">0% of kills</small></article>
+            <article><span>Playtime</span><strong id="statsPlaytime">0h</strong><small id="statsGgWins">0 GunGame wins</small></article>
+          </div>
+          <div class="analytics-grid">
+            <article class="data-card ranking-card">
+              <header><div><span>LEADERBOARD</span><h3>Top players</h3></div><small>Click a player for history</small></header>
+              <div class="data-table-head ranking-columns"><span># / Player</span><span>K</span><span>D</span><span>K/D</span><span>HS</span><span>Time</span></div>
+              <div id="rankingRows" class="data-rows"></div>
+            </article>
+            <article class="data-card">
+              <header><div><span>ROTATION</span><h3>Popular maps</h3></div></header>
+              <div id="mapStatsRows" class="data-rows compact"></div>
+            </article>
+            <article class="data-card">
+              <header><div><span>ACTIVITY</span><h3>Recent sessions</h3></div></header>
+              <div id="sessionRows" class="data-rows compact"></div>
+            </article>
+            <article class="data-card">
+              <header><div><span>PROGRESSION</span><h3>Achievements</h3></div></header>
+              <div id="achievementRows" class="data-rows compact"></div>
+            </article>
+            <article class="data-card bans-card">
+              <header><div><span>FLEET SAFETY</span><h3>Active bans</h3></div><small>Fleet and server scoped</small></header>
+              <div id="banRows" class="data-rows"></div>
+            </article>
+            <article class="data-card moderation-card">
+              <header><div><span>AUDIT</span><h3>Moderation history</h3></div></header>
+              <div id="moderationRows" class="data-rows compact"></div>
+            </article>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -91,7 +143,11 @@
         </fieldset>
 
         <label class="field"><span>Max players <output id="playersOutput">24</output></span><input id="playersRange" name="maxPlayers" type="range" min="2" max="32" value="24"></label>
-        <label class="field"><span>Start map</span><input id="startMapInput" name="startMap" value="de_dust2" list="mapOptions" pattern="[a-zA-Z0-9_]+" required><datalist id="mapOptions"></datalist></label>
+        <label class="field"><span>Start map</span><select id="startMapInput" name="startMap" required></select></label>
+        <fieldset class="create-maps wide">
+          <div class="map-section-head"><div><span id="createMapCategory" class="map-legend">Classic map rotation</span><small>Only maps for the selected game mode are shown.</small></div><div><button class="text-button" type="button" data-create-maps="all">Select all</button><button class="text-button" type="button" data-create-maps="none">Clear</button></div></div>
+          <div id="createMapGrid" class="map-check-grid"></div>
+        </fieldset>
         <label class="field"><span>Host port <small>blank = automatic</small></span><input name="port" inputmode="numeric" placeholder="Automatic"></label>
         <label class="field"><span>Server password <small>optional</small></span><input name="serverPassword" type="password" maxlength="64"></label>
         <label class="field wide"><span>RCON password <small>blank = securely generated</small></span><input name="rconPassword" type="password" maxlength="64"></label>
@@ -123,6 +179,7 @@
         <div class="admins-summary"><p>Add a Steam ID and choose a role. Changes apply immediately—no restart needed.</p><span id="adminsSource" class="badge"></span></div>
         <div id="adminRows" class="admin-rows"></div>
         <button id="addAdminButton" class="button ghost" type="button">＋ Add admin</button>
+        <label class="toggle fleet-admin-toggle"><input id="fleetAdminScope" type="checkbox"><i></i><span><b>Use as fleet admin list</b><small>Apply to every running server and inherit on newly created servers. Requires MariaDB.</small></span></label>
         <p class="admin-hint">Players can type <code>status</code> in the game console to find their Steam ID. Full admins open the menu with <code>amxmodmenu</code>.</p>
       </div>
       <footer class="dialog-footer admins-footer">
@@ -132,6 +189,48 @@
         <button id="saveAdminsButton" class="button primary" type="submit">Save &amp; reload</button>
       </footer>
     </form>
+  </dialog>
+
+  <dialog id="mapsDialog" class="maps-dialog">
+    <form id="mapsForm">
+      <header class="dialog-header">
+        <div><p class="eyebrow">LIVE MAP CONTROL</p><h2 id="mapsTitle">Server maps</h2></div>
+        <button class="close-button" type="button" data-close-maps aria-label="Close">×</button>
+      </header>
+      <div class="maps-body">
+        <div class="map-status"><div><span>Current map</span><strong id="currentMapName">—</strong></div><span id="mapsSource" class="badge"></span></div>
+        <div class="map-toolbar">
+          <label class="map-search"><span>⌕</span><input id="mapSearch" type="search" placeholder="Filter installed maps…"></label>
+          <div><button id="selectAllMaps" class="text-button" type="button">Select all</button><button id="clearAllMaps" class="text-button" type="button">Clear</button></div>
+        </div>
+        <div id="serverMapGrid" class="server-map-grid"></div>
+        <p class="admin-hint"><span id="mapCategoryHint">Only maps for this server mode are shown.</span> Saving changes the future rotation and map votes. <b>Play now</b> immediately changes the running map for connected players.</p>
+      </div>
+      <footer class="dialog-footer">
+        <button class="button ghost" type="button" data-close-maps>Cancel</button>
+        <button id="saveMapsButton" class="button primary" type="submit">Save rotation</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="playersDialog" class="players-dialog">
+    <header class="dialog-header">
+      <div><p class="eyebrow">LIVE MODERATION</p><h2 id="playersTitle">Connected players</h2></div>
+      <div class="dialog-tools"><button id="refreshPlayersButton" class="icon-button" type="button">↻</button><button class="close-button" type="button" data-close-players aria-label="Close">×</button></div>
+    </header>
+    <div class="players-body">
+      <div class="players-table-head"><span>Player</span><span>Score</span><span>Ping</span><span>Connected</span><span>Actions</span></div>
+      <div id="playersList" class="players-list"><p class="muted">Loading players…</p></div>
+      <p class="admin-hint">With MariaDB enabled, bans use the central fleet database and can be revoked below. Without it they fall back to the server's persistent <code>banned.cfg</code>. Duration 0 means permanent.</p>
+    </div>
+  </dialog>
+
+  <dialog id="profileDialog" class="profile-dialog">
+    <header class="dialog-header">
+      <div><p class="eyebrow">PLAYER INTELLIGENCE</p><h2 id="profileTitle">Player profile</h2></div>
+      <button class="close-button" type="button" data-close-profile aria-label="Close">×</button>
+    </header>
+    <div id="profileBody" class="profile-body"><p class="muted">Loading player…</p></div>
   </dialog>
 
   <dialog id="credentialDialog" class="credential-dialog">
@@ -144,7 +243,7 @@
     <button class="button primary full" data-close-credential type="button">Done</button>
   </dialog>
 
-  <div id="toast" class="toast" role="status"></div>
+  <div id="toast" class="toast" role="status" popover="manual"></div>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

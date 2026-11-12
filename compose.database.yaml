@@ -3,8 +3,19 @@ services:
     environment:
       DB_ENABLED: "1"
     depends_on:
-      mariadb:
-        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
+
+  panel:
+    environment:
+      DB_ENABLED: "1"
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_NAME: ${DB_NAME:-cs16}
+      DB_USER: ${DB_USER:-cs16}
+      DB_PASSWORD: ${DB_PASSWORD:-change-db-password}
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
 
   mariadb:
     image: mariadb:11.8
@@ -22,6 +33,23 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  db-migrate:
+    image: mariadb:11.8
+    restart: "no"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      MYSQL_PWD: ${DB_PASSWORD:-change-db-password}
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_NAME: ${DB_NAME:-cs16}
+      DB_USER: ${DB_USER:-cs16}
+    volumes:
+      - ./database/schema.sql:/schema.sql:ro
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - mariadb --host="$${DB_HOST}" --user="$${DB_USER}" "$${DB_NAME}" < /schema.sql
 
 volumes:
   mariadb_data:
