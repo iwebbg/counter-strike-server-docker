@@ -133,7 +133,7 @@ function serverCard(server) {
     <article class="server-card ${online ? "online" : ""}" data-id="${server.id}">
       <div class="card-head">
         <div class="card-title"><i class="status-orb"></i><div><h3>${escapeHtml(server.name)}</h3><p>${escapeHtml(server.containerName)}</p></div></div>
-        <div class="badges"><span class="badge mode">${escapeHtml(server.mode)}</span><span class="badge">${escapeHtml(server.managedBy)}</span></div>
+        <div class="badges"><span class="badge mode">${escapeHtml(server.mode)}</span><span class="badge">${escapeHtml(server.managedBy)}</span>${server.updateAvailable ? `<span class="badge update">${t("updateAvailable")}</span>` : ""}</div>
       </div>
       <div class="server-data">
         <div><span>${t("status")}</span><strong>${escapeHtml(t(online ? server.health : server.state))}</strong></div>
@@ -149,6 +149,7 @@ function serverCard(server) {
         }
         <button class="button ghost" data-action="logs">${t("logs")}</button>
         ${server.managedBy === "panel" ? `<button class="button ghost" data-action="edit">${t("edit")}</button>` : ""}
+        ${server.updateAvailable ? `<button class="button ghost update-button" data-action="update">${t("update")}</button>` : ""}
         <button class="button ghost" data-action="players" ${online ? "" : `disabled title="${t("viewPlayersHint")}"`}>${t("players")}</button>
         <button class="button ghost" data-action="maps" ${online ? "" : `disabled title="${t("manageMapsHint")}"`}>${t("maps")}</button>
         <button class="button ghost" data-action="admins" ${online ? "" : `disabled title="${t("manageAdminsHint")}"`}>${t("admins")}</button>
@@ -445,6 +446,22 @@ serverGrid.addEventListener("click", async (event) => {
 
   if (action === "edit") {
     await openEdit(server);
+    return;
+  }
+
+  if (action === "update") {
+    if (!confirm(t("updateConfirm", { name: server.name }))) return;
+    button.disabled = true;
+    button.textContent = t("updating");
+    try {
+      await api(`/api/servers/${server.id}/image`, { method: "PUT" });
+      notify(t("serverImageUpdated", { name: server.name }));
+      await refresh(true);
+    } catch (error) {
+      notify(error.message, true);
+      button.disabled = false;
+      button.textContent = t("update");
+    }
     return;
   }
 

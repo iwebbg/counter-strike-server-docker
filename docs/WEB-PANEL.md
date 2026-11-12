@@ -84,6 +84,15 @@ password може да бъде премахната с отделната от�
 Compose-managed primary server умишлено няма **Edit**: неговата конфигурация
 остава собственост на Compose/`.env` и се променя чрез recreate на stack-а.
 
+## Update на server image
+
+Панелът сравнява immutable image ID на всяка panel-managed инстанция с текущия
+ID на `SERVER_IMAGE`. След нов build/pull картата показва **Update available** и
+бутон **Update**. Операцията създава replacement с новия image, запазва
+environment, port, network и всички named volumes, след което възстановява
+предишното running/stopped състояние. При неуспех се прави rollback към стария
+image. Compose-managed primary server се обновява чрез Compose, не от панела.
+
 ## Управление на администратори
 
 При работещ сървър натиснете **Admins** в неговата карта. Можете да добавяте и

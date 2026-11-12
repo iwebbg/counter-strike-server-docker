@@ -32,7 +32,7 @@
 - [x] ban history/unban UI с причина, срок и администратор;
 - [x] MariaDB-backed moderation history за fleet-wide bans;
 - [x] server edit workflow с controlled recreate и запазване на volumes;
-- [ ] image update/migrate workflow със запазване на volumes;
+- [x] image update/migrate workflow със version detection, rollback и запазване на volumes;
 - [ ] map package uploader с validation и rebuild workflow;
 - [ ] backup/restore/export на AMXX data, logs и database;
 - [ ] audit log екран и отделни panel operator роли.

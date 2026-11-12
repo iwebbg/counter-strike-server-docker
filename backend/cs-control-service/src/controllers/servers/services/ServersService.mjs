@@ -298,6 +298,7 @@ async function applyInheritedAdmins(id) {
 async function listServers() {
   const filters = encodeURIComponent(JSON.stringify({ label: [managedLabel] }));
   const containers = await docker.request("GET", `/containers/json?all=1&filters=${filters}`);
+  const targetImage = await docker.request("GET", `/images/${encodeURIComponent(config.image)}/json`).catch(() => null);
 
   const servers = await Promise.all(
     containers.map(async (container) => {
@@ -323,6 +324,13 @@ async function listServers() {
         liveMaxPlayers: game?.maxPlayers ?? null,
         map: game?.map || null,
         startedAt: inspect.State?.StartedAt || null,
+        image: inspect.Config?.Image || "",
+        imageId: inspect.Image || "",
+        targetImageId: targetImage?.Id || null,
+        updateAvailable:
+          inspect.Config?.Labels?.["com.cs16.managed-by"] === "panel" &&
+          Boolean(targetImage?.Id) &&
+          inspect.Image !== targetImage.Id,
       };
     }),
   );
@@ -383,11 +391,11 @@ function networkConfig(inspect) {
   return { EndpointsConfig: Object.fromEntries(networks.map((name) => [name, {}])) };
 }
 
-function containerPayload(inspect, { env, labels, port }) {
+function containerPayload(inspect, { env, labels, port, image = inspect.Config.Image }) {
   const currentBindings = inspect.HostConfig?.PortBindings || {};
   const hostIp = currentBindings["27015/udp"]?.[0]?.HostIp || "0.0.0.0";
   return {
-    Image: inspect.Config.Image,
+    Image: image,
     Env: [...env].map(([key, value]) => `${key}=${value}`),
     Labels: labels,
     ExposedPorts: inspect.Config.ExposedPorts || { "27015/udp": {}, "27015/tcp": {} },
@@ -655,6 +663,69 @@ export async function updateServer(id, input) {
       );
       if (wasRunning) await docker.request("POST", `/containers/${restored.Id}/start`);
       rollbackMessage = " The original server configuration was restored.";
+    } catch (rollbackError) {
+      rollbackMessage = ` Automatic rollback failed: ${rollbackError.message}.`;
+    }
+    throw new Error(`${error.message}.${rollbackMessage}`);
+  }
+}
+
+export async function migrateServerImage(id) {
+  const inspect = await assertControlled(id);
+  assertPanelManaged(inspect);
+  const targetImage = await docker.request("GET", `/images/${encodeURIComponent(config.image)}/json`);
+  if (inspect.Image === targetImage.Id) {
+    return { id: inspect.Id, status: "up-to-date", restarted: false, volumesPreserved: true };
+  }
+
+  const wasRunning = Boolean(inspect.State?.Running);
+  const originalName = inspect.Name.replace(/^\//, "");
+  const temporaryName = `${originalName}-migrate-${crypto.randomUUID().slice(0, 8)}`;
+  const env = environmentMap(inspect);
+  const labels = { ...(inspect.Config?.Labels || {}) };
+  const port = publishedPort(inspect);
+  const originalPayload = containerPayload(inspect, { env, labels, port });
+  const targetPayload = containerPayload(inspect, { env, labels, port, image: config.image });
+  let replacement = null;
+  let oldRemoved = false;
+
+  try {
+    replacement = await docker.request(
+      "POST",
+      `/containers/create?name=${encodeURIComponent(temporaryName)}`,
+      targetPayload,
+    );
+    if (wasRunning) await docker.request("POST", `/containers/${inspect.Id}/stop?t=30`);
+    await docker.request("DELETE", `/containers/${inspect.Id}?v=0`);
+    oldRemoved = true;
+    await docker.request("POST", `/containers/${replacement.Id}/rename?name=${encodeURIComponent(originalName)}`);
+    if (wasRunning) await docker.request("POST", `/containers/${replacement.Id}/start`);
+    return {
+      id: replacement.Id,
+      status: "updated",
+      previousImageId: inspect.Image,
+      imageId: targetImage.Id,
+      restarted: wasRunning,
+      volumesPreserved: true,
+    };
+  } catch (error) {
+    if (replacement?.Id) {
+      await docker.request("DELETE", `/containers/${replacement.Id}?force=1&v=0`).catch(() => {});
+    }
+    if (!oldRemoved) {
+      if (wasRunning) await docker.request("POST", `/containers/${inspect.Id}/start`).catch(() => {});
+      throw error;
+    }
+
+    let rollbackMessage = "";
+    try {
+      const restored = await docker.request(
+        "POST",
+        `/containers/create?name=${encodeURIComponent(originalName)}`,
+        originalPayload,
+      );
+      if (wasRunning) await docker.request("POST", `/containers/${restored.Id}/start`);
+      rollbackMessage = " The previous image and server configuration were restored.";
     } catch (rollbackError) {
       rollbackMessage = ` Automatic rollback failed: ${rollbackError.message}.`;
     }
