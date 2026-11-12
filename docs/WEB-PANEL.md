@@ -1,6 +1,6 @@
 # CS Control Panel
 
-CS Control е opt-in локален dashboard за управление на много Counter-Strike 1.6
+CS Control е опционален уеб контролен панел за управление на много Counter-Strike 1.6
 containers. Той е в Compose profile `panel`; без този profile проектът продължава
 да работи като обикновена едносървърна Compose конфигурация.
 

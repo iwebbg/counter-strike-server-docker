@@ -71,7 +71,7 @@ Docker Compose, така и с опционален интерактивен CS 
 ### CS Control Panel
 
 - opt-in Compose profile `panel`, bind-нат по подразбиране само към `127.0.0.1`;
-- MariaDB-backed операторски login с access/refresh tokens, HttpOnly cookie и
+- MariaDB-backed администраторски login с access/refresh tokens, HttpOnly cookie и
   Redis session cache;
 - responsive fleet dashboard за desktop и mobile;
 - A2S UDP status за карта, players и max players;
@@ -153,7 +153,7 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 ## Важни ограничения
 
 - Docker socket е силно привилегирован; вграденият NGINX добавя TLS, но за
-  публичен remote достъп все още се препоръчват силна операторска парола,
+  публичен remote достъп все още се препоръчват силна администраторска парола,
   rate limiting и VPN/identity защита;
 - admin editor работи само при стартиран server, защото трябва да изпълни live
   RCON reload;

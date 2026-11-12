@@ -58,8 +58,8 @@
 - [ ] SafeNameAndChat или еквивалентна validation защита;
 - [ ] rate limits за moderation endpoints и login attempts;
 - [x] NGINX reverse proxy с автоматичен self-signed/Let's Encrypt TLS и
-  конфигурируем външен HTTPS порт;
-- [ ] VPN/SSO, identity provider и trusted proxy hardening за remote оператори.
+      конфигурируем външен HTTPS порт;
+- [ ] VPN/SSO, identity provider и trusted proxy hardening за remote администратори.
 
 ## FragZone Server Link
 

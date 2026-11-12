@@ -23,7 +23,7 @@ environment променливите, генерира `server.cfg`, избир�
 HLDS. Така режимът не изисква различен image.
 
 MariaDB е Compose override и не е задължителна за game-server-only stack-а. CS
-Control я използва за операторските акаунти и OAuth sessions. Game server-ът
+Control я използва за администраторските акаунти и OAuth sessions. Game server-ът
 може да работи напълно самостоятелно, а SQL plugin-ът се добавя в `plugins.ini`
 само при `DB_ENABLED=1`.
 
@@ -43,4 +43,3 @@ docker compose logs -f server
 
 Steam App 90 понякога изисква повторен update; Dockerfile прави до три опита и
 прекъсва build-а, ако `cstrike/liblist.gam` липсва.
-
