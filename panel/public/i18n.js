@@ -1,0 +1,190 @@
+const STORAGE_KEY = 'cs16-panel-language';
+const supported = ['en', 'bg'];
+const textOriginals = new WeakMap();
+const attributeOriginals = new WeakMap();
+
+const bg = {
+  'Language': 'Език',
+  'LOCAL OPERATIONS CONSOLE': 'ЛОКАЛНА ОПЕРАТОРСКА КОНЗОЛА',
+  'Enter the private panel token configured on this Docker host.': 'Въведете частния token за панела, конфигуриран на този Docker host.',
+  'Panel token': 'Token за панела',
+  'Unlock dashboard': 'Отключи панела',
+  'Docker connected': 'Docker е свързан',
+  'Refresh servers': 'Обнови сървърите',
+  'Lock': 'Заключи',
+  'FLEET OVERVIEW': 'ПРЕГЛЕД НА МРЕЖАТА',
+  'Your servers.': 'Твоите сървъри.',
+  'One command center.': 'Един команден център.',
+  'Launch, monitor and operate isolated Counter-Strike 1.6 instances without touching the terminal.': 'Стартирай, наблюдавай и управлявай изолирани Counter-Strike 1.6 инстанции без терминал.',
+  'New server': 'Нов сървър',
+  'Fleet metrics': 'Показатели на мрежата',
+  'Total servers': 'Общо сървъри',
+  'controlled instances': 'управлявани инстанции',
+  'Online': 'Онлайн',
+  'accepting players': 'приемащи играчи',
+  'Players': 'Играчи',
+  'Port pool': 'Портове',
+  'automatic allocation': 'автоматично разпределение',
+  'INSTANCES': 'ИНСТАНЦИИ',
+  'Server fleet': 'Мрежа от сървъри',
+  'Filter servers': 'Филтрирай сървърите',
+  'All': 'Всички',
+  'Stopped': 'Спрени',
+  'No servers in this view': 'Няма сървъри в този изглед',
+  'Create a server or change the active filter.': 'Създай сървър или промени активния филтър.',
+  'COMMUNITY DATA': 'ДАННИ ЗА ОБЩНОСТТА',
+  'Stats & moderation': 'Статистика и модерация',
+  'Checking MariaDB…': 'Проверка на MariaDB…',
+  'Filter statistics by server': 'Филтрирай статистиката по сървър',
+  'All servers': 'Всички сървъри',
+  'Filter statistics by season': 'Филтрирай статистиката по сезон',
+  'All time': 'За цялото време',
+  'Season': 'Сезон', '＋ Season': '＋ Сезон', '＋ Add admin': '＋ Добави админ',
+  'Refresh statistics': 'Обнови статистиката',
+  'MariaDB analytics are optional.': 'MariaDB анализите са опционални.',
+  'Players': 'Играчи', 'Kills': 'Убийства', 'Headshots': 'Хедшоти', 'Playtime': 'Игрово време',
+  'unique Steam IDs': 'уникални Steam ID',
+  'LEADERBOARD': 'КЛАСАЦИЯ', 'Top players': 'Топ играчи', 'Click a player for history': 'Натисни играч за история',
+  '# / Player': '# / Играч', 'Time': 'Време',
+  'ROTATION': 'РОТАЦИЯ', 'Popular maps': 'Популярни карти',
+  'ACTIVITY': 'АКТИВНОСТ', 'Recent sessions': 'Последни сесии',
+  'PROGRESSION': 'ПРОГРЕС', 'Achievements': 'Постижения',
+  'FLEET SAFETY': 'СИГУРНОСТ', 'Active bans': 'Активни банове', 'Fleet and server scoped': 'За мрежата или сървъра',
+  'AUDIT': 'ОДИТ', 'Moderation history': 'История на модерацията',
+  'DEPLOY INSTANCE': 'СЪЗДАЙ ИНСТАНЦИЯ', 'New CS server': 'Нов CS сървър', 'Close': 'Затвори',
+  'Server name': 'Име на сървъра', 'Game mode': 'Режим', 'Competitive CS 1.6': 'Класически CS 1.6', 'Progressive weapons': 'Прогресивни оръжия',
+  'Max players': 'Максимум играчи', 'Start map': 'Начална карта', 'Only maps for the selected game mode are shown.': 'Показват се само картите за избрания режим.',
+  'Select all': 'Избери всички', 'Clear': 'Изчисти', 'Host port': 'Host порт', 'blank = automatic': 'празно = автоматичен', 'Automatic': 'Автоматичен',
+  'Server password': 'Парола за сървъра', 'optional': 'опционално', 'RCON password': 'RCON парола', 'blank = securely generated': 'празно = сигурно генерирана',
+  'Full admin Steam IDs': 'Steam ID на пълни админи', 'optional, comma separated': 'опционално, разделени със запетая',
+  'Start immediately': 'Стартирай веднага', 'Create and boot the server in one step': 'Създай и стартирай сървъра в една стъпка',
+  'Cancel': 'Отказ', 'Create server': 'Създай сървър',
+  'LIVE OUTPUT': 'LIVE ИЗХОД', 'Server logs': 'Логове на сървъра', 'Loading…': 'Зареждане…',
+  'LIVE AMX MOD X ACCESS': 'LIVE AMX MOD X ДОСТЪП', 'Server admins': 'Админи на сървъра',
+  'Add a Steam ID and choose a role. Changes apply immediately—no restart needed.': 'Добави Steam ID и избери роля. Промените се прилагат веднага, без рестарт.',
+  'Add admin': 'Добави админ', 'Use as fleet admin list': 'Използвай като общ списък с админи',
+  'Apply to every running server and inherit on newly created servers. Requires MariaDB.': 'Приложи към всички работещи сървъри и наследи при новите. Изисква MariaDB.',
+  'Reset to .env': 'Върни от .env', 'Save & reload': 'Запази и презареди',
+  'LIVE MAP CONTROL': 'LIVE УПРАВЛЕНИЕ НА КАРТИ', 'Server maps': 'Карти на сървъра', 'Current map': 'Текуща карта',
+  'Filter installed maps…': 'Филтрирай инсталираните карти…', 'Only maps for this server mode are shown.': 'Показват се само картите за режима на сървъра.',
+  'Save rotation': 'Запази ротацията',
+  'LIVE MODERATION': 'LIVE МОДЕРАЦИЯ', 'Connected players': 'Свързани играчи', 'Player': 'Играч', 'Score': 'Точки', 'Ping': 'Пинг', 'Connected': 'Свързан', 'Actions': 'Действия',
+  'Loading players…': 'Зареждане на играчите…',
+  'PLAYER INTELLIGENCE': 'ПРОФИЛ НА ИГРАЧА', 'Player profile': 'Профил на играча', 'Loading player…': 'Зареждане на играча…',
+  'SERVER CREATED': 'СЪРВЪРЪТ Е СЪЗДАДЕН', 'Instance is ready': 'Инстанцията е готова',
+  'Save this RCON password now. It is shown only once in the panel.': 'Запази RCON паролата сега. Тя се показва само веднъж в панела.',
+  'Copy': 'Копирай', 'Done': 'Готово',
+  'healthy': 'работи', 'starting': 'стартира', 'running': 'работи', 'exited': 'спрян', 'unhealthy': 'има проблем',
+  'kicked': 'кикнат', 'banned': 'баннат',
+  'Saving changes the future rotation and map votes.': 'Запазването променя бъдещата ротация и гласуването за карти.',
+  'immediately changes the running map for connected players.': 'сменя веднага текущата карта за свързаните играчи.',
+  'Players can type': 'Играчите могат да напишат',
+  'in the game console to find their Steam ID. Full admins open the menu with': 'в игровата конзола, за да намерят своя Steam ID. Пълните админи отварят менюто с',
+  'With MariaDB enabled, bans use the central fleet database and can be revoked below. Without it they fall back to the server\'s persistent': 'При включена MariaDB бановете използват централната база и могат да бъдат отменени по-долу. Без нея се използва постоянният файл на сървъра',
+  'Duration 0 means permanent.': 'Продължителност 0 означава постоянен бан.',
+};
+
+const dynamic = {
+  en: {
+    requestFailed: 'Request failed ({status})', starting: 'starting…', loading: 'Loading…', status: 'Status', players: 'Players', map: 'Map', port: 'Port',
+    stop: 'Stop', restart: 'Restart', start: 'Start', logs: 'Logs', maps: 'Maps', admins: 'Admins', remove: 'Remove',
+    viewPlayersHint: 'Start the server to view players', manageMapsHint: 'Start the server to manage maps', manageAdminsHint: 'Start the server to manage admins',
+    onlineSlots: '{count} online slots', dockerConnected: 'Docker connected', connectionLost: 'Connection lost',
+    mapRotation: '{mode} map rotation · {count} maps', selectMap: 'Select at least one map for the rotation.', deploying: 'Deploying…', createServer: 'Create server',
+    serverLogs: '{name} logs', noLogs: 'No logs available yet.', removeConfirm: 'Remove {name}? Its data volumes will be preserved.',
+    removed: 'Server removed; data volumes were preserved.', actionRequested: '{name}: {action} requested.',
+    steamId: 'Steam ID', role: 'Role', fullAdmin: 'Full admin', moderator: 'Moderator', mapsVotes: 'Maps & votes', customFlags: 'Custom flags', flags: 'Flags', removeAdmin: 'Remove admin',
+    serverAdmins: '{name} admins', loadingAdmins: 'Loading admins…', panelManaged: 'PANEL MANAGED', envDefaults: '.ENV DEFAULTS', databaseFleet: 'DATABASE FLEET',
+    fleetAdminsSaved: '{count} fleet admin(s) applied to {servers} running server(s).', adminsSaved: '{count} admin(s) saved and reloaded live.',
+    resetAdminsConfirm: 'Replace panel-managed admins with the original AMXX_ADMINS from .env?', adminsReset: 'Admins reset to .env and reloaded live.',
+    nowPlaying: 'NOW PLAYING', playNow: 'PLAY NOW', serverMaps: '{name} maps', loadingMaps: 'Loading installed maps…', unknown: 'Unknown',
+    categoryMaps: 'Only {category} category maps are shown.', mapsSaved: '{count} map(s) saved to the rotation.', changeMapConfirm: 'Change {name} to {map} now? Connected players will be moved immediately.', changingMap: '{name}: changing to {map}.',
+    kick: 'Kick', ban: 'Ban', noPlayers: 'No players are connected right now.', serverPlayers: '{name} players',
+    banMinutes: 'Ban {name} for how many minutes? Use 0 for permanent.', banDurationError: 'Ban duration must be between 0 and 525600 minutes.',
+    banScope: 'Ban scope: type "fleet" for every server or "server" for this server only.', banScopeError: 'Ban scope must be fleet or server.', actionReason: '{action} reason for {name}:', ruleViolation: 'Rule violation', adminRemoved: 'Removed by an administrator', playerAction: '{name} was {status}.',
+    online: 'online', allServers: 'All servers', allTime: 'All time', active: 'active', mariaConnected: 'MariaDB connected', mariaUnavailable: 'MariaDB unavailable', mariaDisabled: 'MariaDB disabled', dataError: 'Data error',
+    fleetKd: '{value} fleet K/D', killsPercent: '{value}% of kills', ggWins: '{count} GunGame wins',
+    noPlayerStats: 'No player statistics yet.', roundsKills: '{rounds} rounds · {kills} kills', plays: '{count} plays', noMapActivity: 'No map activity yet.', noSessions: 'No sessions yet.',
+    achievementsProgress: 'Achievements will appear as players progress.', serverScope: 'Server {id}', entireFleet: 'Entire fleet', permanent: 'PERMANENT', revoke: 'Revoke', noBans: 'No active database bans.', noModeration: 'No moderation events yet.',
+    killsDeaths: 'Kills / Deaths', playtime: 'Playtime', gungameWinsLabel: 'GunGame wins', knownNames: 'Known names', seenTimes: 'Seen {count} times', noAliases: 'No aliases.', noAchievements: 'No achievements yet.', achievements: 'Achievements',
+    newSeason: 'New season name. The current active season will be closed:', activeSeason: '{name} is now the active season.', revokeConfirm: 'Revoke this database ban?', revoked: 'Ban revoked. Existing local banned.cfg entries may require manual removal.', copied: 'RCON password copied.', sessionExpired: 'Session expired. Enter the panel token again.',
+  },
+  bg: {
+    requestFailed: 'Заявката е неуспешна ({status})', starting: 'стартира…', loading: 'Зареждане…', status: 'Статус', players: 'Играчи', map: 'Карта', port: 'Порт',
+    stop: 'Спри', restart: 'Рестарт', start: 'Старт', logs: 'Логове', maps: 'Карти', admins: 'Админи', remove: 'Премахни',
+    viewPlayersHint: 'Стартирай сървъра, за да видиш играчите', manageMapsHint: 'Стартирай сървъра, за да управляваш картите', manageAdminsHint: 'Стартирай сървъра, за да управляваш админите',
+    onlineSlots: '{count} онлайн слота', dockerConnected: 'Docker е свързан', connectionLost: 'Връзката е прекъсната',
+    mapRotation: 'Ротация {mode} · {count} карти', selectMap: 'Избери поне една карта за ротацията.', deploying: 'Стартиране…', createServer: 'Създай сървър',
+    serverLogs: 'Логове на {name}', noLogs: 'Все още няма логове.', removeConfirm: 'Да се премахне ли {name}? Data volumes ще бъдат запазени.',
+    removed: 'Сървърът е премахнат; data volumes са запазени.', actionRequested: '{name}: заявено действие {action}.',
+    steamId: 'Steam ID', role: 'Роля', fullAdmin: 'Пълен админ', moderator: 'Модератор', mapsVotes: 'Карти и гласуване', customFlags: 'Собствени флагове', flags: 'Флагове', removeAdmin: 'Премахни админа',
+    serverAdmins: 'Админи на {name}', loadingAdmins: 'Зареждане на админите…', panelManaged: 'УПРАВЛЯВА СЕ ОТ ПАНЕЛА', envDefaults: '.ENV НАСТРОЙКИ', databaseFleet: 'ОБЩИ ОТ БАЗАТА',
+    fleetAdminsSaved: '{count} общи админи са приложени към {servers} работещи сървъра.', adminsSaved: '{count} админи са запазени и презаредени на живо.',
+    resetAdminsConfirm: 'Да се заменят ли админите с оригиналните AMXX_ADMINS от .env?', adminsReset: 'Админите са върнати от .env и презаредени на живо.',
+    nowPlaying: 'ИГРАЕ СЕ СЕГА', playNow: 'ИГРАЙ СЕГА', serverMaps: 'Карти на {name}', loadingMaps: 'Зареждане на инсталираните карти…', unknown: 'Неизвестна',
+    categoryMaps: 'Показват се само карти от категория {category}.', mapsSaved: '{count} карти са запазени в ротацията.', changeMapConfirm: 'Да се смени ли картата на {name} с {map}? Свързаните играчи ще бъдат преместени веднага.', changingMap: '{name}: смяна към {map}.',
+    kick: 'Кик', ban: 'Бан', noPlayers: 'В момента няма свързани играчи.', serverPlayers: 'Играчи на {name}',
+    banMinutes: 'За колко минути да бъде баннат {name}? Използвай 0 за постоянен бан.', banDurationError: 'Продължителността трябва да е между 0 и 525600 минути.',
+    banScope: 'Обхват: напиши "fleet" за всички или "server" само за този сървър.', banScopeError: 'Обхватът трябва да бъде fleet или server.', actionReason: 'Причина за {action} на {name}:', ruleViolation: 'Нарушение на правилата', adminRemoved: 'Премахнат от администратор', playerAction: '{name} беше {status}.',
+    online: 'онлайн', allServers: 'Всички сървъри', allTime: 'За цялото време', active: 'активен', mariaConnected: 'MariaDB е свързана', mariaUnavailable: 'MariaDB не е достъпна', mariaDisabled: 'MariaDB е изключена', dataError: 'Грешка в данните',
+    fleetKd: '{value} общо K/D', killsPercent: '{value}% от убийствата', ggWins: '{count} GunGame победи',
+    noPlayerStats: 'Все още няма статистика за играчи.', roundsKills: '{rounds} рунда · {kills} убийства', plays: '{count} игри', noMapActivity: 'Все още няма активност по карти.', noSessions: 'Все още няма сесии.',
+    achievementsProgress: 'Постиженията ще се появят с прогреса на играчите.', serverScope: 'Сървър {id}', entireFleet: 'Цялата мрежа', permanent: 'ПОСТОЯНЕН', revoke: 'Отмени', noBans: 'Няма активни банове в базата.', noModeration: 'Все още няма действия по модерация.',
+    killsDeaths: 'Убийства / Умирания', playtime: 'Игрово време', gungameWinsLabel: 'GunGame победи', knownNames: 'Познати имена', seenTimes: 'Видян {count} пъти', noAliases: 'Няма други имена.', noAchievements: 'Все още няма постижения.', achievements: 'Постижения',
+    newSeason: 'Име на новия сезон. Текущият активен сезон ще бъде затворен:', activeSeason: '{name} вече е активният сезон.', revokeConfirm: 'Да се отмени ли този бан от базата?', revoked: 'Банът е отменен. Локални banned.cfg записи може да изискват ръчно премахване.', copied: 'RCON паролата е копирана.', sessionExpired: 'Сесията е изтекла. Въведи token-а отново.',
+  },
+};
+
+let language = supported.includes(localStorage.getItem(STORAGE_KEY)) ? localStorage.getItem(STORAGE_KEY) : (navigator.language?.toLowerCase().startsWith('bg') ? 'bg' : 'en');
+
+function interpolate(value, variables) {
+  return String(value).replace(/\{(\w+)\}/g, (_, key) => variables[key] ?? `{${key}}`);
+}
+
+export function t(key, variables = {}) {
+  return interpolate(dynamic[language]?.[key] ?? dynamic.en[key] ?? (language === 'bg' ? bg[key] : key), variables);
+}
+
+export function getLanguage() { return language; }
+export function getLocale() { return language === 'bg' ? 'bg-BG' : 'en-US'; }
+
+export function translateDocument(root = document) {
+  document.documentElement.lang = language;
+  document.title = language === 'bg' ? 'CS Control — Управление на сървъри' : 'CS Control — Server Operations';
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach((node) => {
+    if (['SCRIPT', 'STYLE'].includes(node.parentElement?.tagName)) return;
+    if (!textOriginals.has(node)) textOriginals.set(node, node.nodeValue);
+    const original = textOriginals.get(node);
+    const trimmed = original.trim();
+    if (!trimmed) return;
+    const translated = language === 'bg' ? (bg[trimmed] ?? trimmed) : trimmed;
+    node.nodeValue = original.replace(trimmed, translated);
+  });
+  root.querySelectorAll?.('[placeholder], [title], [aria-label]').forEach((element) => {
+    if (!attributeOriginals.has(element)) attributeOriginals.set(element, {});
+    const originals = attributeOriginals.get(element);
+    ['placeholder', 'title', 'aria-label'].forEach((attribute) => {
+      if (!element.hasAttribute(attribute)) return;
+      if (!(attribute in originals)) originals[attribute] = element.getAttribute(attribute);
+      const original = originals[attribute];
+      element.setAttribute(attribute, language === 'bg' ? (bg[original] ?? original) : original);
+    });
+  });
+  document.querySelectorAll('[data-language-selector]').forEach((select) => { select.value = language; });
+}
+
+export function setLanguage(next) {
+  if (!supported.includes(next) || next === language) return;
+  language = next;
+  localStorage.setItem(STORAGE_KEY, language);
+  translateDocument();
+  window.dispatchEvent(new CustomEvent('i18n:change', { detail: { language } }));
+}
+
+export function initI18n() {
+  document.querySelectorAll('[data-language-selector]').forEach((select) => select.addEventListener('change', () => setLanguage(select.value)));
+  translateDocument();
+}

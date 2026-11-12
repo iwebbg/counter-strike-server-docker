@@ -13,6 +13,7 @@
 
   <section id="authView" class="auth-view">
     <form id="authForm" class="auth-card">
+      <label class="language-control auth-language"><span class="sr-only">Language</span><select data-language-selector aria-label="Language"><option value="en">EN</option><option value="bg">BG</option></select></label>
       <div class="brand-mark" aria-hidden="true"><span>CS</span></div>
       <p class="eyebrow">LOCAL OPERATIONS CONSOLE</p>
       <h1>CS Control</h1>
@@ -34,6 +35,7 @@
       </a>
       <div class="topbar-actions">
         <span id="connectionState" class="connection"><i></i> Docker connected</span>
+        <label class="language-control"><span class="sr-only">Language</span><select data-language-selector aria-label="Language"><option value="en">EN</option><option value="bg">BG</option></select></label>
         <button id="refreshButton" class="icon-button" type="button" title="Refresh servers" aria-label="Refresh servers">↻</button>
         <button id="logoutButton" class="button ghost small" type="button">Lock</button>
       </div>
@@ -101,15 +103,15 @@
               <div class="data-table-head ranking-columns"><span># / Player</span><span>K</span><span>D</span><span>K/D</span><span>HS</span><span>Time</span></div>
               <div id="rankingRows" class="data-rows"></div>
             </article>
-            <article class="data-card">
+            <article class="data-card map-stats-card">
               <header><div><span>ROTATION</span><h3>Popular maps</h3></div></header>
               <div id="mapStatsRows" class="data-rows compact"></div>
             </article>
-            <article class="data-card">
+            <article class="data-card sessions-card">
               <header><div><span>ACTIVITY</span><h3>Recent sessions</h3></div></header>
               <div id="sessionRows" class="data-rows compact"></div>
             </article>
-            <article class="data-card">
+            <article class="data-card achievements-card">
               <header><div><span>PROGRESSION</span><h3>Achievements</h3></div></header>
               <div id="achievementRows" class="data-rows compact"></div>
             </article>

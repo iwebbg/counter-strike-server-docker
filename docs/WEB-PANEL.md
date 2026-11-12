@@ -4,6 +4,11 @@ CS Control е opt-in локален dashboard за управление на м�
 containers. Той е в Compose profile `panel`; без този profile проектът продължава
 да работи като обикновена едносървърна Compose конфигурация.
 
+Интерфейсът поддържа English и Български от dropdown-а в горната навигация.
+Изборът се пази локално в browser-а. Stats dashboard-ът използва responsive
+подредба: full-width leaderboard, равен ред за карти/сесии/постижения и общ ред
+за bans/moderation.
+
 ## Стартиране и спиране
 
 Генерирайте силен token и го поставете в `.env`:

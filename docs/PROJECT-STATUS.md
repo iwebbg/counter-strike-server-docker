@@ -139,6 +139,8 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
   production използват отделни Compose overlays и NGINX конфигурации;
 - external overlay публикува NGINX само чрез alias в existing Docker network,
   без host port и без директно излагане на `panel:8080`;
+- Control Panel има dependency-free EN/BG i18n dropdown с persistent browser
+  избор и преработена responsive analytics grid подредба;
 - panel auth е проверен с валиден и невалиден token;
 - динамично създадена тестова инстанция е проверена и премахната след smoke test.
 

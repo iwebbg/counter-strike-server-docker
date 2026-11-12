@@ -232,6 +232,7 @@ Docker Compose не може надеждно сам да открива и ре
 - избор с checkbox-и кои карти участват в rotation-а;
 - start/stop/restart и live logs;
 - health, текуща карта и A2S player count;
+- EN/BG интерфейс с persistent language dropdown;
 - автоматично генерирана RCON парола;
 - live редактор за AMXX администратори без рестарт;
 - live map manager с rotation и безопасен `Play now` през RCON;
