@@ -18,6 +18,12 @@ import createRouter from "./helpers/router.mjs";
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const publicDirectory = path.resolve(directory, "../../public");
 
+export function jsonValueReplacer(key, value) {
+  if (typeof value !== "bigint") return value;
+  const number = Number(value);
+  return Number.isSafeInteger(number) ? number : value.toString();
+}
+
 function jsonOk(code = 200, message = "", data = {}) {
   return this.status(code).json({ success: true, message, data });
 }
@@ -56,6 +62,7 @@ class Server {
 
   async init() {
     this.app = express();
+    this.app.set("json replacer", jsonValueReplacer);
     this.app.set("trust proxy", "loopback, linklocal, uniquelocal");
     this.app.use((req, res, next) => {
       req.requestId = req.headers["x-request-id"] || crypto.randomUUID();

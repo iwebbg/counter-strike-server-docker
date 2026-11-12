@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import signout from "../src/controllers/users/rest/signout.mjs";
 import { sessionCookieClearOptions, sessionCookieOptions } from "../src/controllers/users/services/sessionCookie.mjs";
-import { csrfRequestAllowed } from "../src/utils/Server.mjs";
+import { csrfRequestAllowed, jsonValueReplacer } from "../src/utils/Server.mjs";
 
 test("session cookie clear options never preserve the positive max age", () => {
   const request = { secure: false };
@@ -56,4 +56,9 @@ test("CSRF accepts the browser origin when the reverse proxy preserves its publi
   request.get = (name) =>
     ({ host: "localhost", origin: "http://localhost:8080", "sec-fetch-site": "same-origin" })[name];
   assert.equal(csrfRequestAllowed(request), false);
+});
+
+test("JSON serialization preserves MariaDB BIGINT values without throwing", () => {
+  assert.equal(JSON.stringify({ count: 42n }, jsonValueReplacer), '{"count":42}');
+  assert.equal(JSON.stringify({ count: 9007199254740993n }, jsonValueReplacer), '{"count":"9007199254740993"}');
 });
