@@ -3,8 +3,8 @@ services:
     environment:
       DB_ENABLED: "1"
     depends_on:
-      db-migrate:
-        condition: service_completed_successfully
+      mariadb:
+        condition: service_healthy
 
   panel:
     environment:
@@ -14,10 +14,8 @@ services:
       DB_USER: ${DB_USER:-cs16}
       DB_PASSWORD: ${DB_PASSWORD:-change-db-password}
     depends_on:
-      db-migrate:
-        condition: service_completed_successfully
-      panel-bootstrap-admin:
-        condition: service_completed_successfully
+      mariadb:
+        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -31,52 +29,13 @@ services:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change-root-password}
     volumes:
       - mariadb_data:/var/lib/mysql
+      - ./backend/cs-control-service/src/database/baseline.sql:/docker-entrypoint-initdb.d/010-cs16-baseline.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
-
-  db-migrate:
-    build:
-      context: .
-      dockerfile: backend/cs-control-service/docker/prod/Dockerfile
-    image: cs16-control-panel:local
-    restart: "no"
-    depends_on:
-      mariadb:
-        condition: service_healthy
-    environment:
-      NODE_ENV: production
-      DB_ENABLED: "1"
-      DB_HOST: ${DB_HOST:-mariadb}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_NAME: ${DB_NAME:-cs16}
-      DB_USER: ${DB_USER:-cs16}
-      DB_PASSWORD: ${DB_PASSWORD:-change-db-password}
-      DB_MULTIPLE_STATEMENTS: "1"
-    command: ["npm", "run", "migrate"]
-
-  panel-bootstrap-admin:
-    profiles: ["panel"]
-    image: cs16-control-panel:local
-    restart: "no"
-    depends_on:
-      db-migrate:
-        condition: service_completed_successfully
-    environment:
-      NODE_ENV: production
-      DB_ENABLED: "1"
-      DB_HOST: ${DB_HOST:-mariadb}
-      DB_PORT: ${DB_PORT:-3306}
-      DB_NAME: ${DB_NAME:-cs16}
-      DB_USER: ${DB_USER:-cs16}
-      DB_PASSWORD: ${DB_PASSWORD:-change-db-password}
-      BOOTSTRAP_ADMIN_NAME: ${PANEL_ADMIN_NAME:-Administrator}
-      BOOTSTRAP_ADMIN_EMAIL: ${PANEL_ADMIN_EMAIL:-admin@example.com}
-      BOOTSTRAP_ADMIN_PASSWORD: ${PANEL_ADMIN_PASSWORD:-change-admin-password}
-    command: ["npm", "run", "admin:create"]
 
   redis:
     profiles: ["panel"]
@@ -88,7 +47,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a '$${REDIS_PASSWORD}' ping | grep -q PONG"]
+      test: ["CMD-SHELL", 'redis-cli --no-auth-warning -a "$${REDIS_PASSWORD}" ping | grep -q PONG']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -96,4 +55,3 @@ services:
 volumes:
   mariadb_data:
   redis_data:
-

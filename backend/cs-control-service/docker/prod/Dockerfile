@@ -17,6 +17,7 @@ COPY --from=dependencies /usr/app/node_modules ./node_modules
 COPY backend/cs-control-service/package*.json ./
 COPY backend/cs-control-service/src ./src
 COPY panel/public ./public
+COPY --chmod=755 backend/cs-control-service/docker/prod/entrypoint.sh /usr/local/bin/cs-control-entrypoint
 
 USER node
-CMD ["npm", "start"]
+ENTRYPOINT ["cs-control-entrypoint"]

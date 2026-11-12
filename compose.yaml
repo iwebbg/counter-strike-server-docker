@@ -95,6 +95,9 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-change-db-password}
       DB_POOL_MIN: ${DB_POOL_MIN:-0}
       DB_POOL_MAX: ${DB_POOL_MAX:-5}
+      BOOTSTRAP_ADMIN_NAME: ${PANEL_ADMIN_NAME:-Administrator}
+      BOOTSTRAP_ADMIN_EMAIL: ${PANEL_ADMIN_EMAIL:-admin@example.com}
+      BOOTSTRAP_ADMIN_PASSWORD: ${PANEL_ADMIN_PASSWORD:-change-admin-password}
       REDIS_URL: redis://default:${REDIS_PASSWORD:-change-redis-password}@redis:6379
       REDIS_REQUIRED: "true"
       AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-cs_control_session}
@@ -123,4 +126,3 @@ services:
 volumes:
   cs16_logs:
   cs16_amxx_data:
-

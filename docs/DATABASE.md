@@ -27,36 +27,39 @@ docker compose -f compose.yaml -f compose.database.yaml up -d --build
 ./docker/compose up -d --build
 ```
 
-`db-migrate` е краткотрайна one-shot услуга. Тя изчаква MariaDB и изпълнява
-версионираните Knex migrations от
+Control backend-ът изчаква MariaDB и преди всеки API старт изпълнява
+версионираните idempotent Knex migrations от
 [`backend/cs-control-service/src/database/migrations`](../backend/cs-control-service/src/database/migrations).
 Първата migration прилага замразения idempotent baseline безопасно и върху
 съществуващ `mariadb_data` volume.
 Старата таблица `cs_player_stats` автоматично се импортира, когато съществува;
 тя не се изтрива.
 
+При database-only инсталация без Control Panel същият baseline се зарежда от
+официалния MariaDB entrypoint само при първоначалното създаване на volume-а.
+
 MariaDB няма публикуван host port. Game containers и панелът се свързват през
 вътрешната Docker network.
 
 ## Какво се записва
 
-| Таблица | Данни |
-|---|---|
-| `cs_servers` | Persistent server registry, mode, port, state, map и heartbeat |
-| `cs_players` | Steam ID, текущо име, first/last seen и брой връзки |
-| `cs_player_names` | История на използваните имена |
+| Таблица                  | Данни                                                                   |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `cs_servers`             | Persistent server registry, mode, port, state, map и heartbeat          |
+| `cs_players`             | Steam ID, текущо име, first/last seen и брой връзки                     |
+| `cs_player_names`        | История на използваните имена                                           |
 | `cs_player_server_stats` | Kills, deaths, headshots, damage, hits, playtime, rounds и GunGame wins |
-| `cs_player_sessions` | Connect/disconnect история и продължителност |
-| `cs_map_stats` | Played count, rounds, kills и player time по карта |
-| `cs_gungame_progress` | Current/highest level и победи |
-| `cs_achievements` | Achievement каталог и thresholds |
-| `cs_player_achievements` | Отключени achievements |
-| `cs_seasons` | Сезони, период и active state |
-| `cs_season_stats` | Отделен seasonal ranking |
-| `cs_admins` | Server-scoped и fleet-wide (`*`) администратори |
-| `cs_bans` | Fleet/server scope, duration, revoke и причина |
-| `cs_moderation_actions` | Неизменяем audit на kick, ban и unban действия |
-| `cs_schema_migrations` | Версия на приложената схема |
+| `cs_player_sessions`     | Connect/disconnect история и продължителност                            |
+| `cs_map_stats`           | Played count, rounds, kills и player time по карта                      |
+| `cs_gungame_progress`    | Current/highest level и победи                                          |
+| `cs_achievements`        | Achievement каталог и thresholds                                        |
+| `cs_player_achievements` | Отключени achievements                                                  |
+| `cs_seasons`             | Сезони, период и active state                                           |
+| `cs_season_stats`        | Отделен seasonal ranking                                                |
+| `cs_admins`              | Server-scoped и fleet-wide (`*`) администратори                         |
+| `cs_bans`                | Fleet/server scope, duration, revoke и причина                          |
+| `cs_moderation_actions`  | Неизменяем audit на kick, ban и unban действия                          |
+| `cs_schema_migrations`   | Версия на приложената схема                                             |
 
 RCON, panel и database паролите не се записват в статистическите таблици.
 
@@ -122,7 +125,7 @@ docker compose -f compose.yaml -f compose.database.yaml exec -T mariadb \
 Приложете отново текущата схема след restore:
 
 ```bash
-docker compose -f compose.yaml -f compose.database.yaml run --rm db-migrate
+./docker/compose run --rm --no-deps -e DB_MULTIPLE_STATEMENTS=1 panel npm run migrate
 ```
 
 ## Operational бележки

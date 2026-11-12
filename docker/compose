@@ -35,7 +35,7 @@ stack_description() {
     server) printf 'Game server only' ;;
     panel) printf 'Game server + CS Control Panel + NGINX + MariaDB + Redis' ;;
     database) printf 'Game server + MariaDB fleet data' ;;
-    full) printf 'Game server + Control Panel + NGINX + MariaDB' ;;
+    full) printf 'Game server + Control Panel + NGINX + MariaDB + Redis' ;;
   esac
 }
 
@@ -267,4 +267,28 @@ if [[ "${1:-}" == doctor ]]; then
 fi
 
 [[ $# -gt 0 ]] || { show_help; exit 0; }
+
+# Local images are part of this repository. Rebuild them on `up` so a stale
+# panel image cannot run newer Compose commands with an older package.json.
+if [[ "$1" == up ]]; then
+  has_build_flag=0
+  has_remove_orphans_flag=0
+  for argument in "$@"; do
+    if [[ "$argument" == --build || "$argument" == --no-build ]]; then
+      has_build_flag=1
+    elif [[ "$argument" == --remove-orphans ]]; then
+      has_remove_orphans_flag=1
+    fi
+  done
+  compose_command=(up)
+  if (( has_build_flag == 0 )); then
+    compose_command+=(--build)
+  fi
+  if (( has_remove_orphans_flag == 0 )); then
+    compose_command+=(--remove-orphans)
+  fi
+  compose_command+=("${@:2}")
+  exec docker compose "${compose_arguments[@]}" "${compose_command[@]}"
+fi
+
 exec docker compose "${compose_arguments[@]}" "$@"

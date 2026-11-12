@@ -91,7 +91,7 @@ Docker Compose, така и с опционален интерактивен CS 
 - MariaDB dashboard с leaderboard, player profiles, map/session activity,
   achievements, seasonal filters, active bans/revoke и moderation history;
 - fleet-wide admin lists и автоматично inheritance за нови/стартирани servers;
-- idempotent `db-migrate` service, 15-table schema и legacy stats import.
+- backend-managed idempotent Knex migrations, 15-table schema и legacy stats import.
 
 ## Архитектура накратко
 

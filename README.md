@@ -181,7 +181,7 @@ MariaDB не е нужна за самата игра. За да записва�
 docker compose -f compose.yaml -f compose.database.yaml up -d --build
 ```
 
-One-shot migration услугата създава централната схема, а AMXX collector-ът
+Backend услугата прилага Knex migrations преди API старта, а AMXX collector-ът
 записва players, name history, sessions, kills/deaths/headshots, damage,
 playtime, map activity, GunGame progress, seasons и achievements. Control Panel
 добавя fleet admins, shared bans, revoke и moderation audit. MariaDB не се
