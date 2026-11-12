@@ -615,13 +615,15 @@ main {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 .card-actions .button {
+  flex: 0 0 auto;
   padding: 8px 12px;
   font-size: 11px;
+  white-space: nowrap;
 }
 .card-actions .danger {
-  margin-left: auto;
   color: var(--red);
 }
 .empty-state {
