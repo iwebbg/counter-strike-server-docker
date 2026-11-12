@@ -6,9 +6,6 @@ services:
       context: .
     image: cs16-server:local
     restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
     environment:
       SERVER_MODE: ${SERVER_MODE:-classic}
       SERVER_NAME: ${SERVER_NAME:-My CS 1.6 Server}
@@ -70,11 +67,17 @@ services:
   panel:
     profiles: ["panel"]
     build:
-      context: ./panel
+      context: .
+      dockerfile: backend/cs-control-service/docker/prod/Dockerfile
     image: cs16-control-panel:local
     restart: unless-stopped
+    # Docker socket GIDs differ between hosts; socket access is already
+    # root-equivalent, so only the control-plane process runs as root.
+    user: root
     environment:
-      PANEL_TOKEN: ${PANEL_TOKEN:-}
+      SERVICE_NAME: cs-control-service
+      SERVICE_PORT: 8080
+      PROCESS_ROLE: api
       SERVER_IMAGE: cs16-server:local
       PANEL_NETWORK: cs16_default
       PORT_RANGE_START: ${PORT_RANGE_START:-27015}
@@ -86,9 +89,21 @@ services:
       KILLSTREAK_MULTI_WINDOW: ${KILLSTREAK_MULTI_WINDOW:-4.0}
       DB_ENABLED: ${DB_ENABLED:-0}
       DB_HOST: ${DB_HOST:-mariadb}
+      DB_PORT: ${DB_PORT:-3306}
       DB_NAME: ${DB_NAME:-cs16}
       DB_USER: ${DB_USER:-cs16}
       DB_PASSWORD: ${DB_PASSWORD:-change-db-password}
+      DB_POOL_MIN: ${DB_POOL_MIN:-0}
+      DB_POOL_MAX: ${DB_POOL_MAX:-5}
+      REDIS_URL: redis://default:${REDIS_PASSWORD:-change-redis-password}@redis:6379
+      REDIS_REQUIRED: "true"
+      AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-cs_control_session}
+      AUTH_ACCESS_TOKEN_LIFETIME: ${AUTH_ACCESS_TOKEN_LIFETIME:-3600}
+      AUTH_REFRESH_TOKEN_LIFETIME: ${AUTH_REFRESH_TOKEN_LIFETIME:-1209600}
+      AUTH_COOKIE_TTL_LIFETIME: ${AUTH_COOKIE_TTL_LIFETIME:-1209600}
+      API_RATE_LIMIT_WINDOW_MS: ${API_RATE_LIMIT_WINDOW_MS:-60000}
+      API_RATE_LIMIT_MAX: ${API_RATE_LIMIT_MAX:-600}
+      SWAGGER_UI_ENABLED: ${SWAGGER_UI_ENABLED:-false}
     expose:
       - "8080"
     volumes:
@@ -96,6 +111,12 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     security_opt:
       - no-new-privileges:true
 

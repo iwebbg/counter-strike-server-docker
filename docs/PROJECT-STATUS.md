@@ -26,6 +26,8 @@ Docker Compose, така и с опционален интерактивен CS 
   регион, LAN режим, welcome message и GunGame double jump;
 - persistent volumes за AMXX data и logs;
 - отделен Compose override за опционална MariaDB без публичен database port;
+- структуриран Express/Knex backend с REST descriptors, AJV validation,
+  Swagger, MariaDB migrations, OAuth-style operator login и Redis session cache;
 - deployment и capacity planning guide с минимални изисквания, препоръчани VPS
   профили, базови idle измервания и bandwidth формула.
 
@@ -69,7 +71,8 @@ Docker Compose, така и с опционален интерактивен CS 
 ### CS Control Panel
 
 - opt-in Compose profile `panel`, bind-нат по подразбиране само към `127.0.0.1`;
-- token authentication, пазена само в browser `sessionStorage`;
+- MariaDB-backed операторски login с access/refresh tokens, HttpOnly cookie и
+  Redis session cache;
 - responsive fleet dashboard за desktop и mobile;
 - A2S UDP status за карта, players и max players;
 - create на Classic/GunGame инстанция, max players, start map и server password;
@@ -119,18 +122,19 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 
 - Dockerfile, Docker Compose profiles/overrides, volumes, healthchecks и labels;
 - AMX Mod X/Pawn plugin разработка и build-time compilation;
-- Node.js HTTP service без външни runtime dependencies;
+- Express 5 HTTP service с автоматично route discovery и централизирани errors;
 - Docker Engine API през Unix socket с ограничени операции;
 - GoldSource A2S и challenge-based RCON върху UDP;
 - vanilla HTML/CSS/JavaScript responsive UI;
-- input validation, token authentication и basic container security hardening;
+- AJV input validation, OAuth-style login, Redis cache и container hardening;
 - Node test runner, shell syntax checks и реални Docker smoke tests.
 
 ## Проверено до момента
 
 - `bash -n docker/entrypoint.sh`;
-- `node --check panel/src/server.mjs` и `node --check panel/public/app.js`;
-- `npm --prefix panel test` — A2S, RCON challenge, Docker stream и validation tests;
+- `node --check` за backend framework модулите и `panel/public/app.js`;
+- `npm --prefix backend/cs-control-service test` — route discovery, AJV, i18n,
+  A2S, RCON, Docker stream и domain validation tests;
 - успешен build на `cs16-server:local` и `cs16-control-panel:local`;
 - Compose server и panel са наблюдавани в `healthy` състояние;
 - реална A2S заявка връща карта и player slots;
@@ -149,14 +153,15 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 ## Важни ограничения
 
 - Docker socket е силно привилегирован; вграденият NGINX добавя TLS, но за
-  публичен remote достъп все още се препоръчва VPN/identity provider и силен
-  `PANEL_API_TOKEN`;
+  публичен remote достъп все още се препоръчват силна операторска парола,
+  rate limiting и VPN/identity защита;
 - admin editor работи само при стартиран server, защото трябва да изпълни live
   RCON reload;
 - вече съществуващ container трябва еднократно да бъде recreate-нат с новия
   server image, за да използва persistent admin override още от entrypoint;
 - Remove запазва volumes по дизайн; автоматичен lifecycle/cleanup UI още няма;
-- MariaDB статистиката работи на plugin ниво, но още няма stats страница в panel;
+- MariaDB статистиката има dashboard в панела; остават допълнителни audit и
+  operator-management екрани;
 - няма backup/restore, map uploader, update/migrate action или audit log;
 - hardcoded default network `cs16_default` трябва да се конфигурира при различно
   Compose project name.
@@ -166,7 +171,7 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 1. Edit server wizard за име, max players, пароли, mode/mapcycle и controlled recreate.
 2. Update/migrate action за panel-created containers със запазване на volumes.
 3. Map uploader и безопасен workflow за добавяне/премахване на map packages.
-4. Stats dashboard върху MariaDB с per-server ranking и history.
+4. Разширен operator/audit dashboard върху MariaDB.
 5. Backup/restore/export на AMXX data, logs и database.
 6. Audit log за panel действия и отделни panel operator роли.
 7. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.

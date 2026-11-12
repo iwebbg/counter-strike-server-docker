@@ -4,7 +4,7 @@ export const sessionCookieOptions = (req) => ({
   httpOnly: true,
   path: "/",
   sameSite: "strict",
-  secure: process.env.NODE_ENV === "production" || req.secure,
+  secure: process.env.AUTH_COOKIE_SECURE === "true" || (process.env.AUTH_COOKIE_SECURE !== "false" && req.secure),
   maxAge: authConfig.cookieLifetime * 1000,
 });
 

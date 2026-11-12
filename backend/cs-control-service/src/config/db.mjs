@@ -11,6 +11,7 @@ const connection = {
   database: process.env.DB_NAME ?? "cs16",
   timezone: "Z",
   charset: "utf8mb4",
+  multipleStatements: process.env.DB_MULTIPLE_STATEMENTS === "1",
 };
 const shared = {
   client: "mariadb",

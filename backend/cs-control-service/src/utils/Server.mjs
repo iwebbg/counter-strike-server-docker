@@ -88,6 +88,20 @@ class Server {
         handler: (req, res) => res.jsonError(429, "API_RATE_LIMITED"),
       }),
     );
+    this.app.use("/api", (req, res, next) => {
+      if (["GET", "HEAD", "OPTIONS"].includes(req.method) || !req.cookies?.[process.env.AUTH_COOKIE_NAME ?? "cs_control_session"])
+        return next();
+      const configuredOrigin = new URL(process.env.CORS_ORIGIN ?? process.env.APP_PUBLIC_URL ?? "http://localhost").origin;
+      const requestOrigin = `${req.protocol}://${req.get("host")}`;
+      const origin = req.get("origin");
+      const fetchSite = req.get("sec-fetch-site");
+      if (
+        fetchSite === "cross-site" ||
+        (origin && ![configuredOrigin, requestOrigin].includes(origin)) ||
+        (!origin && process.env.NODE_ENV === "production")
+      ) return res.jsonError(403, "CSRF_ORIGIN_REJECTED");
+      return next();
+    });
     configurePassport();
     this.app.use(passport.initialize());
     this.app.use("/api", cors({ origin: process.env.CORS_ORIGIN ?? false, credentials: true }), await createRouter());

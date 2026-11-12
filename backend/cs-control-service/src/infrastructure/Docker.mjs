@@ -1,4 +1,4 @@
-import http from 'node:http';
+import http from "node:http";
 
 export class DockerError extends Error {
   constructor(message, statusCode, details = '') {

@@ -1,0 +1,3 @@
+import checkAuth from "../../../middlewares/checkAuth.mjs";
+import { changeMap } from "../../servers/services/ServersService.mjs";
+export default { route: "/servers/:id/maps/change", method: "POST", bearerAuth: true, validation: { query: {}, path: { type: "object", properties: { id: { type: "string", pattern: "^[a-f0-9]{12,64}$" } }, required: ["id"], additionalProperties: false }, body: { type: "object", properties: { map: { type: "string", pattern: "^[a-zA-Z0-9_]+$" } }, required: ["map"], additionalProperties: false } }, docs: { tags: ["Maps"], description: "Change the running map through RCON." }, middlewares: [checkAuth], entryPoint: async (req, res) => res.jsonOk(200, "MAP_CHANGING", await changeMap(req.validated.path.id, req.validated.body.map)) };

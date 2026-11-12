@@ -165,7 +165,7 @@ Web пази cache/read models за бързи публични страници
 
 ## Сигурност и privacy
 
-- никога да не се използва `PANEL_TOKEN` като integration token;
+- никога да не се използва OAuth session token като integration token;
 - публичният API няма Docker socket, RCON или write операции;
 - token-ите са scoped, криптирани at rest и могат да се rotate-ват;
 - production transport е HTTPS, с rate limiting и response size limits;

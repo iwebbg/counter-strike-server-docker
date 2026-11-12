@@ -1,3 +1,5 @@
+export const config = { transaction: false };
+
 export const up = async (knex) => {
   if (!(await knex.schema.hasTable("users"))) {
     await knex.schema.createTable("users", (table) => {

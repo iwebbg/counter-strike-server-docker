@@ -227,7 +227,8 @@ Docker Compose не може надеждно сам да открива и ре
 ./docker/compose up -d --build
 ```
 
-Отворете `http://127.0.0.1:8080` и въведете `PANEL_TOKEN`. Панелът предлага:
+Отворете `http://127.0.0.1:8080` и влезте с `PANEL_ADMIN_EMAIL` и
+`PANEL_ADMIN_PASSWORD`, създадени от setup командата. Панелът предлага:
 
 - Classic/GunGame и начална карта;
 - max players от 2 до 32;

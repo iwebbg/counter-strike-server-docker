@@ -17,12 +17,16 @@
       <div class="brand-mark" aria-hidden="true"><span>CS</span></div>
       <p class="eyebrow">LOCAL OPERATIONS CONSOLE</p>
       <h1>CS Control</h1>
-      <p class="muted">Enter the private panel token configured on this Docker host.</p>
+      <p class="muted">Sign in with your CS Control operator account.</p>
       <label class="field">
-        <span>Panel token</span>
-        <input id="tokenInput" type="password" autocomplete="current-password" required minlength="16" autofocus>
+        <span>Email</span>
+        <input id="emailInput" type="email" autocomplete="username" required maxlength="254" autofocus>
       </label>
-      <button class="button primary full" type="submit">Unlock dashboard <span>→</span></button>
+      <label class="field">
+        <span>Password</span>
+        <input id="passwordInput" type="password" autocomplete="current-password" required maxlength="128">
+      </label>
+      <button class="button primary full" type="submit">Sign in <span>→</span></button>
       <p id="authError" class="form-error" role="alert"></p>
     </form>
   </section>
@@ -37,7 +41,7 @@
         <span id="connectionState" class="connection"><i></i> Docker connected</span>
         <label class="language-control"><span class="sr-only">Language</span><select data-language-selector aria-label="Language"><option value="en">EN</option><option value="bg">BG</option></select></label>
         <button id="refreshButton" class="icon-button" type="button" title="Refresh servers" aria-label="Refresh servers">↻</button>
-        <button id="logoutButton" class="button ghost small" type="button">Lock</button>
+        <button id="logoutButton" class="button ghost small" type="button">Sign out</button>
       </div>
     </header>
 

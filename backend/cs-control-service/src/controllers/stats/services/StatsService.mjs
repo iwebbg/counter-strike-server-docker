@@ -1,4 +1,4 @@
-function filter(serverId, alias = 's') {
+function filter(serverId, alias = "s") {
   return serverId ? { sql: ` WHERE ${alias}.server_id = ?`, parameters: [serverId] } : { sql: '', parameters: [] };
 }
 

@@ -95,7 +95,9 @@ Let's Encrypt HTTP-01 challenge:
 
 ```dotenv
 CS16_DEPLOYMENT=local
-PANEL_TOKEN=
+PANEL_ADMIN_EMAIL=admin@example.com
+PANEL_ADMIN_PASSWORD=change-admin-password
+REDIS_PASSWORD=change-redis-password
 PANEL_BIND_IP=127.0.0.1
 PANEL_PORT=8080
 PANEL_DOMAIN=panel.example.com
@@ -112,7 +114,7 @@ PANEL_EXTERNAL_ALIAS=cs16-panel
 - `panel_letsencrypt` пази certificates, renewal config и private keys;
 - `panel_certbot_www` пази ACME webroot challenge файловете;
 - `docker compose down` ги запазва, а `down -v` ги изтрива;
-- HTTPS не замества силния `PANEL_TOKEN`;
+- HTTPS не замества силната операторска парола и защитата на login endpoint-а;
 - NGINX няма Docker socket; само backend panel-ът има контролирания достъп;
 - при external mode само trusted upstream proxy containers трябва да участват
   в зададената network;

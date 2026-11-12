@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseA2SInfo } from '../src/a2s.mjs';
+import { parseA2SInfo } from "../src/infrastructure/A2S.mjs";
 
 test('parses a protocol 48 A2S info response', () => {
   const strings = Buffer.from('Arena\0gg_3way\0cstrike\0Counter-Strike\0');

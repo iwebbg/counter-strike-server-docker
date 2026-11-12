@@ -1,20 +1,11 @@
-import crypto from 'node:crypto';
-import fs from 'node:fs/promises';
-import http from 'node:http';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { queryA2S } from './a2s.mjs';
-import { createDatabase } from './database.mjs';
-import { DockerClient, DockerError, demuxDockerStream } from './docker.mjs';
-import { parseStatusPlayers, rconCommand } from './rcon.mjs';
-import { activeBans, createSeason, globalAdmins, moderationHistory, playerProfile, recordModeration, revokeBan, statsOverview, syncDatabaseAdmins, syncGlobalAdmins, syncServerRegistry, validateStatsFilter } from './stats.mjs';
-import { parseAdminEntries, parseInteger, validateAdmins, validateCreateInput, validateMapList, validateModerationInput } from './validation.mjs';
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const publicDir = path.join(root, 'public');
+import crypto from "node:crypto";
+import { queryA2S } from "../../../infrastructure/A2S.mjs";
+import { DockerClient, demuxDockerStream } from "../../../infrastructure/Docker.mjs";
+import { parseStatusPlayers, rconCommand } from "../../../infrastructure/Rcon.mjs";
+import Db from "../../../utils/Db.mjs";
+import { globalAdmins, recordModeration, syncDatabaseAdmins, syncGlobalAdmins, syncServerRegistry } from "../../stats/services/StatsService.mjs";
+import { parseAdminEntries, parseInteger, validateAdmins, validateCreateInput, validateModerationInput } from "./schemas.mjs";
 const config = {
-  listenPort: parseInteger(process.env.PANEL_PORT || 8080, 'PANEL_PORT', 1, 65535),
-  token: process.env.PANEL_TOKEN || '',
   image: process.env.SERVER_IMAGE || 'cs16-server:local',
   network: process.env.PANEL_NETWORK || 'cs16_default',
   portStart: parseInteger(process.env.PORT_RANGE_START || 27015, 'PORT_RANGE_START', 1024, 65535),
@@ -31,17 +22,13 @@ const config = {
   killstreakWindow: process.env.KILLSTREAK_MULTI_WINDOW || '4.0',
 };
 
-if (config.token.length < 16) {
-  console.error('[panel] PANEL_TOKEN must contain at least 16 characters');
-  process.exit(1);
-}
 if (config.portStart > config.portEnd) {
   console.error('[panel] PORT_RANGE_START must not be greater than PORT_RANGE_END');
   process.exit(1);
 }
 
 const docker = new DockerClient();
-const database = createDatabase();
+const database = new Db();
 const managedLabel = 'com.cs16.controlled=true';
 const managedAdminsFile = '/opt/hlds/cstrike/addons/amxmodx/data/panel_admins.txt';
 const usersFile = '/opt/hlds/cstrike/addons/amxmodx/configs/users.ini';
@@ -49,38 +36,6 @@ const managedMapcycleFile = '/opt/hlds/cstrike/addons/amxmodx/data/panel_mapcycl
 const mapcycleFile = '/opt/hlds/cstrike/mapcycle.txt';
 const amxxMapsFile = '/opt/hlds/cstrike/addons/amxmodx/configs/maps.ini';
 const moderationLog = '/opt/hlds/cstrike/addons/amxmodx/data/panel_moderation.log';
-
-function sendJson(response, status, data) {
-  const body = JSON.stringify(data);
-  response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(body) });
-  response.end(body);
-}
-
-function safeEqual(left, right) {
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-
-function isAuthorized(request) {
-  const header = request.headers.authorization || '';
-  return header.startsWith('Bearer ') && safeEqual(header.slice(7), config.token);
-}
-
-async function readJson(request) {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of request) {
-    size += chunk.length;
-    if (size > 64 * 1024) throw new Error('Request body is too large');
-    chunks.push(chunk);
-  }
-  try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-  } catch {
-    throw new Error('Invalid JSON body');
-  }
-}
 
 function envValue(inspect, name, fallback = '') {
   const prefix = `${name}=`;
@@ -414,197 +369,76 @@ async function createServer(input) {
   return { id: container.Id, instanceId, port, rconPassword, started: values.startImmediately };
 }
 
-async function serveStatic(requestPath, response) {
-  const files = {
-    '/': ['index.html', 'text/html; charset=utf-8'],
-    '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
-    '/i18n.js': ['i18n.js', 'text/javascript; charset=utf-8'],
-    '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
-  };
-  const target = files[requestPath];
-  if (!target) return false;
-  const content = await fs.readFile(path.join(publicDir, target[0]));
-  response.writeHead(200, {
-    'content-type': target[1],
-    'content-length': content.length,
-    'cache-control': 'no-store',
-    'content-security-policy': "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'",
-    'x-content-type-options': 'nosniff',
-    'x-frame-options': 'DENY',
-  });
-  response.end(content);
-  return true;
+export const portRange = () => [config.portStart, config.portEnd];
+export { createServer, listServers };
+
+export async function serverAction(id, action) {
+  await assertControlled(id);
+  const suffix = action === "stop" ? "/stop?t=30" : action === "restart" ? "/restart?t=30" : "/start";
+  await docker.request("POST", `/containers/${id}${suffix}`);
+  if (action === "start") await applyInheritedAdmins(id);
+  return { status: action };
 }
 
-const server = http.createServer(async (request, response) => {
-  try {
-    const url = new URL(request.url, 'http://panel.local');
-    if (request.method === 'GET' && url.pathname === '/api/health') {
-      sendJson(response, 200, { status: 'ok' });
-      return;
-    }
-    if (!url.pathname.startsWith('/api/')) {
-      if (!await serveStatic(url.pathname, response)) sendJson(response, 404, { error: 'Not found' });
-      return;
-    }
-    if (!isAuthorized(request)) {
-      sendJson(response, 401, { error: 'Invalid panel token' });
-      return;
-    }
+export async function serverLogs(id) {
+  await assertControlled(id);
+  const logs = await docker.request("GET", `/containers/${id}/logs?stdout=1&stderr=1&timestamps=1&tail=250`);
+  return { logs: demuxDockerStream(logs) };
+}
 
-    if (request.method === 'GET' && url.pathname === '/api/database/status') {
-      sendJson(response, 200, await database.status());
-      return;
-    }
-    if (request.method === 'GET' && url.pathname === '/api/stats/overview') {
-      sendJson(response, 200, await statsOverview(database, validateStatsFilter(url)));
-      return;
-    }
-    const playerStatsMatch = url.pathname.match(/^\/api\/stats\/players\/(STEAM_[0-9]+:[01]:[0-9]+)$/);
-    if (request.method === 'GET' && playerStatsMatch) {
-      sendJson(response, 200, await playerProfile(database, playerStatsMatch[1]));
-      return;
-    }
-    if (request.method === 'GET' && url.pathname === '/api/moderation/history') {
-      sendJson(response, 200, { actions: await moderationHistory(database) });
-      return;
-    }
-    if (request.method === 'GET' && url.pathname === '/api/bans') {
-      sendJson(response, 200, { bans: await activeBans(database) });
-      return;
-    }
-    const revokeBanMatch = url.pathname.match(/^\/api\/bans\/(\d+)\/revoke$/);
-    if (request.method === 'POST' && revokeBanMatch) {
-      sendJson(response, 200, await revokeBan(database, Number(revokeBanMatch[1])));
-      return;
-    }
-    if (request.method === 'POST' && url.pathname === '/api/seasons') {
-      sendJson(response, 201, await createSeason(database, await readJson(request)));
-      return;
-    }
+export async function getAdmins(id) {
+  const inspect = await requireRunning(id);
+  return readAdmins(id, inspect);
+}
 
-    if (request.method === 'GET' && url.pathname === '/api/servers') {
-      sendJson(response, 200, { servers: await listServers(), portRange: [config.portStart, config.portEnd] });
-      return;
-    }
-    if (request.method === 'POST' && url.pathname === '/api/servers') {
-      sendJson(response, 201, await createServer(await readJson(request)));
-      return;
-    }
-
-    const actionMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/(start|stop|restart)$/);
-    if (request.method === 'POST' && actionMatch) {
-      const [, id, action] = actionMatch;
-      await assertControlled(id);
-      const suffix = action === 'stop' ? '/stop?t=30' : action === 'restart' ? '/restart?t=30' : '/start';
-      await docker.request('POST', `/containers/${id}${suffix}`);
-      if (action === 'start') await applyInheritedAdmins(id);
-      sendJson(response, 200, { status: action });
-      return;
-    }
-
-    const logsMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/logs$/);
-    if (request.method === 'GET' && logsMatch) {
-      await assertControlled(logsMatch[1]);
-      const logs = await docker.request('GET', `/containers/${logsMatch[1]}/logs?stdout=1&stderr=1&timestamps=1&tail=250`);
-      sendJson(response, 200, { logs: demuxDockerStream(logs) });
-      return;
-    }
-
-    const adminsMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/admins$/);
-    if (adminsMatch && request.method === 'GET') {
-      const inspect = await requireRunning(adminsMatch[1]);
-      sendJson(response, 200, await readAdmins(adminsMatch[1], inspect));
-      return;
-    }
-    if (adminsMatch && request.method === 'PUT') {
-      const inspect = await requireRunning(adminsMatch[1]);
-      const input = await readJson(request);
-      const admins = validateAdmins(input);
-      if (input.scope === 'fleet') {
-        const updatedServers = await applyFleetAdmins(admins);
-        sendJson(response, 200, { source: 'database-fleet', admins, reloaded: true, updatedServers });
-      } else {
-        sendJson(response, 200, await reloadAdmins(adminsMatch[1], inspect, admins, true));
-      }
-      return;
-    }
-    if (adminsMatch && request.method === 'DELETE') {
-      const inspect = await requireRunning(adminsMatch[1]);
-      const admins = parseAdminEntries(envValue(inspect, 'AMXX_ADMINS'));
-      sendJson(response, 200, await reloadAdmins(adminsMatch[1], inspect, admins, false));
-      return;
-    }
-
-    const mapsMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/maps$/);
-    if (mapsMatch && request.method === 'GET') {
-      const inspect = await requireRunning(mapsMatch[1]);
-      sendJson(response, 200, await readMaps(mapsMatch[1], inspect));
-      return;
-    }
-    if (mapsMatch && request.method === 'PUT') {
-      const inspect = await requireRunning(mapsMatch[1]);
-      const maps = validateMapList((await readJson(request)).maps, 'Map rotation');
-      sendJson(response, 200, await saveMaps(mapsMatch[1], inspect, maps));
-      return;
-    }
-
-    const changeMapMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/maps\/change$/);
-    if (changeMapMatch && request.method === 'POST') {
-      const inspect = await requireRunning(changeMapMatch[1]);
-      const map = validateMapList([(await readJson(request)).map], 'Map selection')[0];
-      const { mode, available } = await categorizedMaps(changeMapMatch[1], inspect);
-      if (!available.includes(map)) throw new Error(`Map does not belong to the ${mode} category or is not installed: ${map}`);
-      const output = await rconCommand(containerAddress(inspect), 27015, envValue(inspect, 'RCON_PASSWORD'), `changelevel ${map}`);
-      sendJson(response, 200, { status: 'changing', mode, map, output });
-      return;
-    }
-
-    const playersMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/players$/);
-    if (playersMatch && request.method === 'GET') {
-      const inspect = await requireRunning(playersMatch[1]);
-      sendJson(response, 200, { players: await livePlayers(inspect) });
-      return;
-    }
-
-    const moderationMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})\/players\/(\d+)\/(kick|ban)$/);
-    if (moderationMatch && request.method === 'POST') {
-      const [, id, rawUserId, action] = moderationMatch;
-      const inspect = await requireRunning(id);
-      sendJson(response, 200, await moderatePlayer(id, inspect, Number(rawUserId), action, await readJson(request)));
-      return;
-    }
-
-    const deleteMatch = url.pathname.match(/^\/api\/servers\/([a-f0-9]{12,64})$/);
-    if (request.method === 'DELETE' && deleteMatch) {
-      const inspect = await assertControlled(deleteMatch[1]);
-      if (inspect.Config?.Labels?.['com.cs16.managed-by'] !== 'panel') throw new Error('Compose-managed servers cannot be removed from the panel');
-      if (inspect.State?.Running) throw new Error('Stop the server before removing it');
-      await docker.request('DELETE', `/containers/${deleteMatch[1]}?v=0`);
-      sendJson(response, 200, { status: 'removed', volumesPreserved: true });
-      return;
-    }
-
-    sendJson(response, 404, { error: 'API route not found' });
-  } catch (error) {
-    console.error('[panel]', error);
-    const clientError = !(error instanceof DockerError) || (error.statusCode >= 400 && error.statusCode < 500);
-    sendJson(response, clientError ? 400 : 502, { error: error.details || error.message || 'Unexpected error' });
+export async function updateAdmins(id, input) {
+  const inspect = await requireRunning(id);
+  const admins = validateAdmins(input);
+  if (input.scope === "fleet") {
+    const updatedServers = await applyFleetAdmins(admins);
+    return { source: "database-fleet", admins, reloaded: true, updatedServers };
   }
-});
-
-server.listen(config.listenPort, '0.0.0.0', () => {
-  console.log(`[panel] CS Control listening on port ${config.listenPort}; game ports ${config.portStart}-${config.portEnd}`);
-});
-
-function shutdown(signal) {
-  console.log(`[panel] ${signal} received, closing HTTP server`);
-  server.close(async () => {
-    await database.close();
-    process.exit(0);
-  });
-  setTimeout(() => process.exit(1), 5000).unref();
+  return reloadAdmins(id, inspect, admins, true);
 }
 
-process.once('SIGTERM', () => shutdown('SIGTERM'));
-process.once('SIGINT', () => shutdown('SIGINT'));
+export async function resetAdmins(id) {
+  const inspect = await requireRunning(id);
+  const admins = parseAdminEntries(envValue(inspect, "AMXX_ADMINS"));
+  return reloadAdmins(id, inspect, admins, false);
+}
+
+export async function getMaps(id) {
+  const inspect = await requireRunning(id);
+  return readMaps(id, inspect);
+}
+
+export async function updateMaps(id, input) {
+  const inspect = await requireRunning(id);
+  return saveMaps(id, inspect, input.maps);
+}
+
+export async function changeMap(id, map) {
+  const inspect = await requireRunning(id);
+  const { available } = await categorizedMaps(id, inspect);
+  if (!available.includes(map)) throw new Error("Map does not belong to this server mode or is not installed");
+  await rconCommand(containerAddress(inspect), 27015, envValue(inspect, "RCON_PASSWORD"), `changelevel ${map}`);
+  return { status: "changing", map };
+}
+
+export async function getPlayers(id) {
+  const inspect = await requireRunning(id);
+  return { players: await livePlayers(inspect) };
+}
+
+export async function moderate(id, userId, action, input) {
+  const inspect = await requireRunning(id);
+  return moderatePlayer(id, inspect, Number(userId), action, input);
+}
+
+export async function removeServer(id) {
+  const inspect = await assertControlled(id);
+  if (inspect.Config?.Labels?.["com.cs16.managed-by"] !== "panel") throw new Error("Compose-managed servers cannot be removed from the panel");
+  if (inspect.State?.Running) throw new Error("Stop the server before removing it");
+  await docker.request("DELETE", `/containers/${id}?v=0`);
+  return { status: "removed", volumesPreserved: true };
+}

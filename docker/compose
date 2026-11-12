@@ -33,7 +33,7 @@ random_secret() {
 stack_description() {
   case "$1" in
     server) printf 'Game server only' ;;
-    panel) printf 'Game server + CS Control Panel + NGINX' ;;
+    panel) printf 'Game server + CS Control Panel + NGINX + MariaDB + Redis' ;;
     database) printf 'Game server + MariaDB fleet data' ;;
     full) printf 'Game server + Control Panel + NGINX + MariaDB' ;;
   esac
@@ -71,20 +71,26 @@ configure_stack() {
 
   set_env_value CS16_STACK "$requested"
 
-  local rcon_password panel_token database_password root_password
+  local rcon_password database_password root_password admin_password redis_password
   rcon_password="$(env_value RCON_PASSWORD)"
   if [[ -z "$rcon_password" || "$rcon_password" == change-me-now ]]; then
     set_env_value RCON_PASSWORD "$(random_secret)"
   fi
 
   if [[ "$requested" == panel || "$requested" == full ]]; then
-    panel_token="$(env_value PANEL_TOKEN)"
-    if [[ ${#panel_token} -lt 16 ]]; then
-      set_env_value PANEL_TOKEN "$(random_secret)"
+    admin_password="$(env_value PANEL_ADMIN_PASSWORD)"
+    redis_password="$(env_value REDIS_PASSWORD)"
+    [[ -n "$(env_value PANEL_ADMIN_EMAIL)" ]] || set_env_value PANEL_ADMIN_EMAIL 'admin@example.com'
+    [[ -n "$(env_value PANEL_ADMIN_NAME)" ]] || set_env_value PANEL_ADMIN_NAME 'Administrator'
+    if [[ ${#admin_password} -lt 12 || "$admin_password" == change-admin-password ]]; then
+      set_env_value PANEL_ADMIN_PASSWORD "$(random_secret)"
+    fi
+    if [[ -z "$redis_password" || "$redis_password" == change-redis-password ]]; then
+      set_env_value REDIS_PASSWORD "$(random_secret)"
     fi
   fi
 
-  if [[ "$requested" == database || "$requested" == full ]]; then
+  if [[ "$requested" == panel || "$requested" == database || "$requested" == full ]]; then
     database_password="$(env_value DB_PASSWORD)"
     root_password="$(env_value DB_ROOT_PASSWORD)"
     if [[ -z "$database_password" || "$database_password" == change-db-password ]]; then
@@ -208,7 +214,7 @@ compose_arguments=(
   --file "$project_directory/compose.yaml"
 )
 
-if [[ "$stack" == database || "$stack" == full ]]; then
+if [[ "$stack" == panel || "$stack" == database || "$stack" == full ]]; then
   compose_arguments+=(--file "$project_directory/compose.database.yaml")
 fi
 if [[ "$stack" == panel || "$stack" == full ]]; then
@@ -218,7 +224,7 @@ fi
 
 if [[ "${1:-}" == show ]]; then
   compose_files='compose.yaml'
-  if [[ "$stack" == database || "$stack" == full ]]; then
+  if [[ "$stack" == panel || "$stack" == database || "$stack" == full ]]; then
     compose_files+=' + compose.database.yaml'
   fi
   if [[ "$stack" == panel || "$stack" == full ]]; then
@@ -247,10 +253,11 @@ if [[ "${1:-}" == doctor ]]; then
   docker info >/dev/null || die 'Docker Engine is unavailable or permission is denied.'
   [[ "$(env_value RCON_PASSWORD)" != change-me-now ]] || die 'RCON_PASSWORD still uses the example value. Run setup again.'
   if [[ "$stack" == panel || "$stack" == full ]]; then
-    panel_token="$(env_value PANEL_TOKEN)"
-    [[ ${#panel_token} -ge 16 ]] || die 'PANEL_TOKEN is missing or too short. Run setup again.'
+    admin_password="$(env_value PANEL_ADMIN_PASSWORD)"
+    [[ ${#admin_password} -ge 12 ]] || die 'PANEL_ADMIN_PASSWORD is missing or too short. Run setup again.'
+    [[ "$(env_value REDIS_PASSWORD)" != change-redis-password ]] || die 'REDIS_PASSWORD still uses the example value. Run setup again.'
   fi
-  if [[ "$stack" == database || "$stack" == full ]]; then
+  if [[ "$stack" == panel || "$stack" == database || "$stack" == full ]]; then
     [[ "$(env_value DB_PASSWORD)" != change-db-password ]] || die 'DB_PASSWORD still uses the example value. Run setup again.'
     [[ "$(env_value DB_ROOT_PASSWORD)" != change-root-password ]] || die 'DB_ROOT_PASSWORD still uses the example value. Run setup again.'
   fi

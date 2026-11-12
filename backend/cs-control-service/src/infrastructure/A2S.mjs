@@ -1,4 +1,4 @@
-import dgram from 'node:dgram';
+import dgram from "node:dgram";
 
 const QUERY = Buffer.concat([
   Buffer.from([0xff, 0xff, 0xff, 0xff, 0x54]),

@@ -8,6 +8,10 @@ class Db {
     return process.env.DB_ENABLED === "1";
   }
 
+  get enabled() {
+    return Db.enabled;
+  }
+
   static async init() {
     if (!Db.enabled) return null;
     if (!Db.knexdb) {
@@ -32,6 +36,17 @@ class Db {
     } catch (error) {
       return { enabled: true, connected: false, error: error.message };
     }
+  }
+
+  async query(sql, parameters = []) {
+    const result = await (await this.db()).raw(sql, parameters);
+    return result[0];
+  }
+
+  async transaction(callback) {
+    return (await this.db()).transaction((trx) => callback({
+      query: async (sql, parameters = []) => (await trx.raw(sql, parameters))[0],
+    }));
   }
 
   static async stop() {

@@ -1,7 +1,8 @@
 import { getLocale, initI18n, t, translateDocument } from './i18n.js';
 
 const state = {
-  token: sessionStorage.getItem('cs16-panel-token') || '',
+  authenticated: false,
+  user: null,
   servers: [],
   filter: 'all',
   loading: false,
@@ -56,18 +57,22 @@ function notify(message, error = false) {
   }, 3500);
 }
 
-async function api(path, options = {}) {
+async function api(path, options = {}, allowRefresh = true) {
   const response = await fetch(path, {
     ...options,
+    credentials: 'same-origin',
     headers: {
-      authorization: `Bearer ${state.token}`,
       ...(options.body ? { 'content-type': 'application/json' } : {}),
       ...(options.headers || {}),
     },
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || t('requestFailed', { status: response.status }));
-  return payload;
+  if (response.status === 401 && allowRefresh && !path.includes('/v1/users/')) {
+    const refreshed = await api('/api/v1/users/session/refresh', { method: 'POST' }, false).catch(() => null);
+    if (refreshed) return api(path, options, false);
+  }
+  if (!response.ok) throw new Error(payload.error_code || payload.message || payload.error || t('requestFailed', { status: response.status }));
+  return payload.success === true ? payload.data : payload;
 }
 
 function showApp() {
@@ -79,7 +84,7 @@ function showAuth(message = '') {
   appView.classList.add('hidden');
   authView.classList.remove('hidden');
   $('#authError').textContent = message;
-  $('#tokenInput').focus();
+  $('#emailInput').focus();
 }
 
 function serverCard(server) {
@@ -143,9 +148,8 @@ async function refresh(silent = false) {
     $('#connectionState').classList.add('offline');
     $('#connectionState').innerHTML = `<i></i> ${t('connectionLost')}`;
     if (!silent) notify(error.message, true);
-    if (/token/i.test(error.message)) {
-      sessionStorage.removeItem('cs16-panel-token');
-      state.token = '';
+    if (/UNAUTHORIZED|SESSION|CREDENTIAL/i.test(error.message)) {
+      state.authenticated = false;
       showAuth(error.message);
     }
     throw error;
@@ -157,23 +161,27 @@ async function refresh(silent = false) {
 
 $('#authForm').addEventListener('submit', async (event) => {
   event.preventDefault();
-  const token = $('#tokenInput').value;
-  state.token = token;
   $('#authError').textContent = '';
   try {
+    const session = await api('/api/v1/users/signin', {
+      method: 'POST',
+      body: JSON.stringify({ email: $('#emailInput').value, password: $('#passwordInput').value }),
+    }, false);
+    state.authenticated = true;
+    state.user = session.user;
     await refresh(true);
-    sessionStorage.setItem('cs16-panel-token', token);
     showApp();
   } catch (error) {
-    state.token = '';
+    state.authenticated = false;
     $('#authError').textContent = error.message;
   }
 });
 
-$('#logoutButton').addEventListener('click', () => {
-  sessionStorage.removeItem('cs16-panel-token');
-  state.token = '';
-  $('#tokenInput').value = '';
+$('#logoutButton').addEventListener('click', async () => {
+  await api('/api/v1/users/signout', { method: 'POST' }, false).catch(() => {});
+  state.authenticated = false;
+  state.user = null;
+  $('#passwordInput').value = '';
   showAuth();
 });
 
@@ -608,7 +616,7 @@ function fillStatsFilters(payload) {
 }
 
 async function loadAnalytics(silent = false) {
-  if (state.statsLoading || !state.token) return;
+  if (state.statsLoading || !state.authenticated) return;
   state.statsLoading = true;
   $('#refreshStatsButton').disabled = true;
   try {
@@ -720,7 +728,7 @@ $('#copyCredential').addEventListener('click', async () => {
 });
 
 setInterval(() => {
-  if (!document.hidden && state.token && !appView.classList.contains('hidden')) refresh(true).catch(() => {});
+  if (!document.hidden && state.authenticated && !appView.classList.contains('hidden')) refresh(true).catch(() => {});
 }, 7000);
 
 window.addEventListener('i18n:change', () => {
@@ -732,14 +740,20 @@ window.addEventListener('i18n:change', () => {
     $('#mapCategoryHint').textContent = t('categoryMaps', { category });
     renderServerMaps();
   }
-  if (state.token) loadAnalytics(true).catch(() => {});
+  if (state.authenticated) loadAnalytics(true).catch(() => {});
   translateDocument();
 });
 
-if (state.token) {
-  showApp();
-  refresh(true).catch(() => showAuth(t('sessionExpired')));
-} else {
-  showAuth();
-}
+(async () => {
+  try {
+    const session = await api('/api/v1/users/session', {}, false).catch(() =>
+      api('/api/v1/users/session/refresh', { method: 'POST' }, false));
+    state.authenticated = true;
+    state.user = session.user;
+    showApp();
+    await refresh(true);
+  } catch {
+    showAuth();
+  }
+})();
 renderCreateMaps('classic');

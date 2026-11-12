@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { demuxDockerStream } from '../src/docker.mjs';
-import { parseAdminEntries, validateAdmins, validateCreateInput, validateMapList, validateModerationInput } from '../src/validation.mjs';
+import { demuxDockerStream } from "../src/infrastructure/Docker.mjs";
+import { parseAdminEntries, validateAdmins, validateCreateInput, validateMapList, validateModerationInput } from "../src/controllers/servers/services/schemas.mjs";
 
 test('validates a GunGame server and applies its default map', () => {
   const value = validateCreateInput({ name: 'Arena One', mode: 'gungame', maxPlayers: 20 }, 27015, 27115);

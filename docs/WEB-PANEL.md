@@ -104,7 +104,10 @@ persistent AMXX data volume, синхронизира `mapcycle.txt` и AMXX `ma
 ## Настройки
 
 ```dotenv
-PANEL_TOKEN=
+PANEL_ADMIN_NAME=Administrator
+PANEL_ADMIN_EMAIL=admin@example.com
+PANEL_ADMIN_PASSWORD=change-admin-password
+REDIS_PASSWORD=change-redis-password
 PANEL_BIND_IP=127.0.0.1
 PANEL_PORT=8080
 PORT_RANGE_START=27015
@@ -118,8 +121,9 @@ PANEL_EXTERNAL_NETWORK=server1_net
 PANEL_EXTERNAL_ALIAS=cs16-panel
 ```
 
-`PANEL_TOKEN` под 16 символа прекратява старта на панела. API заявките използват
-Bearer token, пазен от browser-а само в `sessionStorage`.
+Setup командата генерира липсващите admin и Redis пароли. Login системата
+използва MariaDB-backed access/refresh sessions, HttpOnly SameSite cookie и
+Redis session cache; sign out revoke-ва активните token-и.
 
 ## Live Players и moderation
 

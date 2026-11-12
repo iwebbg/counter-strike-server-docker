@@ -22,9 +22,10 @@ Game image-ът съдържа еднаква основа за всички с�
 environment променливите, генерира `server.cfg`, избира plugin list и стартира
 HLDS. Така режимът не изисква различен image.
 
-MariaDB е Compose override, а не задължителна зависимост. Game server-ът може да
-работи напълно самостоятелно, а SQL plugin-ът се добавя в `plugins.ini` само при
-`DB_ENABLED=1`.
+MariaDB е Compose override и не е задължителна за game-server-only stack-а. CS
+Control я използва за операторските акаунти и OAuth sessions. Game server-ът
+може да работи напълно самостоятелно, а SQL plugin-ът се добавя в `plugins.ini`
+само при `DB_ENABLED=1`.
 
 Named volumes пазят само mutable данни. Game binaries и plugins остават в image,
 което прави новите инстанции възпроизводими и предотвратява стар volume да скрие

@@ -1,4 +1,4 @@
-import dgram from 'node:dgram';
+import dgram from "node:dgram";
 
 const header = Buffer.from([0xff, 0xff, 0xff, 0xff]);
 

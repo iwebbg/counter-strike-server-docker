@@ -1,4 +1,8 @@
 services:
+  panel:
+    environment:
+      AUTH_COOKIE_SECURE: "false"
+
   panel-proxy:
     profiles: ["panel"]
     image: nginx:1.29-alpine

@@ -14,8 +14,8 @@
 
 | Stack | Услуги |
 |---|---|
-| `full` | Game server, локален CS Control Panel и MariaDB |
-| `panel` | Game server и локален Control Panel |
+| `full` | Game server, локален CS Control Panel, MariaDB и Redis |
+| `panel` | Game server, локален Control Panel, MariaDB и Redis |
 | `database` | Game server и MariaDB |
 | `server` | Само game server |
 

@@ -27,9 +27,11 @@ docker compose -f compose.yaml -f compose.database.yaml up -d --build
 ./docker/compose up -d --build
 ```
 
-`db-migrate` е краткотрайна one-shot услуга. Тя изчаква MariaDB, прилага
-[`database/schema.sql`](../database/schema.sql) и завършва. Схемата е
-idempotent и се изпълнява безопасно и върху съществуващ `mariadb_data` volume.
+`db-migrate` е краткотрайна one-shot услуга. Тя изчаква MariaDB и изпълнява
+версионираните Knex migrations от
+[`backend/cs-control-service/src/database/migrations`](../backend/cs-control-service/src/database/migrations).
+Първата migration прилага замразения idempotent baseline безопасно и върху
+съществуващ `mariadb_data` volume.
 Старата таблица `cs_player_stats` автоматично се импортира, когато съществува;
 тя не се изтрива.
 

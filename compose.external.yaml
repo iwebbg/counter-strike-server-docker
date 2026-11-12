@@ -1,4 +1,8 @@
 services:
+  panel:
+    environment:
+      AUTH_COOKIE_SECURE: "true"
+
   panel-proxy:
     profiles: ["panel"]
     build:

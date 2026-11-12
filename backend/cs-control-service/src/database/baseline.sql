@@ -1,3 +1,4 @@
+-- Frozen MariaDB baseline imported by the first Knex migration.
 CREATE TABLE IF NOT EXISTS cs_schema_migrations (
   version INT UNSIGNED NOT NULL PRIMARY KEY,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
