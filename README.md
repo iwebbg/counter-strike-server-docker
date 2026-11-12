@@ -173,6 +173,9 @@ AFK играчите получават предупреждение, преме
 
 Редът за map vote/mapcycle е в [`configs/maps/gungame.txt`](configs/maps/gungame.txt).
 При добавяне на нова карта добавете нейното име без `.bsp` и rebuild-нете image-а.
+Алтернативно CS Control Panel може да качи папка на разархивиран map package
+директно към конкретен сървър. Ресурсите се валидират и остават в persistent
+AMXX data volume при бъдещ recreate/update.
 
 ### Classic карти
 

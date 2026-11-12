@@ -130,6 +130,21 @@ persistent AMXX data volume, синхронизира `mapcycle.txt` и AMXX `ma
 официалния и custom Classic rotation от `configs/maps/classic.txt`. Backend-ът
 налага същото правило и не позволява карта от друга категория чрез API.
 
+### Качване на custom map package
+
+Бутонът **Upload map** приема папката на предварително разархивиран map package.
+Поддържат се `maps/*.bsp|res|txt|nav`, `models/*.mdl`, `sound/*.wav|mp3`,
+`sprites/*.spr|txt`, `gfx/*.tga|bmp` и root `.wad` файлове. Пакетът може да има
+външна директория и вложена `cstrike/` структура. Лимитът е 128 файла и 32 MiB
+raw съдържание.
+
+Backend-ът отхвърля path traversal, непознати файлове, дублирани built-in карти
+и конфликтни ресурси. Преди запис пакетът се инсталира пробно в чист временен
+container от текущия game image. Успешните ресурси и mode category list се пазят
+в AMXX data volume под `custom_maps/`, затова оцеляват след Edit, Update и
+recreate. При работещ сървър картата става налична веднага; при спрян — при
+следващия старт. Server image трябва първо да е обновен до текущата версия.
+
 ## Настройки
 
 ```dotenv

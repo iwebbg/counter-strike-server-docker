@@ -7,6 +7,7 @@ import {
   validateCreateInput,
   validateEditInput,
   validateMapList,
+  validateMapUpload,
   validateModerationInput,
 } from "../src/controllers/servers/services/schemas.mjs";
 
@@ -107,6 +108,30 @@ test("validates editable server settings without changing blank passwords", () =
   assert.equal(value.rconPassword, "");
   assert.equal(value.clearServerPassword, true);
   assert.deepEqual(value.maps, ["gg_3way", "gg_buzz"]);
+});
+
+test("normalizes and validates extracted custom map packages", () => {
+  const payload = validateMapUpload({
+    mode: "gungame",
+    files: [
+      { path: "my-package/cstrike/maps/gg_custom_test.bsp", content: Buffer.from("bsp-data").toString("base64") },
+      { path: "my-package/cstrike/sound/custom/test.wav", content: Buffer.from("wav-data").toString("base64") },
+      { path: "my-package/custom.wad", content: Buffer.from("wad-data").toString("base64") },
+    ],
+  });
+  assert.deepEqual(payload.maps, ["gg_custom_test"]);
+  assert.deepEqual(
+    payload.files.map((file) => file.path),
+    ["maps/gg_custom_test.bsp", "sound/custom/test.wav", "custom.wad"],
+  );
+  assert.throws(
+    () =>
+      validateMapUpload({
+        mode: "classic",
+        files: [{ path: "../server.cfg", content: Buffer.from("bad").toString("base64") }],
+      }),
+    /Invalid map resource path/,
+  );
 });
 
 test("demultiplexes Docker stdout frames", () => {

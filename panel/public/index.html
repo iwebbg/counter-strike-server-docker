@@ -458,6 +458,7 @@
               ><span>⌕</span><input id="mapSearch" type="search" placeholder="Filter installed maps…"
             /></label>
             <div>
+              <button id="uploadMapFolderButton" class="text-button" type="button">Upload map folder</button>
               <button id="selectAllMaps" class="text-button" type="button">Select all</button
               ><button id="clearAllMaps" class="text-button" type="button">Clear</button>
             </div>
@@ -520,6 +521,8 @@
       <p id="connectHint" class="connect-hint"></p>
       <button class="button primary full" data-close-credential type="button">Done</button>
     </dialog>
+
+    <input id="mapPackageInput" type="file" webkitdirectory directory multiple hidden />
 
     <div id="toast" class="toast" role="status" popover="manual"></div>
     <script type="module" src="/app.js"></script>

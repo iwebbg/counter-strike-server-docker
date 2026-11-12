@@ -175,3 +175,79 @@ export function validateEditInput(input, portStart, portEnd) {
     clearServerPassword: input.clearServerPassword === true,
   };
 }
+
+const mapResourceExtensions = new Map([
+  [".bsp", "maps"],
+  [".res", "maps"],
+  [".nav", "maps"],
+  [".mdl", "models"],
+  [".wav", "sound"],
+  [".mp3", "sound"],
+  [".spr", "sprites"],
+  [".tga", "gfx"],
+  [".bmp", "gfx"],
+]);
+
+function normalizeMapResourcePath(value) {
+  const raw = String(value || "").replaceAll("\\", "/");
+  const parts = raw.split("/").filter(Boolean);
+  if (!parts.length || parts.some((part) => part === "." || part === ".." || /[\u0000-\u001f]/.test(part))) {
+    throw new Error(`Invalid map resource path: ${raw || "(empty)"}`);
+  }
+  const lowerParts = parts.map((part) => part.toLowerCase());
+  const cstrikeIndex = lowerParts.lastIndexOf("cstrike");
+  let relative = cstrikeIndex === -1 ? null : parts.slice(cstrikeIndex + 1).join("/");
+  if (!relative) {
+    const anchor = lowerParts.findIndex((part) => ["maps", "models", "sound", "sprites", "gfx"].includes(part));
+    if (anchor !== -1) relative = parts.slice(anchor).join("/");
+  }
+
+  const filename = parts.at(-1);
+  const extensionIndex = filename.lastIndexOf(".");
+  const extension = extensionIndex === -1 ? "" : filename.slice(extensionIndex).toLowerCase();
+  if (!relative && extension === ".wad") relative = filename;
+  if (!relative && mapResourceExtensions.has(extension)) {
+    relative = `${mapResourceExtensions.get(extension)}/${filename}`;
+  }
+  if (!relative || relative.length > 76) throw new Error(`Unsupported or overly long map resource path: ${raw}`);
+
+  const normalized = relative.replaceAll("\\", "/");
+  const lower = normalized.toLowerCase();
+  const allowed =
+    /^(maps\/(?:[^/]+\.(?:bsp|res|txt|nav))|models\/(?:.+\.mdl)|sound\/(?:.+\.(?:wav|mp3))|sprites\/(?:.+\.(?:spr|txt))|gfx\/(?:.+\.(?:tga|bmp))|[^/]+\.wad)$/i;
+  if (!allowed.test(normalized) || lower.endsWith(".ztmp")) {
+    throw new Error(`Unsupported map resource: ${raw}`);
+  }
+  return normalized;
+}
+
+export function validateMapUpload(input) {
+  const mode = input?.mode === "classic" || input?.mode === "gungame" ? input.mode : null;
+  if (!mode) throw new Error("Map upload mode must be classic or gungame");
+  if (!Array.isArray(input?.files) || input.files.length < 1 || input.files.length > 128) {
+    throw new Error("Map package must contain between 1 and 128 files");
+  }
+  const files = [];
+  const paths = new Set();
+  let totalBytes = 0;
+  for (const entry of input.files) {
+    const path = normalizeMapResourcePath(entry?.path);
+    const encoded = String(entry?.content || "");
+    if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
+      throw new Error(`Invalid base64 content for ${path}`);
+    }
+    const content = Buffer.from(encoded, "base64");
+    if (!content.length) throw new Error(`Empty map resource: ${path}`);
+    totalBytes += content.length;
+    if (totalBytes > 32 * 1024 * 1024) throw new Error("Map package exceeds the 32 MiB upload limit");
+    const key = path.toLowerCase();
+    if (paths.has(key)) throw new Error(`Duplicate map resource: ${path}`);
+    paths.add(key);
+    files.push({ path, content });
+  }
+  const maps = files.filter((file) => /^maps\/[^/]+\.bsp$/i.test(file.path)).map((file) => file.path.slice(5, -4));
+  if (!maps.length) throw new Error("Map package must contain at least one maps/*.bsp file");
+  if (maps.some((map) => !/^[a-zA-Z0-9_]+$/.test(map)))
+    throw new Error("Uploaded map names contain unsupported characters");
+  return { mode, files, maps };
+}

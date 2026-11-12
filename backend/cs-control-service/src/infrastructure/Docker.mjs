@@ -14,8 +14,8 @@ export class DockerClient {
     this.socketPath = socketPath;
   }
 
-  request(method, path, body = undefined) {
-    const payload = body === undefined ? undefined : Buffer.from(JSON.stringify(body));
+  request(method, path, body = undefined, contentType = "application/json") {
+    const payload = body === undefined ? undefined : Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body));
 
     return new Promise((resolve, reject) => {
       const request = http.request(
@@ -25,7 +25,7 @@ export class DockerClient {
           path,
           headers: payload
             ? {
-                "content-type": "application/json",
+                "content-type": contentType,
                 "content-length": payload.length,
               }
             : {},

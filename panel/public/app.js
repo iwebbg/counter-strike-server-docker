@@ -14,6 +14,7 @@ const state = {
   playersServer: null,
   playersTimer: null,
   editServer: null,
+  uploadServer: null,
   statsLoading: false,
   databaseConnected: false,
 };
@@ -152,6 +153,7 @@ function serverCard(server) {
         ${server.updateAvailable ? `<button class="button ghost update-button" data-action="update">${t("update")}</button>` : ""}
         <button class="button ghost" data-action="players" ${online ? "" : `disabled title="${t("viewPlayersHint")}"`}>${t("players")}</button>
         <button class="button ghost" data-action="maps" ${online ? "" : `disabled title="${t("manageMapsHint")}"`}>${t("maps")}</button>
+        <button class="button ghost" data-action="upload-maps" ${server.updateAvailable ? `disabled title="${t("updateBeforeUpload")}"` : ""}>${t("uploadMaps")}</button>
         <button class="button ghost" data-action="admins" ${online ? "" : `disabled title="${t("manageAdminsHint")}"`}>${t("admins")}</button>
         ${canRemove ? `<button class="button ghost danger" data-action="remove">${t("remove")}</button>` : ""}
       </div>
@@ -465,6 +467,11 @@ serverGrid.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "upload-maps") {
+    chooseMapPackage(server);
+    return;
+  }
+
   if (action === "logs") {
     state.logsServer = server;
     $("#logsTitle").textContent = t("serverLogs", { name: server.name });
@@ -669,6 +676,69 @@ async function openMaps(server) {
     notify(error.message, true);
   }
 }
+
+function chooseMapPackage(server) {
+  state.uploadServer = server;
+  const input = $("#mapPackageInput");
+  input.value = "";
+  input.click();
+}
+
+async function fileBase64(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  const chunkSize = 32_768;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
+$("#mapPackageInput").addEventListener("change", async (event) => {
+  const server = state.uploadServer;
+  const files = [...event.target.files];
+  if (!server || !files.length) return;
+  if (files.length > 128) {
+    notify(t("mapPackageFileLimit"), true);
+    return;
+  }
+  const totalBytes = files.reduce((total, file) => total + file.size, 0);
+  if (totalBytes > 32 * 1024 * 1024) {
+    notify(t("mapPackageSizeLimit"), true);
+    return;
+  }
+  if (!confirm(t("uploadMapConfirm", { name: server.name, count: files.length }))) return;
+  notify(t("uploadingMaps"));
+  try {
+    const payload = {
+      mode: server.mode,
+      files: await Promise.all(
+        files.map(async (file) => ({
+          path: file.webkitRelativePath || file.name,
+          content: await fileBase64(file),
+        })),
+      ),
+    };
+    const result = await api(`/api/servers/${server.id}/maps/upload`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    notify(t("mapsUploaded", { maps: result.maps.join(", "), count: result.files }));
+    if (state.mapsServer?.id === server.id && mapsDialog.open) {
+      closeMaps();
+      await openMaps(server);
+    }
+  } catch (error) {
+    notify(error.message, true);
+  } finally {
+    state.uploadServer = null;
+    event.target.value = "";
+  }
+});
+
+$("#uploadMapFolderButton").addEventListener("click", () => {
+  if (state.mapsServer) chooseMapPackage(state.mapsServer);
+});
 
 function closeMaps() {
   state.mapsServer = null;

@@ -144,6 +144,12 @@ if [[ -n ${admin_entries} ]]; then
 fi
 echo "[entrypoint] Loaded ${admin_count} AMXX admin(s) from ${admin_source}"
 
+custom_map_root="${CSTRIKE_DIR}/addons/amxmodx/data/custom_maps"
+if [[ -d ${custom_map_root}/resources ]]; then
+  /usr/local/bin/install-custom-map-resources "${custom_map_root}/resources" "${CSTRIKE_DIR}"
+  echo "[entrypoint] Installed persistent custom map resources"
+fi
+
 persistent_bans_file="${CSTRIKE_DIR}/addons/amxmodx/data/banned.cfg"
 touch "${persistent_bans_file}"
 ln -sfn "addons/amxmodx/data/banned.cfg" "${CSTRIKE_DIR}/banned.cfg"

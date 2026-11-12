@@ -77,9 +77,10 @@ COPY assets/sounds/killstreak/ "${HLDS_DIR}/cstrike/sound/cs16/killstreak/"
 COPY gungame_maps/ /tmp/gungame_maps/
 COPY classic_maps/ /tmp/classic_maps/
 COPY docker/install_map_packages.sh /usr/local/bin/install-map-packages
+COPY docker/install_custom_map_resources.sh /usr/local/bin/install-custom-map-resources
 COPY docker/entrypoint.sh /usr/local/bin/cs16-entrypoint
 
-RUN chmod 0755 /usr/local/bin/cs16-entrypoint /usr/local/bin/install-map-packages \
+RUN chmod 0755 /usr/local/bin/cs16-entrypoint /usr/local/bin/install-map-packages /usr/local/bin/install-custom-map-resources \
  && /usr/local/bin/install-map-packages /tmp/gungame_maps "${HLDS_DIR}/cstrike" \
  && /usr/local/bin/install-map-packages /tmp/classic_maps "${HLDS_DIR}/cstrike" \
  && for map_list in "${HLDS_DIR}"/presets/maps/*.txt; do \

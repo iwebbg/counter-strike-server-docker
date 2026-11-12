@@ -127,6 +127,7 @@ class Server {
       if (loggerConfig.showErrorLogs) {
         console.error("HTTP request failed", { requestId: req.requestId, route: error.route, message: error.message });
       }
+      if (error.type === "entity.too.large") return res.jsonError(413, "REQUEST_BODY_TOO_LARGE");
       if (error.status && error.code) return res.jsonError(error.status, error.code, error.extensions ?? []);
       return res.jsonError(500, "INTERNAL_SERVER_ERROR");
     });
