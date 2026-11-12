@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#08100f" />
-    <title>CS Control Panel</title>
+    <title>CS 1.6 Server CP</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -21,8 +21,11 @@
           </select></label
         >
         <div class="brand-mark" aria-hidden="true"><span>CS</span></div>
-        <h1>CS Control Panel</h1>
-        <p class="muted">Sign in to manage your Counter-Strike servers.</p>
+        <h1>CS 1.6 Server CP</h1>
+        <p class="powered-by">
+          Powered by
+          <a href="https://interweb.bg" target="_blank" rel="noopener noreferrer">InterWeb</a>
+        </p>
         <label class="field">
           <span>Email</span>
           <input id="emailInput" type="email" autocomplete="username" required maxlength="254" autofocus />
@@ -38,10 +41,15 @@
 
     <div id="appView" class="app-view hidden">
       <header class="topbar">
-        <a class="brand" href="#" aria-label="CS Control home">
-          <span class="brand-icon">CS</span>
-          <span><strong>CS Control</strong><small>GoldSrc Fleet</small></span>
-        </a>
+        <div class="brand" aria-label="CS 1.6 Server CP">
+          <span class="brand-mark brand-mark-header" aria-hidden="true"><span>CS</span></span>
+          <span
+            ><strong>CS 1.6 Server CP</strong
+            ><small
+              >Powered by <a href="https://interweb.bg" target="_blank" rel="noopener noreferrer">InterWeb</a></small
+            ></span
+          >
+        </div>
         <div class="topbar-actions">
           <span id="connectionState" class="connection"><i></i> Docker connected</span>
           <label class="language-control"
@@ -220,6 +228,10 @@
           </div>
         </section>
       </main>
+      <footer class="product-footer">
+        <strong>CS 1.6 Server CP</strong>
+        <span>Powered by <a href="https://interweb.bg" target="_blank" rel="noopener noreferrer">InterWeb</a></span>
+      </footer>
     </div>
 
     <dialog id="createDialog" class="panel-dialog">
