@@ -17,6 +17,7 @@ const bg = {
   "Launch, monitor and operate isolated Counter-Strike 1.6 instances without touching the terminal.":
     "Стартирай, наблюдавай и управлявай изолирани Counter-Strike 1.6 инстанции без терминал.",
   "New server": "Нов сървър",
+  "Update all": "Обнови всички",
   "Fleet metrics": "Показатели на мрежата",
   "Total servers": "Общо сървъри",
   "controlled instances": "управлявани инстанции",
@@ -171,10 +172,22 @@ const dynamic = {
     edit: "Edit",
     update: "Update",
     updateAvailable: "UPDATE AVAILABLE",
+    upToDate: "UP TO DATE",
+    currentImage: "Current image",
+    availableImage: "Available image",
     updateConfirm:
       "Update {name} to the latest local server image? A running server will restart and connected players will be disconnected.",
+    updatePlayersConfirm:
+      "Update {name}? The server will restart and {count} connected player(s) will be disconnected.",
     updating: "Updating…",
     serverImageUpdated: "{name} was updated. Persistent volumes were preserved.",
+    updateAllCount: "Update all ({count})",
+    updateAllConfirm: "Update all {count} outdated panel-managed server(s)?",
+    updateAllPlayersConfirm:
+      "Update all {count} outdated server(s)? {players} connected player(s) will be disconnected.",
+    updatingAll: "Updating fleet…",
+    fleetUpdated: "Updated {count} server(s). Persistent volumes were preserved.",
+    fleetUpdatePartial: "Updated {updated}; failed {failed}: {names}.",
     remove: "Remove",
     viewPlayersHint: "Start the server to view players",
     manageMapsHint: "Start the server to manage maps",
@@ -298,10 +311,22 @@ const dynamic = {
     edit: "Редакция",
     update: "Обнови",
     updateAvailable: "ИМА ОБНОВЛЕНИЕ",
+    upToDate: "АКТУАЛЕН",
+    currentImage: "Текущ image",
+    availableImage: "Наличен image",
     updateConfirm:
       "Да се обнови ли {name} до последния локален server image? Работещият сървър ще се рестартира и свързаните играчи ще бъдат разкачени.",
+    updatePlayersConfirm:
+      "Да се обнови ли {name}? Сървърът ще се рестартира и {count} свързани играчи ще бъдат разкачени.",
     updating: "Обновяване…",
     serverImageUpdated: "{name} е обновен. Persistent volumes са запазени.",
+    updateAllCount: "Обнови всички ({count})",
+    updateAllConfirm: "Да се обновят ли всички {count} остарели panel-managed сървъра?",
+    updateAllPlayersConfirm:
+      "Да се обновят ли всички {count} остарели сървъра? {players} свързани играчи ще бъдат разкачени.",
+    updatingAll: "Обновяване на fleet-а…",
+    fleetUpdated: "Обновени са {count} сървъра. Persistent volumes са запазени.",
+    fleetUpdatePartial: "Обновени: {updated}; неуспешни: {failed} — {names}.",
     remove: "Премахни",
     viewPlayersHint: "Стартирай сървъра, за да видиш играчите",
     manageMapsHint: "Стартирай сървъра, за да управляваш картите",

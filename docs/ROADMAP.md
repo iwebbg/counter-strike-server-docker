@@ -33,6 +33,7 @@
 - [x] MariaDB-backed moderation history за fleet-wide bans;
 - [x] server edit workflow с controlled recreate и запазване на volumes;
 - [x] image update/migrate workflow със version detection, rollback и запазване на volumes;
+- [x] image build IDs, Up to date status, player-aware warning и fleet Update all;
 - [x] extracted map package uploader с validation и persistent per-server resources;
 - [ ] ZIP upload и управление/премахване на качени map packages;
 - [ ] backup/restore/export на AMXX data, logs и database;

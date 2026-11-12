@@ -82,8 +82,8 @@ Docker Compose, така и с опционален интерактивен CS 
 - start, stop, restart, live logs и remove за спрени panel-managed containers;
 - Edit wizard с controlled recreate за име, режим, max players, port, passwords,
   start map и rotation, който запазва същите logs/data volumes;
-- image ID detection и Update action с controlled migration и rollback за
-  panel-managed servers;
+- current/target image ID, Up to date/Update available badges, player-aware
+  confirmation и sequential Update all с per-server rollback;
 - map rotation checklist при create и live map manager с search/select all;
 - validated custom map folder upload с persistent resources и mode categories;
 - persistent mapcycle override и проверен `changelevel` чрез RCON;

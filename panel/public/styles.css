@@ -387,6 +387,13 @@ main {
   font-size: 16px;
   line-height: 1.65;
 }
+.hero-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 .create-button {
   padding: 14px 20px;
   white-space: nowrap;
@@ -529,6 +536,11 @@ main {
     11px ui-monospace,
     monospace;
 }
+.card-title .image-build {
+  color: #6f8c83;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
 .badges {
   display: flex;
   gap: 6px;
@@ -555,6 +567,10 @@ main {
   color: var(--lime);
   border-color: rgba(201, 255, 74, 0.28);
   background: rgba(201, 255, 74, 0.07);
+}
+.badge.current {
+  color: #91aaa2;
+  border-color: rgba(145, 170, 162, 0.2);
 }
 .card-actions .update-button {
   color: var(--lime);

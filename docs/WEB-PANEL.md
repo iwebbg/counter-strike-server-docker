@@ -91,7 +91,14 @@ ID на `SERVER_IMAGE`. След нов build/pull картата показва
 бутон **Update**. Операцията създава replacement с новия image, запазва
 environment, port, network и всички named volumes, след което възстановява
 предишното running/stopped състояние. При неуспех се прави rollback към стария
-image. Compose-managed primary server се обновява чрез Compose, не от панела.
+image. Картата показва кратките current/target image IDs и постоянен **Up to
+date** или **Update available** badge. Потвърждението предупреждава с реалния
+брой свързани играчи.
+
+Когато повече от една инстанция е остаряла, **Update all** ги обработва
+последователно. Всяка има собствен rollback; проблем в една инстанция не спира
+останалите и резултатът показва успешните и неуспешните имена. Compose-managed
+primary server се обновява чрез Compose, не от панела.
 
 ## Управление на администратори
 

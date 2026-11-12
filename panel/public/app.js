@@ -124,17 +124,26 @@ function showAuth(message = "") {
   $("#emailInput").focus();
 }
 
+function shortImageId(value) {
+  return String(value || "")
+    .replace(/^sha256:/, "")
+    .slice(0, 12);
+}
+
 function serverCard(server) {
   const online = server.state === "running";
   const canRemove = server.managedBy === "panel" && !online;
   const players = server.players === null ? "—" : server.players;
   const capacity = server.liveMaxPlayers || server.maxPlayers;
   const currentMap = server.map || server.startMap || t("starting");
+  const currentImage = shortImageId(server.imageId) || "—";
+  const targetImage = shortImageId(server.targetImageId) || "—";
+  const imageTitle = `${t("currentImage")}: ${server.imageId || "—"}\n${t("availableImage")}: ${server.targetImageId || "—"}`;
   return `
     <article class="server-card ${online ? "online" : ""}" data-id="${server.id}">
       <div class="card-head">
-        <div class="card-title"><i class="status-orb"></i><div><h3>${escapeHtml(server.name)}</h3><p>${escapeHtml(server.containerName)}</p></div></div>
-        <div class="badges"><span class="badge mode">${escapeHtml(server.mode)}</span><span class="badge">${escapeHtml(server.managedBy)}</span>${server.updateAvailable ? `<span class="badge update">${t("updateAvailable")}</span>` : ""}</div>
+        <div class="card-title"><i class="status-orb"></i><div><h3>${escapeHtml(server.name)}</h3><p>${escapeHtml(server.containerName)}</p>${server.managedBy === "panel" ? `<p class="image-build" title="${escapeHtml(imageTitle)}">IMAGE ${escapeHtml(currentImage)}${server.updateAvailable ? ` → ${escapeHtml(targetImage)}` : ""}</p>` : ""}</div></div>
+        <div class="badges"><span class="badge mode">${escapeHtml(server.mode)}</span><span class="badge">${escapeHtml(server.managedBy)}</span>${server.managedBy === "panel" ? `<span class="badge ${server.updateAvailable ? "update" : "current"}">${t(server.updateAvailable ? "updateAvailable" : "upToDate")}</span>` : ""}</div>
       </div>
       <div class="server-data">
         <div><span>${t("status")}</span><strong>${escapeHtml(t(online ? server.health : server.state))}</strong></div>
@@ -168,6 +177,10 @@ function render() {
   const online = state.servers.filter((server) => server.state === "running");
   const knownPlayers = online.reduce((total, server) => total + (server.players || 0), 0);
   const capacity = online.reduce((total, server) => total + (server.liveMaxPlayers || server.maxPlayers || 0), 0);
+  const updates = state.servers.filter((server) => server.updateAvailable);
+  const updateAll = $("#updateAllButton");
+  updateAll.classList.toggle("hidden", updates.length === 0);
+  updateAll.textContent = t("updateAllCount", { count: updates.length });
   $("#totalMetric").textContent = state.servers.length;
   $("#onlineMetric").textContent = online.length;
   $("#playersMetric").textContent = knownPlayers;
@@ -241,6 +254,38 @@ $("#logoutButton").addEventListener("click", async () => {
 
 $("#refreshButton").addEventListener("click", () => refresh());
 $("#openCreateButton").addEventListener("click", () => createDialog.showModal());
+$("#updateAllButton").addEventListener("click", async () => {
+  const servers = state.servers.filter((server) => server.updateAvailable);
+  if (!servers.length) return;
+  const players = servers.reduce((total, server) => total + Number(server.players || 0), 0);
+  const message = players
+    ? t("updateAllPlayersConfirm", { count: servers.length, players })
+    : t("updateAllConfirm", { count: servers.length });
+  if (!confirm(message)) return;
+  const button = $("#updateAllButton");
+  button.disabled = true;
+  button.textContent = t("updatingAll");
+  try {
+    const result = await api("/api/fleet/server-images", { method: "PUT" });
+    if (result.failed.length) {
+      notify(
+        t("fleetUpdatePartial", {
+          updated: result.updated.length,
+          failed: result.failed.length,
+          names: result.failed.map((server) => server.name).join(", "),
+        }),
+        true,
+      );
+    } else {
+      notify(t("fleetUpdated", { count: result.updated.length }));
+    }
+    await refresh(true);
+  } catch (error) {
+    notify(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
 
 document.querySelectorAll(".filter").forEach((button) =>
   button.addEventListener("click", () => {
@@ -452,7 +497,11 @@ serverGrid.addEventListener("click", async (event) => {
   }
 
   if (action === "update") {
-    if (!confirm(t("updateConfirm", { name: server.name }))) return;
+    const connectedPlayers = Number(server.players || 0);
+    const message = connectedPlayers
+      ? t("updatePlayersConfirm", { name: server.name, count: connectedPlayers })
+      : t("updateConfirm", { name: server.name });
+    if (!confirm(message)) return;
     button.disabled = true;
     button.textContent = t("updating");
     try {

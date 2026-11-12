@@ -767,6 +767,39 @@ export async function migrateServerImage(id) {
   }
 }
 
+export async function migrateFleetImages() {
+  const filters = encodeURIComponent(JSON.stringify({ label: [managedLabel] }));
+  const containers = await docker.request("GET", `/containers/json?all=1&filters=${filters}`);
+  const targetImage = await docker.request("GET", `/images/${encodeURIComponent(config.image)}/json`);
+  const pending = [];
+  for (const container of containers) {
+    const inspect = await docker.request("GET", `/containers/${container.Id}/json`);
+    if (inspect.Config?.Labels?.["com.cs16.managed-by"] === "panel" && inspect.Image !== targetImage.Id) {
+      pending.push({
+        id: inspect.Id,
+        name: inspect.Config?.Labels?.["com.cs16.display-name"] || inspect.Name.replace(/^\//, ""),
+      });
+    }
+  }
+
+  const updated = [];
+  const failed = [];
+  for (const server of pending) {
+    try {
+      const result = await migrateServerImage(server.id);
+      updated.push({ name: server.name, id: result.id });
+    } catch (error) {
+      failed.push({ name: server.name, error: error.message });
+    }
+  }
+  return {
+    targetImageId: targetImage.Id,
+    requested: pending.length,
+    updated,
+    failed,
+  };
+}
+
 export const portRange = () => [config.portStart, config.portEnd];
 export { createServer, listServers };
 
