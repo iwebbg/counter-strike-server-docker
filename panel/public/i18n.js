@@ -5,8 +5,7 @@ const attributeOriginals = new WeakMap();
 
 const bg = {
   Language: "Език",
-  "CS CONTROL PANEL": "CS КОНТРОЛЕН ПАНЕЛ",
-  "Sign in to your CS Control account.": "Влезте във вашия CS Control акаунт.",
+  "Sign in to manage your Counter-Strike servers.": "Влезте, за да управлявате своите Counter-Strike сървъри.",
   Email: "Имейл",
   Password: "Парола",
   "Sign in": "Вход",
@@ -383,7 +382,7 @@ export function getLocale() {
 
 export function translateDocument(root = document) {
   document.documentElement.lang = language;
-  document.title = language === "bg" ? "CS Control — Контролен панел" : "CS Control — Control Panel";
+  document.title = "CS Control Panel";
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const nodes = [];
   while (walker.nextNode()) nodes.push(walker.currentNode);
