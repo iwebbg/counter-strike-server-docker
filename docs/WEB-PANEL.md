@@ -139,7 +139,7 @@ Duration `0` означава permanent ban. Database collector-ът прове�
 
 ## Statistics dashboard
 
-С `compose.database.yaml` панелът показва database status, all-time или seasonal
+С `docker/compose.database.yaml` панелът показва database status, all-time или seasonal
 ranking и филтър по server. Таблиците включват K/D, headshots, playtime,
 GunGame wins, popular maps, sessions, achievements и moderation audit. Click
 върху ranking ред отваря player profile. **+ Season** приключва текущия активен

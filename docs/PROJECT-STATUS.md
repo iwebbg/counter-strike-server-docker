@@ -182,7 +182,7 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 
 ```bash
 git status
-docker compose ps
+./docker/compose ps
 npm --prefix panel test
 ./docker/compose up -d --build
 ```

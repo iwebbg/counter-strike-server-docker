@@ -17,7 +17,7 @@ DB_ROOT_PASSWORD=replace-with-another-long-random-password
 Само game server и MariaDB:
 
 ```bash
-docker compose -f compose.yaml -f compose.database.yaml up -d --build
+docker compose --project-directory . -f docker/compose.yaml -f docker/compose.database.yaml up -d --build
 ```
 
 С Control Panel:
@@ -104,7 +104,7 @@ collector-ът блокира следващите връзки до изтич�
 SQL backup към текущата директория:
 
 ```bash
-docker compose -f compose.yaml -f compose.database.yaml exec -T mariadb \
+docker compose --project-directory . -f docker/compose.yaml -f docker/compose.database.yaml exec -T mariadb \
   sh -lc 'MYSQL_PWD="$MARIADB_PASSWORD" mariadb-dump --user="$MARIADB_USER" "$MARIADB_DATABASE"' \
   > cs16-database.sql
 ```
@@ -117,7 +117,7 @@ docker compose -f compose.yaml -f compose.database.yaml exec -T mariadb \
 Първо спрете game инстанциите или направете maintenance window. После:
 
 ```bash
-docker compose -f compose.yaml -f compose.database.yaml exec -T mariadb \
+docker compose --project-directory . -f docker/compose.yaml -f docker/compose.database.yaml exec -T mariadb \
   sh -lc 'MYSQL_PWD="$MARIADB_PASSWORD" mariadb --user="$MARIADB_USER" "$MARIADB_DATABASE"' \
   < cs16-database.sql
 ```
@@ -130,7 +130,7 @@ docker compose -f compose.yaml -f compose.database.yaml exec -T mariadb \
 
 ## Operational бележки
 
-- Не използвайте `docker compose down -v`, ако искате да запазите базата.
+- Не използвайте `./docker/compose down -v`, ако искате да запазите базата.
 - Наблюдавайте размера на `mariadb_data` и правете периодични restore тестове.
 - Name и session history са лични community данни; публикувайте privacy policy и
   задайте retention правила според юрисдикцията си.

@@ -36,9 +36,9 @@ Named volumes пазят само mutable данни. Game binaries и plugins �
 Версиите са build args в `Dockerfile`. След промяна изпълнете build и smoke test:
 
 ```bash
-docker compose build --no-cache server
-docker compose up -d
-docker compose logs -f server
+./docker/compose build --no-cache server
+./docker/compose up -d
+./docker/compose logs -f server
 ```
 
 Steam App 90 понякога изисква повторен update; Dockerfile прави до три опита и

@@ -12,12 +12,12 @@
 
 Интерактивният selector предлага:
 
-| Stack | Услуги |
-|---|---|
-| `full` | Game server, локален CS Control Panel, MariaDB и Redis |
-| `panel` | Game server, локален Control Panel, MariaDB и Redis |
-| `database` | Game server и MariaDB |
-| `server` | Само game server |
+| Stack      | Услуги                                                 |
+| ---------- | ------------------------------------------------------ |
+| `full`     | Game server, локален CS Control Panel, MariaDB и Redis |
+| `panel`    | Game server, локален Control Panel, MariaDB и Redis    |
+| `database` | Game server и MariaDB                                  |
+| `server`   | Само game server                                       |
 
 Изборът се записва като `CS16_STACK` в `.env`. Setup-ът генерира липсващи или
 примерни RCON, panel и database secrets чрез OpenSSL, без да ги показва в
@@ -55,7 +55,15 @@ CS16_ENV_FILE=/run/secrets/cs16.env ./docker/compose config
 
 ## Ежедневни команди
 
-След setup повече не е нужно да помните `--file` и `--profile` аргументите:
+Стартирайте wrapper-а без аргументи за интерактивно управление:
+
+```bash
+./docker/compose
+```
+
+Менюто предлага start/update, status, logs, restart, пълно спиране, изтриване
+на volumes с потвърждение, смяна на stack и diagnostics. Същите операции са
+достъпни и като директни команди:
 
 ```bash
 ./docker/compose up -d --build
@@ -86,9 +94,9 @@ CS16_ENV_FILE=/run/secrets/cs16.env ./docker/compose config
 ./docker/compose up -d --build
 ```
 
-Командата запазва останалите `.env` настройки. Ако премахвате услуги от stack-а,
-първо изпълнете `./docker/compose down` със стария избор, сменете stack-а и после
-стартирайте отново. Named volumes не се изтриват без изрично `-v`.
+Командата запазва останалите `.env` настройки. `./docker/compose down` винаги
+открива и сваля целия `cs16` project, независимо кой stack е избран в момента.
+Named volumes не се изтриват без изрично `-v`.
 
 ## Standard Compose fallback
 
@@ -96,10 +104,10 @@ Wrapper-ът не скрива Docker Compose. Напредналите потр
 директно:
 
 ```bash
-docker compose up -d --build
-docker compose -f compose.yaml -f compose.local.yaml --profile panel up -d --build
-docker compose -f compose.yaml -f compose.external.yaml --profile panel up -d --build
-docker compose -f compose.yaml -f compose.database.yaml -f compose.production.yaml --profile panel up -d --build
+docker compose --project-directory . -f docker/compose.yaml up -d --build
+docker compose --project-directory . -f docker/compose.yaml -f docker/compose.local.yaml --profile panel up -d --build
+docker compose --project-directory . -f docker/compose.yaml -f docker/compose.external.yaml --profile panel up -d --build
+docker compose --project-directory . -f docker/compose.yaml -f docker/compose.database.yaml -f docker/compose.production.yaml --profile panel up -d --build
 ```
 
 Това е полезно за CI, custom overrides и диагностика.

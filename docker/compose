@@ -146,6 +146,7 @@ show_help() {
 CS 1.6 Docker Compose selector
 
 Usage:
+  ./docker/compose
   ./docker/compose setup [server|panel|database|full]
   ./docker/compose publish <domain> [https-port] [email]
   ./docker/compose external <docker-network> [network-alias]
@@ -155,8 +156,9 @@ Usage:
   ./docker/compose <docker compose arguments...>
 
 Examples:
-  ./docker/compose setup
-  ./docker/compose up -d --build
+  ./docker/compose
+  ./docker/compose setup full
+  ./docker/compose up -d
   ./docker/compose ps
   ./docker/compose logs -f server panel mariadb
   ./docker/compose down
@@ -165,6 +167,54 @@ The selected stack and local/production environment are stored in .env.
 Advanced users can still use the Compose overlay files directly.
 Set CS16_ENV_FILE=/path/to/file to use a different environment file in CI.
 EOF
+}
+
+interactive_menu() {
+  [[ -t 0 ]] || { show_help; return; }
+
+  if [[ ! -f "$environment_file" ]]; then
+    printf 'No configuration found. Starting first-time setup.\n'
+    configure_stack
+  fi
+
+  while true; do
+    local selected_stack selected_deployment choice confirmation
+    selected_stack="$(env_value CS16_STACK)"
+    selected_deployment="$(env_value CS16_DEPLOYMENT)"
+    printf '\nCS 1.6 Docker Control\n'
+    printf 'Stack: %s | Deployment: %s\n\n' "${selected_stack:-server}" "${selected_deployment:-local}"
+    printf '  1) Start or update the stack\n'
+    printf '  2) Show service status\n'
+    printf '  3) Follow logs\n'
+    printf '  4) Restart services\n'
+    printf '  5) Stop and remove the complete stack\n'
+    printf '  6) Stop and remove the stack plus all data volumes\n'
+    printf '  7) Change stack configuration\n'
+    printf '  8) Run diagnostics\n'
+    printf '  9) Exit\n\n'
+    read -r -p 'Choose an action: ' choice
+
+    case "$choice" in
+      1) "$0" up -d ;;
+      2) "$0" ps ;;
+      3) "$0" logs --tail=100 -f || true ;;
+      4) "$0" restart ;;
+      5) "$0" down ;;
+      6)
+        printf 'This permanently removes MariaDB, Redis, AMXX and log volumes.\n'
+        read -r -p 'Type DELETE to continue: ' confirmation
+        if [[ "$confirmation" == DELETE ]]; then
+          "$0" down -v
+        else
+          printf 'Cancelled.\n'
+        fi
+        ;;
+      7) configure_stack ;;
+      8) "$0" doctor ;;
+      9) return ;;
+      *) printf 'Choose a number from 1 to 9.\n' ;;
+    esac
+  done
 }
 
 case "${1:-}" in
@@ -193,6 +243,11 @@ case "${1:-}" in
     ;;
 esac
 
+if [[ $# -eq 0 ]]; then
+  interactive_menu
+  exit 0
+fi
+
 [[ -f "$environment_file" ]] || die 'Run ./docker/compose setup first.'
 
 stack="$(env_value CS16_STACK)"
@@ -211,24 +266,32 @@ esac
 compose_arguments=(
   --project-directory "$project_directory"
   --env-file "$environment_file"
-  --file "$project_directory/compose.yaml"
+  --file "$docker_directory/compose.yaml"
 )
 
-if [[ "$stack" == panel || "$stack" == database || "$stack" == full ]]; then
-  compose_arguments+=(--file "$project_directory/compose.database.yaml")
-fi
-if [[ "$stack" == panel || "$stack" == full ]]; then
-  compose_arguments+=(--file "$project_directory/compose.${deployment}.yaml")
+if [[ "${1:-}" == down ]]; then
+  # A project-wide down must see services from the previously selected stack,
+  # even when CS16_STACK has since been changed in .env.
+  compose_arguments+=(--file "$docker_directory/compose.database.yaml")
+  compose_arguments+=(--file "$docker_directory/compose.${deployment}.yaml")
   compose_arguments+=(--profile panel)
+else
+  if [[ "$stack" == panel || "$stack" == database || "$stack" == full ]]; then
+    compose_arguments+=(--file "$docker_directory/compose.database.yaml")
+  fi
+  if [[ "$stack" == panel || "$stack" == full ]]; then
+    compose_arguments+=(--file "$docker_directory/compose.${deployment}.yaml")
+    compose_arguments+=(--profile panel)
+  fi
 fi
 
 if [[ "${1:-}" == show ]]; then
-  compose_files='compose.yaml'
+  compose_files='docker/compose.yaml'
   if [[ "$stack" == panel || "$stack" == database || "$stack" == full ]]; then
-    compose_files+=' + compose.database.yaml'
+    compose_files+=' + docker/compose.database.yaml'
   fi
   if [[ "$stack" == panel || "$stack" == full ]]; then
-    compose_files+=" + compose.${deployment}.yaml"
+    compose_files+=" + docker/compose.${deployment}.yaml"
   fi
   printf 'Selected stack: %s\n' "$stack"
   printf 'Services: %s\n' "$(stack_description "$stack")"
@@ -267,6 +330,15 @@ if [[ "${1:-}" == doctor ]]; then
 fi
 
 [[ $# -gt 0 ]] || { show_help; exit 0; }
+
+if [[ "$1" == down ]]; then
+  mapfile -t project_containers < <(docker ps -aq --filter 'label=com.docker.compose.project=cs16')
+  if (( ${#project_containers[@]} > 0 )); then
+    printf 'Removing %d container(s) belonging to the cs16 project.\n' "${#project_containers[@]}"
+    docker rm -f "${project_containers[@]}" >/dev/null
+  fi
+  exec docker compose "${compose_arguments[@]}" down --remove-orphans "${@:2}"
+fi
 
 # Local images are part of this repository. Rebuild them on `up` so a stale
 # panel image cannot run newer Compose commands with an older package.json.

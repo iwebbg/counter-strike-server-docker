@@ -56,13 +56,13 @@ stack и генерира липсващите secrets:
 ./docker/compose up -d --build
 ```
 
-Стандартният Docker Compose workflow също остава поддържан:
+Единният wrapper е препоръчаният workflow:
 
 ```bash
 cp .env.example .env
 # задължително сменете RCON_PASSWORD в .env преди публичен сървър
-docker compose up -d --build
-docker compose logs -f server
+./docker/compose up -d
+./docker/compose logs -f server
 ```
 
 Свързване от играта:
@@ -74,12 +74,12 @@ connect SERVER_IP:27015
 Спиране и стартиране:
 
 ```bash
-docker compose stop
-docker compose start
-docker compose down
+./docker/compose stop
+./docker/compose start
+./docker/compose down
 ```
 
-`docker compose down` не изтрива named volumes. Не използвайте `down -v`, ако
+`./docker/compose down` не изтрива named volumes. Не използвайте `down -v`, ако
 искате да запазите AMXX/MariaDB данните.
 
 ## Избор на режим
@@ -99,7 +99,7 @@ SERVER_MODE=gungame
 После приложете промяната:
 
 ```bash
-docker compose up -d
+./docker/compose up -d
 ```
 
 Когато `START_MAP` и `MAPCYCLE` са празни, `classic` започва с `de_dust2` и
@@ -178,7 +178,7 @@ MariaDB не е нужна за самата игра. За да записва�
 `DB_PASSWORD` и `DB_ROOT_PASSWORD` в `.env`, след което:
 
 ```bash
-docker compose -f compose.yaml -f compose.database.yaml up -d --build
+docker compose --project-directory . -f docker/compose.yaml -f docker/compose.database.yaml up -d --build
 ```
 
 Backend услугата прилага Knex migrations преди API старта, а AMXX collector-ът
@@ -193,8 +193,8 @@ playtime, map activity, GunGame progress, seasons и achievements. Control Panel
 Всеки Compose project трябва да има собствен външен порт и `SERVER_ID`:
 
 ```bash
-docker compose -p cs16-classic --env-file .env.classic up -d
-docker compose -p cs16-gungame --env-file .env.gungame up -d
+docker compose --project-directory . -f docker/compose.yaml -p cs16-classic --env-file .env.classic up -d
+docker compose --project-directory . -f docker/compose.yaml -p cs16-gungame --env-file .env.gungame up -d
 ```
 
 Примерни различия:
@@ -219,8 +219,8 @@ Docker Compose не може надеждно сам да открива и ре
 
 ## CS Control Panel (опционално)
 
-Интерактивният локален dashboard може да създава и управлява много CS 1.6
-инстанции. Стандартният `docker compose up` не стартира панела. За включване:
+Интерактивният уеб контролен панел може да създава и управлява много CS 1.6
+инстанции. За включване:
 
 ```bash
 ./docker/compose setup panel
@@ -269,7 +269,7 @@ slap/slay, map, chat, vote и menu права. Не използвайте `z` �
 това е флагът за обикновен потребител. След промяна приложете конфигурацията:
 
 ```bash
-docker compose up -d --force-recreate
+./docker/compose up -d --force-recreate
 ```
 
 Влезте със същия Steam акаунт и напишете в game console:
@@ -326,7 +326,7 @@ plugin-а в `configs/plugins/classic.ini`, `configs/plugins/gungame.ini` или
 двата списъка и изпълнете:
 
 ```bash
-docker compose up -d --build
+./docker/compose up -d
 ```
 
 Не добавяйте непроверени готови `.amxx` binaries. Source build-ът прави версиите
@@ -334,8 +334,11 @@ docker compose up -d --build
 
 ## Конфигурационни файлове
 
-- [`compose.yaml`](compose.yaml) — game server;
-- [`compose.database.yaml`](compose.database.yaml) — MariaDB override;
+- [`docker/compose.yaml`](docker/compose.yaml) — game server;
+- [`docker/compose.database.yaml`](docker/compose.database.yaml) — MariaDB override;
+- [`docker/compose.local.yaml`](docker/compose.local.yaml) — local NGINX;
+- [`docker/compose.production.yaml`](docker/compose.production.yaml) — production NGINX и TLS;
+- [`docker/compose.external.yaml`](docker/compose.external.yaml) — existing reverse-proxy network;
 - [`.env.example`](.env.example) — всички основни настройки;
 - [`configs/plugins`](configs/plugins) — plugin list за двата режима;
 - [`configs/maps`](configs/maps) — отделни mapcycle списъци за режимите;
@@ -355,10 +358,10 @@ docker compose up -d --build
 ## Проверка и диагностика
 
 ```bash
-docker compose config
-docker compose ps
-docker compose logs --tail=200 server
-docker compose exec server sh -lc 'grep -E "gamedll_linux" cstrike/liblist.gam'
+./docker/compose config
+./docker/compose ps
+./docker/compose logs --tail=200 server
+./docker/compose exec server sh -lc 'grep -E "gamedll_linux" cstrike/liblist.gam'
 ```
 
 При успешен старт `meta list` трябва да показва AMX Mod X, а `amxx plugins`

@@ -9,23 +9,23 @@ team kills или убийства по време на warmup.
 Multi-kill броячът отчита поредни убийства в рамките на
 `KILLSTREAK_MULTI_WINDOW` секунди:
 
-| Убийства | Известие |
-| ---: | --- |
-| първото за рунда | First Blood |
-| 2 | Double Kill |
-| 3 | Multi Kill |
-| 4 | Ultra Kill |
-| 5+ | Monster Kill |
+|         Убийства | Известие     |
+| ---------------: | ------------ |
+| първото за рунда | First Blood  |
+|                2 | Double Kill  |
+|                3 | Multi Kill   |
+|                4 | Ultra Kill   |
+|               5+ | Monster Kill |
 
 Отделният streak брояч следи убийствата без смърт:
 
-| Поредица | Известие |
-| ---: | --- |
-| 5 | Killing Spree |
-| 10 | Rampage |
-| 15 | Dominating |
-| 20 | Unstoppable |
-| 25 | Godlike |
+| Поредица | Известие      |
+| -------: | ------------- |
+|        5 | Killing Spree |
+|       10 | Rampage       |
+|       15 | Dominating    |
+|       20 | Unstoppable   |
+|       25 | Godlike       |
 
 Ако едно убийство покрива едновременно двата прага, streak събитието има
 приоритет и се пуска само един звук. Multi-kill броячът и First Blood се
@@ -62,5 +62,5 @@ GoldSource съвместимост използвайте mono PCM WAV, 16-bit,
 което rebuild-нете image-а:
 
 ```bash
-docker compose up -d --build
+./docker/compose up -d
 ```

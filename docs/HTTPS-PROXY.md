@@ -4,11 +4,11 @@ Control Panel винаги минава през NGINX и винаги изпо�
 `panel:8080`. Подобно на `counter-strike-web-laravel`, средата избира отделен
 Compose overlay и отделна NGINX конфигурация, без да променя приложението.
 
-| Среда      | Compose overlay           | NGINX                          | Browser URL                     |
-| ---------- | ------------------------- | ------------------------------ | ------------------------------- |
-| Local      | `compose.local.yaml`      | HTTP, без сертификат           | `http://127.0.0.1:8080`         |
-| External   | `compose.external.yaml`   | HTTP в existing Docker network | URL-ът на upstream proxy-то     |
-| Production | `compose.production.yaml` | HTTPS + автоматичен Certbot    | domain на `443` или избран port |
+| Среда      | Compose overlay                  | NGINX                          | Browser URL                     |
+| ---------- | -------------------------------- | ------------------------------ | ------------------------------- |
+| Local      | `docker/compose.local.yaml`      | HTTP, без сертификат           | `http://127.0.0.1:8080`         |
+| External   | `docker/compose.external.yaml`   | HTTP в existing Docker network | URL-ът на upstream proxy-то     |
+| Production | `docker/compose.production.yaml` | HTTPS + автоматичен Certbot    | domain на `443` или избран port |
 
 ```text
 Local:      Browser -> 127.0.0.1:PANEL_PORT -> NGINX:80 -> panel:8080
@@ -63,7 +63,7 @@ Let's Encrypt HTTP-01 challenge:
 ```
 
 `publish` превключва `CS16_DEPLOYMENT=production`, след което wrapper-ът избира
-`compose.production.yaml`. Production image-ът и Certbot lifecycle-ът следват
+`docker/compose.production.yaml`. Production image-ът и Certbot lifecycle-ът следват
 работещия шаблон от `counter-strike-web-laravel`:
 
 - Certbot standalone издава липсващия сертификат при първи старт;
@@ -113,7 +113,7 @@ PANEL_EXTERNAL_ALIAS=cs16-panel
 
 - `panel_letsencrypt` пази certificates, renewal config и private keys;
 - `panel_certbot_www` пази ACME webroot challenge файловете;
-- `docker compose down` ги запазва, а `down -v` ги изтрива;
+- `./docker/compose down` ги запазва, а `down -v` ги изтрива;
 - HTTPS не замества силната администраторска парола и защитата на login endpoint-а;
 - NGINX няма Docker socket; само backend panel-ът има контролирания достъп;
 - при external mode само trusted upstream proxy containers трябва да участват
