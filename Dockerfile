@@ -52,19 +52,27 @@ RUN curl -fsSL --retry 5 \
  && rm -f /tmp/metamod.zip /tmp/amxx-base.tar.gz /tmp/amxx-cstrike.tar.gz
 
 COPY addons/scripting/ /tmp/cs16-scripting/
-RUN cd "${HLDS_DIR}/cstrike/addons/amxmodx/scripting" \
+COPY docker/patch_mapsmenu.sh /usr/local/bin/patch-amxx-mapsmenu
+RUN chmod 0755 /usr/local/bin/patch-amxx-mapsmenu \
+ && cd "${HLDS_DIR}/cstrike/addons/amxmodx/scripting" \
+ && /usr/local/bin/patch-amxx-mapsmenu mapsmenu.sma \
+ && ./amxxpc \
+      mapsmenu.sma \
+      -i"${HLDS_DIR}/cstrike/addons/amxmodx/scripting/include" \
+      -o"${HLDS_DIR}/cstrike/addons/amxmodx/plugins/mapsmenu.amxx" \
  && for source_file in /tmp/cs16-scripting/docker_*.sma; do \
       plugin_name=$(basename "${source_file%.sma}"); \
       ./amxxpc \
         "${source_file}" \
         -i"${HLDS_DIR}/cstrike/addons/amxmodx/scripting/include" \
-        -o"${HLDS_DIR}/cstrike/addons/amxmodx/plugins/${plugin_name}.amxx"; \
+        -o"${HLDS_DIR}/cstrike/addons/amxmodx/plugins/${plugin_name}.amxx" || exit 1; \
     done \
  && cp /tmp/cs16-scripting/*.sma "${HLDS_DIR}/cstrike/addons/amxmodx/scripting/" \
  && rm -rf /tmp/cs16-scripting
 
 COPY configs/plugins/ "${HLDS_DIR}/presets/plugins/"
 COPY configs/maps/ "${HLDS_DIR}/presets/maps/"
+COPY configs/stats.ini "${HLDS_DIR}/presets/stats.ini"
 COPY gungame_maps/ /tmp/gungame_maps/
 COPY classic_maps/ /tmp/classic_maps/
 COPY docker/install_map_packages.sh /usr/local/bin/install-map-packages

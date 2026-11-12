@@ -43,8 +43,44 @@ doublejump_velocity=${GG_DOUBLEJUMP_VELOCITY:-350.0}
 [[ ${doublejump_velocity} =~ ^[0-9]+([.][0-9]+)?$ ]] || \
   die "GG_DOUBLEJUMP_VELOCITY must be a positive number"
 
+warmup_enabled=${WARMUP_ENABLED:-1}
+semiclip_enabled=${SEMICLIP_ENABLED:-1}
+afk_enabled=${AFK_MANAGER_ENABLED:-1}
+rtv_enabled=${RTV_ENABLED:-1}
+for toggle in warmup_enabled semiclip_enabled afk_enabled rtv_enabled; do
+  [[ ${!toggle} == 0 || ${!toggle} == 1 ]] || die "${toggle} must be 0 or 1"
+done
+
+spawn_enabled=${SPAWN_PROTECTION_ENABLED:-}
+if [[ -z ${spawn_enabled} ]]; then
+  spawn_enabled=0
+  [[ ${mode} == gungame ]] && spawn_enabled=1
+fi
+[[ ${spawn_enabled} == 0 || ${spawn_enabled} == 1 ]] || \
+  die "SPAWN_PROTECTION_ENABLED must be 0 or 1"
+
+warmup_seconds=${WARMUP_SECONDS:-45}
+afk_warn=${AFK_WARN_SECONDS:-60}
+afk_spectator=${AFK_SPECTATOR_SECONDS:-90}
+afk_kick=${AFK_KICK_SECONDS:-180}
+rtv_min_votes=${RTV_MIN_VOTES:-2}
+rtv_delay=${RTV_DELAY_SECONDS:-120}
+recent_maps=${RECENT_MAPS:-3}
+for integer in warmup_seconds afk_warn afk_spectator afk_kick rtv_min_votes rtv_delay recent_maps; do
+  is_uint "${!integer}" || die "${integer} must be a non-negative integer"
+done
+(( afk_warn <= afk_spectator && afk_spectator <= afk_kick )) || \
+  die "AFK thresholds must satisfy WARN <= SPECTATOR <= KICK"
+
+spawn_seconds=${SPAWN_PROTECTION_SECONDS:-3.0}
+rtv_ratio=${RTV_RATIO:-0.60}
+[[ ${spawn_seconds} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "SPAWN_PROTECTION_SECONDS must be positive"
+[[ ${rtv_ratio} =~ ^(0([.][0-9]+)?|1([.]0+)?)$ ]] || die "RTV_RATIO must be between 0 and 1"
+
 cp "${HLDS_DIR}/presets/plugins/${mode}.ini" \
    "${CSTRIKE_DIR}/addons/amxmodx/configs/plugins.ini"
+cp "${HLDS_DIR}/presets/stats.ini" \
+   "${CSTRIKE_DIR}/addons/amxmodx/configs/stats.ini"
 if [[ ${db_enabled} == 1 ]]; then
   printf '\n%s\n' 'docker_sql_stats.amxx' >> \
     "${CSTRIKE_DIR}/addons/amxmodx/configs/plugins.ini"
@@ -84,18 +120,42 @@ if [[ -n ${admin_entries} ]]; then
 fi
 echo "[entrypoint] Loaded ${admin_count} AMXX admin(s) from ${admin_source}"
 
-mapcycle=${MAPCYCLE:-}
-if [[ -n ${mapcycle} ]]; then
+persistent_bans_file="${CSTRIKE_DIR}/addons/amxmodx/data/banned.cfg"
+touch "${persistent_bans_file}"
+ln -sfn "addons/amxmodx/data/banned.cfg" "${CSTRIKE_DIR}/banned.cfg"
+
+managed_mapcycle_file="${CSTRIKE_DIR}/addons/amxmodx/data/panel_mapcycle.txt"
+if [[ -f ${managed_mapcycle_file} ]]; then
   : > "${CSTRIKE_DIR}/mapcycle.txt"
-  IFS=',' read -ra maps <<< "${mapcycle}"
-  for map in "${maps[@]}"; do
+  map_count=0
+  while IFS= read -r map || [[ -n ${map} ]]; do
     map=${map//[[:space:]]/}
-    [[ ${map} =~ ^[a-zA-Z0-9_]+$ ]] || die "Invalid map in MAPCYCLE: ${map}"
+    [[ -n ${map} ]] || continue
+    [[ ${map} =~ ^[a-zA-Z0-9_]+$ ]] || die "Invalid map in panel mapcycle: ${map}"
+    [[ -f ${CSTRIKE_DIR}/maps/${map}.bsp ]] || die "Map is not installed: ${map}"
     printf '%s\n' "${map}" >> "${CSTRIKE_DIR}/mapcycle.txt"
-  done
+    ((map_count += 1))
+  done < "${managed_mapcycle_file}"
+  ((map_count > 0)) || die "Panel mapcycle must contain at least one map"
+  echo "[entrypoint] Loaded ${map_count} map(s) from CS Control"
 else
-  cp "${HLDS_DIR}/presets/maps/${mode}.txt" "${CSTRIKE_DIR}/mapcycle.txt"
+  mapcycle=${MAPCYCLE:-}
+  if [[ -n ${mapcycle} ]]; then
+    : > "${CSTRIKE_DIR}/mapcycle.txt"
+    IFS=',' read -ra maps <<< "${mapcycle}"
+    for map in "${maps[@]}"; do
+      map=${map//[[:space:]]/}
+      [[ ${map} =~ ^[a-zA-Z0-9_]+$ ]] || die "Invalid map in MAPCYCLE: ${map}"
+      [[ -f ${CSTRIKE_DIR}/maps/${map}.bsp ]] || die "Map is not installed: ${map}"
+      printf '%s\n' "${map}" >> "${CSTRIKE_DIR}/mapcycle.txt"
+    done
+  else
+    cp "${HLDS_DIR}/presets/maps/${mode}.txt" "${CSTRIKE_DIR}/mapcycle.txt"
+  fi
 fi
+cp "${CSTRIKE_DIR}/mapcycle.txt" \
+   "${CSTRIKE_DIR}/addons/amxmodx/configs/maps.ini"
+echo "[entrypoint] Synchronized AMXX maps.ini with the active mapcycle"
 
 cat > "${CSTRIKE_DIR}/server.cfg" <<EOF
 hostname "$(cfg_escape "${SERVER_NAME:-My CS 1.6 Server}")"
@@ -137,6 +197,21 @@ sv_maxupdaterate 102
 sv_minupdaterate 20
 sv_voiceenable 1
 docker_welcome_message "$(cfg_escape "${WELCOME_MESSAGE:-Welcome to our CS 1.6 server!}")"
+docker_warmup_enabled "${warmup_enabled}"
+docker_warmup_seconds "${warmup_seconds}"
+docker_spawn_protection_enabled "${spawn_enabled}"
+docker_spawn_protection_seconds "${spawn_seconds}"
+docker_semiclip_enabled "${semiclip_enabled}"
+docker_afk_enabled "${afk_enabled}"
+docker_afk_warn_seconds "${afk_warn}"
+docker_afk_spectator_seconds "${afk_spectator}"
+docker_afk_kick_seconds "${afk_kick}"
+docker_rtv_enabled "${rtv_enabled}"
+docker_rtv_ratio "${rtv_ratio}"
+docker_rtv_min_votes "${rtv_min_votes}"
+docker_rtv_delay_seconds "${rtv_delay}"
+docker_recent_maps "${recent_maps}"
+exec banned.cfg
 EOF
 
 if [[ ${mode} == gungame ]]; then
@@ -160,6 +235,8 @@ amx_sql_db "$(cfg_escape "${DB_NAME:-cs16}")"
 amx_sql_type "mysql"
 EOF
 printf '%s\n' "docker_server_id \"$(cfg_escape "${SERVER_ID:-cs16-1}")\"" >> \
+  "${CSTRIKE_DIR}/server.cfg"
+printf '%s\n' "docker_server_mode \"$(cfg_escape "${mode}")\"" >> \
   "${CSTRIKE_DIR}/server.cfg"
 
 if [[ ${RCON_PASSWORD:-change-me-now} == change-me-now ]]; then

@@ -40,7 +40,8 @@ public show_welcome(task_id)
     set_hudmessage(0, 180, 255, -1.0, 0.22, 0, 1.0, 7.0, 0.2, 0.2, -1);
     show_hudmessage(id, "Welcome, %s!^n%s", name, message);
     client_print(id, print_chat, "[Server] Welcome, %s! %s", name, message);
-    client_print(id, print_chat, "[Server] Commands: /rank, /stats, /statsme, /top15");
+    client_print(id, print_chat, "[Server] Stats: /rank, /stats, /statsme, /top15");
+    client_print(id, print_chat, "[Server] Maps: /rtv, /nominate map_name, /maps");
 
     if (cvar_exists("docker_gungame_version")) {
         client_print(id, print_chat, "[GunGame] Double jump: press SPACE again while airborne. Use /level for progress.");

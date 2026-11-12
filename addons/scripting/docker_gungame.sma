@@ -8,6 +8,19 @@
 #define AUTHOR "counter-strike-server-docker"
 #define MAX_LEVELS 21
 
+native docker_stats_gungame_progress(id, level, won);
+
+public plugin_natives()
+{
+    set_native_filter("native_filter");
+}
+
+public native_filter(const name[], index, trap)
+{
+    if (equal(name, "docker_stats_gungame_progress")) return PLUGIN_HANDLED;
+    return PLUGIN_CONTINUE;
+}
+
 new const g_weapons[MAX_LEVELS][] = {
     "weapon_glock18", "weapon_usp", "weapon_p228", "weapon_fiveseven",
     "weapon_deagle", "weapon_m3", "weapon_xm1014", "weapon_tmp",
@@ -132,6 +145,10 @@ public on_death()
         return;
     }
 
+    if (get_cvar_num("docker_warmup_active")) {
+        return;
+    }
+
     new weapon[24];
     read_data(4, weapon, charsmax(weapon));
 
@@ -144,6 +161,7 @@ public on_death()
         new name[32];
         get_user_name(killer, name, charsmax(name));
         client_print(0, print_chat, "[GunGame] %s won the match! Restarting...", name);
+        docker_stats_gungame_progress(killer, MAX_LEVELS, 1);
         set_task(5.0, "restart_match");
         return;
     }
@@ -155,6 +173,7 @@ public on_death()
     if (g_kills[killer] >= required) {
         g_kills[killer] = 0;
         g_level[killer]++;
+        docker_stats_gungame_progress(killer, g_level[killer] + 1, 0);
         client_print(killer, print_chat, "[GunGame] Level up! Now: %s",
             g_death_names[g_level[killer]]);
         give_level_weapon(killer);
