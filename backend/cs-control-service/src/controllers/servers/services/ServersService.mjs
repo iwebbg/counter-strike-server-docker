@@ -319,8 +319,8 @@ async function applyInheritedAdmins(id) {
   const inspect = await requireRunning(id);
   const inherited = await globalAdmins(database);
   if (!inherited.length) return;
-  const current = await readAdmins(id, inspect);
-  await reloadAdmins(id, inspect, mergeAdmins(current.admins, inherited), true);
+  const current = await readAdmins(inspect.Id, inspect);
+  await reloadAdmins(inspect.Id, inspect, mergeAdmins(current.admins, inherited), true);
 }
 
 async function listServers() {
@@ -890,7 +890,7 @@ export const portRange = () => [config.portStart, config.portEnd];
 export { createServer, listServers };
 
 export async function serverAction(id, action) {
-  await assertControlled(id);
+  const inspect = await assertControlled(id);
   const suffix =
     action === "stop"
       ? "/stop?t=30"
@@ -901,20 +901,20 @@ export async function serverAction(id, action) {
           : action === "unpause"
             ? "/unpause"
             : "/start";
-  await docker.request("POST", `/containers/${id}${suffix}`);
-  if (action === "start") await applyInheritedAdmins(id);
+  await docker.request("POST", `/containers/${inspect.Id}${suffix}`);
+  if (action === "start") await applyInheritedAdmins(inspect.Id);
   return { status: action };
 }
 
 export async function serverLogs(id) {
-  await assertControlled(id);
-  const logs = await docker.request("GET", `/containers/${id}/logs?stdout=1&stderr=1&timestamps=1&tail=250`);
+  const inspect = await assertControlled(id);
+  const logs = await docker.request("GET", `/containers/${inspect.Id}/logs?stdout=1&stderr=1&timestamps=1&tail=250`);
   return { logs: demuxDockerStream(logs) };
 }
 
 export async function getAdmins(id) {
   const inspect = await requireRunning(id);
-  return readAdmins(id, inspect);
+  return readAdmins(inspect.Id, inspect);
 }
 
 export async function updateAdmins(id, input) {
@@ -924,28 +924,28 @@ export async function updateAdmins(id, input) {
     const updatedServers = await applyFleetAdmins(admins);
     return { source: "database-fleet", admins, reloaded: true, updatedServers };
   }
-  return reloadAdmins(id, inspect, admins, true);
+  return reloadAdmins(inspect.Id, inspect, admins, true);
 }
 
 export async function resetAdmins(id) {
   const inspect = await requireRunning(id);
   const admins = parseAdminEntries(envValue(inspect, "AMXX_ADMINS"));
-  return reloadAdmins(id, inspect, admins, false);
+  return reloadAdmins(inspect.Id, inspect, admins, false);
 }
 
 export async function getMaps(id) {
   const inspect = await requireRunning(id);
-  return readMaps(id, inspect);
+  return readMaps(inspect.Id, inspect);
 }
 
 export async function updateMaps(id, input) {
   const inspect = await requireRunning(id);
-  return saveMaps(id, inspect, input.maps);
+  return saveMaps(inspect.Id, inspect, input.maps);
 }
 
 export async function changeMap(id, map) {
   const inspect = await requireRunning(id);
-  const { available } = await categorizedMaps(id, inspect);
+  const { available } = await categorizedMaps(inspect.Id, inspect);
   if (!available.includes(map)) throw new Error("Map does not belong to this server mode or is not installed");
   await rconCommand(containerAddress(inspect), 27015, envValue(inspect, "RCON_PASSWORD"), `changelevel ${map}`);
   return { status: "changing", map };
@@ -958,7 +958,7 @@ export async function getPlayers(id) {
 
 export async function moderate(id, userId, action, input) {
   const inspect = await requireRunning(id);
-  return moderatePlayer(id, inspect, Number(userId), action, input);
+  return moderatePlayer(inspect.Id, inspect, Number(userId), action, input);
 }
 
 export async function removeServer(id) {
@@ -966,6 +966,6 @@ export async function removeServer(id) {
   if (inspect.Config?.Labels?.["com.cs16.managed-by"] !== "panel")
     throw new Error("Compose-managed servers cannot be removed from the panel");
   if (inspect.State?.Running) throw new Error("Stop the server before removing it");
-  await docker.request("DELETE", `/containers/${id}?v=0`);
+  await docker.request("DELETE", `/containers/${inspect.Id}?v=0`);
   return { status: "removed", volumesPreserved: true };
 }
