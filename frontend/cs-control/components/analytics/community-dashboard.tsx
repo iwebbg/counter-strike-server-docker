@@ -28,6 +28,15 @@ type Overview = {
   maps: Array<{ mapName: string; timesPlayed: number; kills: number }>;
   sessions: Array<{ steamId: string; name: string; serverId: string; connectedAt: string; playtimeSeconds: number }>;
   achievements: Array<{ steamId: string; name: string; achievement: string; description: string }>;
+  missions: Array<{
+    steamId: string;
+    name: string;
+    mission: string;
+    period: "daily" | "weekly";
+    progress: number;
+    targetValue: number;
+    completedAt: string | null;
+  }>;
   seasons: Array<{ id: number; name: string }>;
   servers: Array<{ serverId: string; name: string }>;
 };
@@ -207,6 +216,25 @@ export function CommunityDashboard() {
                 <strong>{item.achievement}</strong>
                 <small>{item.name}</small>
               </span>
+            </div>
+          ))}
+        </article>
+        <article className="panel">
+          <header>
+            <p className="eyebrow">{t("missions")}</p>
+            <h3>{t("dailyWeeklyMissions")}</h3>
+          </header>
+          {data?.missions.slice(0, 8).map((item, index) => (
+            <div className="community-row" key={`${item.steamId}-${item.mission}-${index}`}>
+              <span>
+                <strong>{item.mission}</strong>
+                <small>
+                  {item.name} · {t(item.period === "daily" ? "daily" : "weekly")}
+                </small>
+              </span>
+              <code>
+                {item.progress}/{item.targetValue} {item.completedAt ? "✓" : ""}
+              </code>
             </div>
           ))}
         </article>

@@ -76,7 +76,12 @@ export async function statsOverview(database, values) {
     `SELECT u.steam_id AS steamId,p.current_name AS name,a.name AS achievement,a.description,u.server_id AS serverId,u.unlocked_at AS unlockedAt FROM cs_player_achievements u JOIN cs_players p ON p.steam_id=u.steam_id JOIN cs_achievements a ON a.code=u.achievement_code${achievementFilter.sql} ORDER BY u.unlocked_at DESC LIMIT 12`,
     achievementFilter.parameters,
   );
-  return { summary: summaryRows[0], ranking, maps, sessions, achievements, seasons, servers };
+  const missionFilter = filter(values.serverId, "p");
+  const missions = await database.query(
+    `SELECT p.server_id AS serverId,p.steam_id AS steamId,player.current_name AS name,m.code,m.name AS mission,m.description,m.period,m.target_value AS targetValue,p.progress,p.period_key AS periodKey,p.completed_at AS completedAt FROM cs_player_mission_progress p JOIN cs_missions m ON m.code=p.mission_code JOIN cs_players player ON player.steam_id=p.steam_id${missionFilter.sql} ORDER BY p.updated_at DESC LIMIT 25`,
+    missionFilter.parameters,
+  );
+  return { summary: summaryRows[0], ranking, maps, sessions, achievements, missions, seasons, servers };
 }
 
 export async function playerProfile(database, steamId) {
@@ -86,9 +91,9 @@ export async function playerProfile(database, steamId) {
     [steamId],
   );
   if (!players.length) throw new Error("Player not found");
-  const [stats, names, achievements, sessions] = await Promise.all([
+  const [stats, names, achievements, sessions, missions] = await Promise.all([
     database.query(
-      "SELECT server_id AS serverId,kills,deaths,headshots,damage,hits,playtime_seconds AS playtimeSeconds,connections,rounds_played AS roundsPlayed,gungame_wins AS gungameWins,highest_gungame_level AS highestGungameLevel,last_seen AS lastSeen FROM cs_player_server_stats WHERE steam_id=? ORDER BY kills DESC",
+      "SELECT server_id AS serverId,kills,deaths,headshots,damage,hits,playtime_seconds AS playtimeSeconds,connections,rounds_played AS roundsPlayed,gungame_wins AS gungameWins,highest_gungame_level AS highestGungameLevel,mvp_awards AS mvpAwards,revenge_kills AS revengeKills,nemesis_events AS nemesisEvents,last_seen AS lastSeen FROM cs_player_server_stats WHERE steam_id=? ORDER BY kills DESC",
       [steamId],
     ),
     database.query(
@@ -103,8 +108,12 @@ export async function playerProfile(database, steamId) {
       "SELECT server_id AS serverId,player_name AS name,connected_at AS connectedAt,disconnected_at AS disconnectedAt,playtime_seconds AS playtimeSeconds FROM cs_player_sessions WHERE steam_id=? ORDER BY connected_at DESC LIMIT 20",
       [steamId],
     ),
+    database.query(
+      "SELECT p.server_id AS serverId,m.code,m.name,m.description,m.period,m.target_value AS targetValue,p.progress,p.period_key AS periodKey,p.completed_at AS completedAt FROM cs_player_mission_progress p JOIN cs_missions m ON m.code=p.mission_code WHERE p.steam_id=? ORDER BY p.updated_at DESC LIMIT 30",
+      [steamId],
+    ),
   ]);
-  return { player: players[0], stats, names, achievements, sessions };
+  return { player: players[0], stats, names, achievements, sessions, missions };
 }
 
 export async function moderationHistory(database) {

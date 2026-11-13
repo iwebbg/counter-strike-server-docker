@@ -119,7 +119,8 @@ try {
 
   const byRole = Object.fromEntries(operators.map((operator) => [operator.role, operator.client]));
   await byRole.viewer.request("GET", "/servers");
-  await byRole.viewer.request("GET", "/stats/overview");
+  const statsOverview = await byRole.viewer.request("GET", "/stats/overview");
+  assert.ok(Array.isArray(statsOverview.data.missions));
   await byRole.admin.request("GET", "/operators", undefined, 403);
 
   const created = await owner.request(

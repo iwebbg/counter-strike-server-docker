@@ -12,6 +12,10 @@ new g_server_mode[24];
 new g_player_steam[33][40];
 new g_player_name[33][64];
 new g_connected_at[33];
+new g_round_kills[33];
+new g_last_killer[33];
+new g_nemesis_killer[33];
+new g_nemesis_count[33];
 
 public plugin_natives()
 {
@@ -26,6 +30,7 @@ public plugin_init()
     register_event("DeathMsg", "on_death", "a");
     register_event("Damage", "on_damage", "b", "2!0");
     register_logevent("on_round_start", 2, "1=Round_Start");
+    register_logevent("on_round_end", 2, "1=Round_End");
     set_task(60.0, "heartbeat", 0, "", 0, "b");
 }
 
@@ -151,6 +156,15 @@ public on_death()
         SQL_ThreadQuery(g_tuple, "query_finished", query);
     }
     if (killer > 0 && killer != victim && valid_steam_id(g_player_steam[killer])) {
+        g_round_kills[killer]++;
+        new revenge = g_last_killer[killer] == victim ? 1 : 0;
+        if (g_nemesis_killer[victim] == killer) g_nemesis_count[victim]++;
+        else {
+            g_nemesis_killer[victim] = killer;
+            g_nemesis_count[victim] = 1;
+        }
+        new nemesis = g_nemesis_count[victim] == 3 ? 1 : 0;
+        g_last_killer[victim] = killer;
         formatex(query, charsmax(query), "UPDATE cs_player_server_stats SET kills=kills+1,headshots=headshots+%d,last_seen=UTC_TIMESTAMP() WHERE server_id='%s' AND steam_id='%s'", headshot, g_server_id, g_player_steam[killer]);
         SQL_ThreadQuery(g_tuple, "query_finished", query);
         formatex(query, charsmax(query), "INSERT INTO cs_season_stats (season_id,server_id,steam_id,kills,headshots) SELECT id,'%s','%s',1,%d FROM cs_seasons WHERE active=1 ON DUPLICATE KEY UPDATE kills=kills+1,headshots=headshots+%d", g_server_id, g_player_steam[killer], headshot, headshot);
@@ -158,6 +172,19 @@ public on_death()
         formatex(query, charsmax(query), "UPDATE cs_map_stats SET kills=kills+1,last_played=UTC_TIMESTAMP() WHERE server_id='%s' AND map_name='%s'", g_server_id, map);
         SQL_ThreadQuery(g_tuple, "query_finished", query);
         unlock_achievements(g_player_steam[killer]);
+        mission_progress(g_player_steam[killer], "kills", 1);
+        if (headshot) mission_progress(g_player_steam[killer], "headshots", 1);
+        if (revenge) {
+            formatex(query, charsmax(query), "UPDATE cs_player_server_stats SET revenge_kills=revenge_kills+1 WHERE server_id='%s' AND steam_id='%s'", g_server_id, g_player_steam[killer]);
+            SQL_ThreadQuery(g_tuple, "query_finished", query);
+            mission_progress(g_player_steam[killer], "revenge", 1);
+            client_print(killer, print_chat, "[Revenge] You got revenge on your previous killer!");
+        }
+        if (nemesis) {
+            formatex(query, charsmax(query), "UPDATE cs_player_server_stats SET nemesis_events=nemesis_events+1 WHERE server_id='%s' AND steam_id='%s'", g_server_id, g_player_steam[killer]);
+            SQL_ThreadQuery(g_tuple, "query_finished", query);
+            client_print(killer, print_chat, "[Nemesis] You dominated the same opponent three times.");
+        }
     }
 }
 
@@ -184,10 +211,40 @@ public on_round_start()
     formatex(query, charsmax(query), "UPDATE cs_map_stats SET rounds_played=rounds_played+1,last_played=UTC_TIMESTAMP() WHERE server_id='%s' AND map_name='%s'", g_server_id, map);
     SQL_ThreadQuery(g_tuple, "query_finished", query);
     for (new id = 1; id <= MaxClients; id++) {
+        g_round_kills[id] = 0;
         if (!is_user_connected(id) || !valid_steam_id(g_player_steam[id])) continue;
         formatex(query, charsmax(query), "UPDATE cs_player_server_stats SET rounds_played=rounds_played+1 WHERE server_id='%s' AND steam_id='%s'", g_server_id, g_player_steam[id]);
         SQL_ThreadQuery(g_tuple, "query_finished", query);
     }
+}
+
+public on_round_end()
+{
+    if (g_tuple == Empty_Handle) return;
+    new mvp, best_kills;
+    for (new id = 1; id <= MaxClients; id++) {
+        if (is_user_connected(id) && valid_steam_id(g_player_steam[id]) && g_round_kills[id] > best_kills) {
+            mvp = id;
+            best_kills = g_round_kills[id];
+        }
+    }
+    if (!mvp || best_kills < 1) return;
+    new query[512], name[32];
+    formatex(query, charsmax(query), "UPDATE cs_player_server_stats SET mvp_awards=mvp_awards+1 WHERE server_id='%s' AND steam_id='%s'", g_server_id, g_player_steam[mvp]);
+    SQL_ThreadQuery(g_tuple, "query_finished", query);
+    mission_progress(g_player_steam[mvp], "mvp", 1);
+    get_user_name(mvp, name, charsmax(name));
+    client_print(0, print_chat, "[MVP] %s earned the round MVP with %d kill(s).", name, best_kills);
+}
+
+mission_progress(const steam_id[], const metric[], amount)
+{
+    if (g_tuple == Empty_Handle || !valid_steam_id(steam_id)) return;
+    new query[1536];
+    formatex(query, charsmax(query), "INSERT IGNORE INTO cs_player_mission_progress (server_id,steam_id,mission_code,period_key,progress) SELECT '%s','%s',code,IF(period='daily',DATE_FORMAT(UTC_DATE(),'%%Y-%%m-%%d'),DATE_FORMAT(UTC_DATE(),'%%x-W%%v')),0 FROM cs_missions WHERE active=1 AND metric='%s'", g_server_id, steam_id, metric);
+    SQL_ThreadQuery(g_tuple, "query_finished", query);
+    formatex(query, charsmax(query), "UPDATE cs_player_mission_progress p JOIN cs_missions m ON m.code=p.mission_code SET p.completed_at=IF(p.progress+%d>=m.target_value,COALESCE(p.completed_at,UTC_TIMESTAMP()),p.completed_at),p.progress=LEAST(m.target_value,p.progress+%d),p.updated_at=UTC_TIMESTAMP() WHERE p.server_id='%s' AND p.steam_id='%s' AND m.metric='%s' AND p.period_key=IF(m.period='daily',DATE_FORMAT(UTC_DATE(),'%%Y-%%m-%%d'),DATE_FORMAT(UTC_DATE(),'%%x-W%%v'))", amount, amount, g_server_id, steam_id, metric);
+    SQL_ThreadQuery(g_tuple, "query_finished", query);
 }
 
 public heartbeat()
@@ -271,6 +328,10 @@ clear_player(id)
     g_player_steam[id][0] = 0;
     g_player_name[id][0] = 0;
     g_connected_at[id] = 0;
+    g_round_kills[id] = 0;
+    g_last_killer[id] = 0;
+    g_nemesis_killer[id] = 0;
+    g_nemesis_count[id] = 0;
 }
 
 bool:valid_steam_id(const value[])
