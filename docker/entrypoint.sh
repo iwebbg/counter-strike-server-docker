@@ -51,7 +51,11 @@ killstreak_enabled=${KILLSTREAK_ENABLED:-1}
 killstreak_sounds=${KILLSTREAK_SOUNDS_ENABLED:-1}
 killstreak_hud=${KILLSTREAK_HUD_ENABLED:-1}
 killstreak_global=${KILLSTREAK_GLOBAL:-1}
-for toggle in warmup_enabled semiclip_enabled afk_enabled rtv_enabled killstreak_enabled killstreak_sounds killstreak_hud killstreak_global; do
+team_balance_enabled=${TEAM_BALANCE_ENABLED:-1}
+team_scramble_enabled=${TEAM_SCRAMBLE_ENABLED:-1}
+[[ ${mode} == gungame ]] && team_scramble_enabled=${TEAM_SCRAMBLE_ENABLED:-0}
+radio_protection_enabled=${RADIO_PROTECTION_ENABLED:-1}
+for toggle in warmup_enabled semiclip_enabled afk_enabled rtv_enabled killstreak_enabled killstreak_sounds killstreak_hud killstreak_global team_balance_enabled team_scramble_enabled radio_protection_enabled; do
   [[ ${!toggle} == 0 || ${!toggle} == 1 ]] || die "${toggle} must be 0 or 1"
 done
 
@@ -82,12 +86,22 @@ killstreak_window=${KILLSTREAK_MULTI_WINDOW:-4.0}
 amxx_branding_message=${AMXX_BRANDING_MESSAGE:-%hostname% is powered by CS 1.6 Server CP | interweb.bg}
 amxx_branding_interval=${AMXX_BRANDING_INTERVAL:-600}
 amxx_branding_color=${AMXX_BRANDING_COLOR:-201255074}
+team_scramble_streak=${TEAM_SCRAMBLE_STREAK:-5}
+radio_limit=${RADIO_SPAM_LIMIT:-4}
+radio_window=${RADIO_SPAM_WINDOW:-5.0}
+server_rules=${SERVER_RULES:-Respect players; no cheating; no abuse; follow admin instructions.}
+community_url=${COMMUNITY_URL:-https://interweb.bg}
 [[ ${spawn_seconds} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "SPAWN_PROTECTION_SECONDS must be positive"
 [[ ${rtv_ratio} =~ ^(0([.][0-9]+)?|1([.]0+)?)$ ]] || die "RTV_RATIO must be between 0 and 1"
 [[ ${killstreak_window} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "KILLSTREAK_MULTI_WINDOW must be positive"
 is_uint "${amxx_branding_interval}" || die "AMXX_BRANDING_INTERVAL must be a non-negative integer"
 (( amxx_branding_interval >= 30 )) || die "AMXX_BRANDING_INTERVAL must be at least 30 seconds"
 [[ ${amxx_branding_color} =~ ^[0-9]{9}$ ]] || die "AMXX_BRANDING_COLOR must contain 9 digits (RRRGGGBBB)"
+is_uint "${team_scramble_streak}" || die "TEAM_SCRAMBLE_STREAK must be a non-negative integer"
+(( team_scramble_streak >= 2 && team_scramble_streak <= 20 )) || die "TEAM_SCRAMBLE_STREAK must be between 2 and 20"
+is_uint "${radio_limit}" || die "RADIO_SPAM_LIMIT must be a non-negative integer"
+(( radio_limit >= 1 && radio_limit <= 20 )) || die "RADIO_SPAM_LIMIT must be between 1 and 20"
+[[ ${radio_window} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "RADIO_SPAM_WINDOW must be positive"
 
 cp "${HLDS_DIR}/presets/plugins/${mode}.ini" \
    "${CSTRIKE_DIR}/addons/amxmodx/configs/plugins.ini"
@@ -107,6 +121,14 @@ sed -i \
   printf '\n// Managed by CS 1.6 Server CP.\n'
   printf 'amx_scrollmsg "%s" %s\n' "$(cfg_escape "${amxx_branding_message}")" "${amxx_branding_interval}"
   printf 'amx_imessage "%s" "%s"\n' "$(cfg_escape "${amxx_branding_message}")" "${amxx_branding_color}"
+  printf 'docker_team_balance_enabled %s\n' "${team_balance_enabled}"
+  printf 'docker_team_scramble_enabled %s\n' "${team_scramble_enabled}"
+  printf 'docker_team_scramble_streak %s\n' "${team_scramble_streak}"
+  printf 'docker_radio_protection_enabled %s\n' "${radio_protection_enabled}"
+  printf 'docker_radio_limit %s\n' "${radio_limit}"
+  printf 'docker_radio_window %s\n' "${radio_window}"
+  printf 'docker_server_rules "%s"\n' "$(cfg_escape "${server_rules}")"
+  printf 'docker_community_url "%s"\n' "$(cfg_escape "${community_url}")"
 } >> "${amxx_config}"
 echo "[entrypoint] Applied CS 1.6 Server CP branding messages"
 
