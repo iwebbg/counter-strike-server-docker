@@ -41,3 +41,13 @@ jobs:
       - run: npm ci --prefix backend/cs-control-service
       - run: docker compose --file docker/compose.yaml build server
       - run: npm run test:e2e --prefix backend/cs-control-service
+
+  rehlds-image:
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash -n docker/rehlds-smoke.sh docker/rehlds-lab.sh
+      - run: docker build --target rehlds --tag cs16-server-rehlds:ci .
+      - run: docker run --rm --entrypoint /usr/local/bin/rehlds-smoke cs16-server-rehlds:ci /opt/hlds

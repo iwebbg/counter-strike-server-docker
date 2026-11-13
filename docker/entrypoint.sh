@@ -61,6 +61,15 @@ for toggle in warmup_enabled semiclip_enabled afk_enabled rtv_enabled killstreak
   [[ ${!toggle} == 0 || ${!toggle} == 1 ]] || die "${toggle} must be 0 or 1"
 done
 
+# ReHLDS uses the native ReSemiclip Metamod plugin. Keep the Pawn implementation
+# as the Valve profile fallback, but never run both collision hooks together.
+pawn_semiclip_enabled=${semiclip_enabled}
+if [[ ${CS16_ENGINE:-valve} == rehlds && -f ${CSTRIKE_DIR}/addons/resemiclip/config.ini ]]; then
+  sed -E -i "s/^[[:space:]]*semiclip[[:space:]]*=.*/semiclip = ${semiclip_enabled};/" \
+    "${CSTRIKE_DIR}/addons/resemiclip/config.ini"
+  pawn_semiclip_enabled=0
+fi
+
 spawn_enabled=${SPAWN_PROTECTION_ENABLED:-}
 if [[ -z ${spawn_enabled} ]]; then
   spawn_enabled=0
@@ -272,7 +281,7 @@ docker_warmup_enabled "${warmup_enabled}"
 docker_warmup_seconds "${warmup_seconds}"
 docker_spawn_protection_enabled "${spawn_enabled}"
 docker_spawn_protection_seconds "${spawn_seconds}"
-docker_semiclip_enabled "${semiclip_enabled}"
+docker_semiclip_enabled "${pawn_semiclip_enabled}"
 docker_afk_enabled "${afk_enabled}"
 docker_afk_warn_seconds "${afk_warn}"
 docker_afk_spectator_seconds "${afk_spectator}"

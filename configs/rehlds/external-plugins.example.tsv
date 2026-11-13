@@ -1,0 +1,3 @@
+plugin	type	version	status	notes
+example-signature-plugin	amxx-signature	unknown	not-tested	Replace with the exact plugin and version under test.
+example-orpheu-plugin	orpheu	unknown	not-tested	Never promote to passed without runtime evidence.

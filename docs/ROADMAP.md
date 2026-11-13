@@ -110,7 +110,8 @@
 - [x] Metamod-R;
 - [x] ReAPI;
 - [x] pin-ната compatibility matrix, build smoke и runtime module test;
-- [ ] ReSemiclip вместо Pawn fallback-а;
+- [x] native ReSemiclip за ReHLDS с pin-нат checksum и Valve-only Pawn fallback;
+- [x] repeatable benchmark/compatibility evidence tooling и staged migration runbook;
 - [ ] security/performance benchmark под реален player load;
 - [ ] compatibility matrix за външни signature/Orpheu plugins;
 - [ ] staged production migration на Classic, след това GunGame.

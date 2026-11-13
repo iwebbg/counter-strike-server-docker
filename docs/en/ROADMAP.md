@@ -107,7 +107,8 @@ This is a separate experimental image, not an immediate stable-image replacement
 - [x] Metamod-R;
 - [x] ReAPI;
 - [x] pinned compatibility matrix, build smoke test, and runtime module test;
-- [ ] ReSemiclip instead of the Pawn fallback;
+- [x] native ReSemiclip for ReHLDS with a pinned checksum and Valve-only Pawn fallback;
+- [x] repeatable benchmark/compatibility evidence tooling and staged migration runbook;
 - [ ] security/performance benchmark under real player load;
 - [ ] compatibility matrix for external signature/Orpheu plugins;
 - [ ] staged production migration of Classic, followed by GunGame.

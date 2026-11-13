@@ -104,6 +104,8 @@ ARG REHLDS_VERSION=3.15.0.896
 ARG REGAMEDLL_VERSION=5.30.0.814
 ARG METAMOD_R_VERSION=1.3.0.149
 ARG REAPI_VERSION=5.29.0.358
+ARG RESEMICLIP_VERSION=2.4.3
+ARG RESEMICLIP_SHA256=d2527ab9f11c514996d7c0aefe4fd385394eed09cdcd87e3c613cdd1539edc13
 
 USER root
 COPY docker/rehlds-smoke.sh /usr/local/bin/rehlds-smoke
@@ -141,21 +143,30 @@ RUN chmod 0755 /usr/local/bin/rehlds-smoke \
  && cp -a /tmp/reapi/addons/. "${HLDS_DIR}/cstrike/addons/" \
  && { grep -qxF reapi "${HLDS_DIR}/cstrike/addons/amxmodx/configs/modules.ini" \
       || printf '%s\n' reapi >> "${HLDS_DIR}/cstrike/addons/amxmodx/configs/modules.ini"; } \
- && printf 'ReHLDS=%s\nReGameDLL_CS=%s\nMetamod-R=%s\nReAPI=%s\n' \
+ && curl -fsSL --retry 5 \
+      "https://github.com/rehlds/resemiclip/releases/download/${RESEMICLIP_VERSION}/resemiclip-${RESEMICLIP_VERSION}.zip" \
+      -o /tmp/resemiclip.zip \
+ && printf '%s  %s\n' "${RESEMICLIP_SHA256}" /tmp/resemiclip.zip | sha256sum --check --strict \
+ && unzip -q /tmp/resemiclip.zip -d "${HLDS_DIR}/cstrike" \
+ && printf '%s\n' 'linux addons/resemiclip/resemiclip_mm_i386.so' \
+      >> "${HLDS_DIR}/cstrike/addons/metamod/plugins.ini" \
+ && printf 'ReHLDS=%s\nReGameDLL_CS=%s\nMetamod-R=%s\nReAPI=%s\nReSemiclip=%s\n' \
       "${REHLDS_VERSION}" "${REGAMEDLL_VERSION}" "${METAMOD_R_VERSION}" "${REAPI_VERSION}" \
+      "${RESEMICLIP_VERSION}" \
       > "${HLDS_DIR}/rehlds-versions.txt" \
  && chmod 0755 "${HLDS_DIR}/hlds_linux" "${HLDS_DIR}/hltv" \
  && /usr/local/bin/rehlds-smoke "${HLDS_DIR}" \
  && chown -R hlds:hlds "${HLDS_DIR}" \
  && rm -rf /tmp/rehlds /tmp/regamedll /tmp/metamod-r /tmp/reapi \
-      /tmp/rehlds.zip /tmp/regamedll.zip /tmp/metamod-r.zip /tmp/reapi.zip
+      /tmp/rehlds.zip /tmp/regamedll.zip /tmp/metamod-r.zip /tmp/reapi.zip /tmp/resemiclip.zip
 
 ENV CS16_ENGINE=rehlds
 LABEL com.cs16.engine="rehlds" \
       com.cs16.rehlds.version="${REHLDS_VERSION}" \
       com.cs16.regamedll.version="${REGAMEDLL_VERSION}" \
       com.cs16.metamod-r.version="${METAMOD_R_VERSION}" \
-      com.cs16.reapi.version="${REAPI_VERSION}"
+      com.cs16.reapi.version="${REAPI_VERSION}" \
+      com.cs16.resemiclip.version="${RESEMICLIP_VERSION}"
 
 USER hlds
 
