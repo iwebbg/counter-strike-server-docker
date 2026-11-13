@@ -1032,6 +1032,15 @@ button:disabled {
 .form-grid .full {
   grid-column: 1/-1;
 }
+.configuration-section-title {
+  margin: 10px 0 0;
+  padding: 15px 0 7px;
+  border-top: 1px solid var(--line);
+  color: var(--cyan);
+  font: 800 11px monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
 .form-grid label > span,
 .form-grid legend {
   display: block;

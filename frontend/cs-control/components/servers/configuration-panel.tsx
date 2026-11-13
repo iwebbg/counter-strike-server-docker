@@ -16,6 +16,19 @@ type Configuration = {
   hasServerPassword: boolean;
   running: boolean;
   volumes: string[];
+  welcomeMessage: string;
+  warmupEnabled: boolean;
+  warmupSeconds: number;
+  spawnProtectionEnabled: boolean;
+  spawnProtectionSeconds: number;
+  semiclipEnabled: boolean;
+  doubleJumpEnabled: boolean;
+  doubleJumpVelocity: number;
+  afkEnabled: boolean;
+  rtvEnabled: boolean;
+  killstreakEnabled: boolean;
+  killstreakSoundsEnabled: boolean;
+  killstreakHudEnabled: boolean;
 };
 type UpdateResult = { id: string; serverId: string };
 const modeMaps = {
@@ -84,6 +97,19 @@ export function ConfigurationPanel({
           serverPassword: form.get("serverPassword") || "",
           rconPassword: form.get("rconPassword") || "",
           clearServerPassword: form.get("clearServerPassword") === "on",
+          welcomeMessage: data.welcomeMessage,
+          warmupEnabled: data.warmupEnabled,
+          warmupSeconds: data.warmupSeconds,
+          spawnProtectionEnabled: data.spawnProtectionEnabled,
+          spawnProtectionSeconds: data.spawnProtectionSeconds,
+          semiclipEnabled: data.semiclipEnabled,
+          doubleJumpEnabled: data.doubleJumpEnabled,
+          doubleJumpVelocity: data.doubleJumpVelocity,
+          afkEnabled: data.afkEnabled,
+          rtvEnabled: data.rtvEnabled,
+          killstreakEnabled: data.killstreakEnabled,
+          killstreakSoundsEnabled: data.killstreakSoundsEnabled,
+          killstreakHudEnabled: data.killstreakHudEnabled,
         }),
       });
       toast.success(t("serverSaved"));
@@ -149,6 +175,119 @@ export function ConfigurationPanel({
             ))}
           </select>
         </label>
+        <h3 className="configuration-section-title full">{t("gameplaySettings")}</h3>
+        <label className="full">
+          <span>{t("welcomeMessage")}</span>
+          <input
+            value={data.welcomeMessage}
+            maxLength={160}
+            onChange={(event) => setData({ ...data, welcomeMessage: event.target.value })}
+          />
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={data.warmupEnabled}
+            onChange={(event) => setData({ ...data, warmupEnabled: event.target.checked })}
+          />
+          <span>{t("warmup")}</span>
+        </label>
+        <label>
+          <span>{t("warmupDuration")}</span>
+          <input
+            type="number"
+            min={0}
+            max={600}
+            value={data.warmupSeconds}
+            onChange={(event) => setData({ ...data, warmupSeconds: Number(event.target.value) })}
+          />
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={data.spawnProtectionEnabled}
+            onChange={(event) => setData({ ...data, spawnProtectionEnabled: event.target.checked })}
+          />
+          <span>{t("spawnProtection")}</span>
+        </label>
+        <label>
+          <span>{t("spawnProtectionDuration")}</span>
+          <input
+            type="number"
+            min={0}
+            max={30}
+            step="0.5"
+            value={data.spawnProtectionSeconds}
+            onChange={(event) => setData({ ...data, spawnProtectionSeconds: Number(event.target.value) })}
+          />
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={data.semiclipEnabled}
+            onChange={(event) => setData({ ...data, semiclipEnabled: event.target.checked })}
+          />
+          <span>{t("semiclip")}</span>
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={data.afkEnabled}
+            onChange={(event) => setData({ ...data, afkEnabled: event.target.checked })}
+          />
+          <span>{t("afkManager")}</span>
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={data.rtvEnabled}
+            onChange={(event) => setData({ ...data, rtvEnabled: event.target.checked })}
+          />
+          <span>{t("rtvMapVotes")}</span>
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={data.doubleJumpEnabled}
+            onChange={(event) => setData({ ...data, doubleJumpEnabled: event.target.checked })}
+          />
+          <span>{t("doubleJump")}</span>
+        </label>
+        <label>
+          <span>{t("doubleJumpVelocity")}</span>
+          <input
+            type="number"
+            min={100}
+            max={1000}
+            value={data.doubleJumpVelocity}
+            onChange={(event) => setData({ ...data, doubleJumpVelocity: Number(event.target.value) })}
+          />
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={data.killstreakEnabled}
+            onChange={(event) => setData({ ...data, killstreakEnabled: event.target.checked })}
+          />
+          <span>{t("killstreakAnnouncements")}</span>
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={data.killstreakSoundsEnabled}
+            onChange={(event) => setData({ ...data, killstreakSoundsEnabled: event.target.checked })}
+          />
+          <span>{t("killstreakSounds")}</span>
+        </label>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={data.killstreakHudEnabled}
+            onChange={(event) => setData({ ...data, killstreakHudEnabled: event.target.checked })}
+          />
+          <span>{t("killstreakHud")}</span>
+        </label>
+        <h3 className="configuration-section-title full">{t("accessSettings")}</h3>
         <label className="full">
           <span>{t("serverPassword")}</span>
           <input

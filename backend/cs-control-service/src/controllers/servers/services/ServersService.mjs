@@ -614,6 +614,19 @@ export async function getServerConfiguration(id) {
     volumes: normalizedMounts(inspect)
       .filter((mount) => mount.Type === "volume")
       .map((mount) => mount.Source),
+    welcomeMessage: envValue(inspect, "WELCOME_MESSAGE", "Welcome to our CS 1.6 server!"),
+    warmupEnabled: envValue(inspect, "WARMUP_ENABLED", "1") === "1",
+    warmupSeconds: Number(envValue(inspect, "WARMUP_SECONDS", 45)),
+    spawnProtectionEnabled: envValue(inspect, "SPAWN_PROTECTION_ENABLED", mode === "gungame" ? "1" : "0") === "1",
+    spawnProtectionSeconds: Number(envValue(inspect, "SPAWN_PROTECTION_SECONDS", 3)),
+    semiclipEnabled: envValue(inspect, "SEMICLIP_ENABLED", "1") === "1",
+    doubleJumpEnabled: envValue(inspect, "GG_DOUBLEJUMP_ENABLED", "1") === "1",
+    doubleJumpVelocity: Number(envValue(inspect, "GG_DOUBLEJUMP_VELOCITY", 350)),
+    afkEnabled: envValue(inspect, "AFK_MANAGER_ENABLED", "1") === "1",
+    rtvEnabled: envValue(inspect, "RTV_ENABLED", "1") === "1",
+    killstreakEnabled: envValue(inspect, "KILLSTREAK_ENABLED", "1") === "1",
+    killstreakSoundsEnabled: envValue(inspect, "KILLSTREAK_SOUNDS_ENABLED", "1") === "1",
+    killstreakHudEnabled: envValue(inspect, "KILLSTREAK_HUD_ENABLED", "1") === "1",
   };
 }
 
@@ -640,7 +653,19 @@ export async function updateServer(id, input) {
   nextEnv.set("MAX_PLAYERS", String(values.maxPlayers));
   nextEnv.set("START_MAP", values.startMap);
   nextEnv.set("MAPCYCLE", values.maps.join(","));
-  nextEnv.set("SPAWN_PROTECTION_ENABLED", values.mode === "gungame" ? "1" : "0");
+  nextEnv.set("WELCOME_MESSAGE", values.welcomeMessage);
+  nextEnv.set("WARMUP_ENABLED", values.warmupEnabled ? "1" : "0");
+  nextEnv.set("WARMUP_SECONDS", String(values.warmupSeconds));
+  nextEnv.set("SPAWN_PROTECTION_ENABLED", values.spawnProtectionEnabled ? "1" : "0");
+  nextEnv.set("SPAWN_PROTECTION_SECONDS", String(values.spawnProtectionSeconds));
+  nextEnv.set("SEMICLIP_ENABLED", values.semiclipEnabled ? "1" : "0");
+  nextEnv.set("GG_DOUBLEJUMP_ENABLED", values.doubleJumpEnabled ? "1" : "0");
+  nextEnv.set("GG_DOUBLEJUMP_VELOCITY", String(values.doubleJumpVelocity));
+  nextEnv.set("AFK_MANAGER_ENABLED", values.afkEnabled ? "1" : "0");
+  nextEnv.set("RTV_ENABLED", values.rtvEnabled ? "1" : "0");
+  nextEnv.set("KILLSTREAK_ENABLED", values.killstreakEnabled ? "1" : "0");
+  nextEnv.set("KILLSTREAK_SOUNDS_ENABLED", values.killstreakSoundsEnabled ? "1" : "0");
+  nextEnv.set("KILLSTREAK_HUD_ENABLED", values.killstreakHudEnabled ? "1" : "0");
   if (values.rconPassword) nextEnv.set("RCON_PASSWORD", values.rconPassword);
   if (values.clearServerPassword) nextEnv.set("SERVER_PASSWORD", "");
   else if (values.serverPassword) nextEnv.set("SERVER_PASSWORD", values.serverPassword);

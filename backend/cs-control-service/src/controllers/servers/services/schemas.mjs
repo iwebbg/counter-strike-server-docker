@@ -173,6 +173,19 @@ export function validateEditInput(input, portStart, portEnd) {
     rconPassword: values.rconPassword,
     serverPassword: values.serverPassword,
     clearServerPassword: input.clearServerPassword === true,
+    welcomeMessage: String(input.welcomeMessage || "").trim(),
+    warmupEnabled: input.warmupEnabled === true,
+    warmupSeconds: input.warmupSeconds,
+    spawnProtectionEnabled: input.spawnProtectionEnabled === true,
+    spawnProtectionSeconds: input.spawnProtectionSeconds,
+    semiclipEnabled: input.semiclipEnabled === true,
+    doubleJumpEnabled: input.doubleJumpEnabled === true,
+    doubleJumpVelocity: input.doubleJumpVelocity,
+    afkEnabled: input.afkEnabled === true,
+    rtvEnabled: input.rtvEnabled === true,
+    killstreakEnabled: input.killstreakEnabled === true,
+    killstreakSoundsEnabled: input.killstreakSoundsEnabled === true,
+    killstreakHudEnabled: input.killstreakHudEnabled === true,
   };
 }
 
