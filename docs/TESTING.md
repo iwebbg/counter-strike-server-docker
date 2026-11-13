@@ -32,7 +32,9 @@ npm --prefix backend/cs-control-service run test:e2e
 logs, maps, admins, templates/import/export/clone, configuration history и
 rollback, resource/network ограничения, image update/rollback, map packages,
 backup/restore и policies, seasons, moderation, audit log, HLTV evidence и
-suspicious-player marker lifecycle.
+suspicious-player marker lifecycle. Lifecycle matrix-ът физически премахва
+временния game container и рестартира control API, за да потвърди, че persistent
+desired state възстановява `running`, `stopped` и `paused` точно.
 
 При приключване временните контейнери, мрежа, database/backup volumes и volumes на тестовия CS сървър се премахват автоматично. Основният Compose project `cs16` и неговите данни не се променят.
 

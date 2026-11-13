@@ -99,6 +99,40 @@ async function waitForServer(client, instanceId) {
   throw new Error(`Server ${instanceId} did not enter the running state.`);
 }
 
+async function waitForServerState(client, instanceId, expectedState) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    try {
+      const payload = await client.request("GET", "/servers");
+      const server = payload.data.servers.find((candidate) => candidate.serverId === instanceId);
+      if (server?.state === expectedState) return server;
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(`Server ${instanceId} did not enter the ${expectedState} state.`);
+}
+
+function dockerContainerByLabels(labels) {
+  const filters = labels.flatMap((label) => ["--filter", `label=${label}`]);
+  const ids = execFileSync("docker", ["container", "ls", "--all", "--quiet", ...filters], {
+    encoding: "utf8",
+  })
+    .trim()
+    .split("\n")
+    .filter(Boolean);
+  assert.equal(ids.length, 1, `Expected one Docker container with labels ${labels.join(", ")}, received ${ids.length}`);
+  return ids[0];
+}
+
+function restartControlApi() {
+  const panel = dockerContainerByLabels(["com.docker.compose.project=cs16-e2e", "com.docker.compose.service=panel"]);
+  execFileSync("docker", ["container", "restart", panel]);
+}
+
+function removeManagedContainer(instanceId) {
+  const container = dockerContainerByLabels([`com.cs16.instance-id=${instanceId}`]);
+  execFileSync("docker", ["container", "rm", "--force", container]);
+}
+
 const owner = await new Client().login("owner@e2e.test", "e2e-owner-password");
 const suffix = Date.now().toString(36);
 const operators = [];
@@ -420,6 +454,26 @@ try {
     execFileSync("docker", ["image", "tag", "cs16-server:e2e-good", "cs16-server:e2e-target"]);
   }
   await byRole.admin.request("GET", "/audit-logs?limit=20");
+
+  removeManagedContainer(instanceId);
+  restartControlApi();
+  await waitForServerState(owner, instanceId, "running");
+
+  await byRole.admin.request("POST", `/servers/${instanceId}/stop`, {});
+  await waitForServerState(owner, instanceId, "exited");
+  removeManagedContainer(instanceId);
+  restartControlApi();
+  await waitForServerState(owner, instanceId, "created");
+
+  await byRole.admin.request("POST", `/servers/${instanceId}/start`, {});
+  await waitForServerState(owner, instanceId, "running");
+  await byRole.admin.request("POST", `/servers/${instanceId}/pause`, {});
+  await waitForServerState(owner, instanceId, "paused");
+  removeManagedContainer(instanceId);
+  restartControlApi();
+  await waitForServerState(owner, instanceId, "paused");
+  await byRole.admin.request("POST", `/servers/${instanceId}/unpause`, {});
+  await waitForServerState(owner, instanceId, "running");
 
   await byRole.admin.request("POST", `/servers/${instanceId}/stop`, {});
   await byRole.admin.request("DELETE", `/servers/${instanceId}`);

@@ -32,7 +32,9 @@ The test uses the `cs16-e2e` Compose project, web port `18080`, and game ports
 admin, template/import/export/clone, configuration history and rollback,
 resource/network limit, image update/rollback, map-package, backup/restore and
 policy, season, moderation, audit-log, HLTV-evidence, and suspicious-player
-marker lifecycle operations.
+marker lifecycle operations. The lifecycle matrix physically removes the
+temporary game container and restarts the control API to verify exact recovery
+of persistent `running`, `stopped`, and `paused` desired states.
 
 On completion, it automatically removes the temporary containers, network, database/backup volumes, and test CS server volumes. The main `cs16` Compose project and its data remain unchanged.
 
