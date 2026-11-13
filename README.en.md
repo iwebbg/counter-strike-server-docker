@@ -108,6 +108,17 @@ passwords, tokens, RCON values, or personal data in logs.
 The project downloads official Valve HLDS files through SteamCMD during the
 image build and does not distribute game content in this repository.
 
+## License and third-party content
+
+The original project code and documentation are licensed under the
+[MIT License](LICENSE), copyright © 2026 iwebbg / InterWeb Ltd.
+
+The maps under `classic_maps/` and `gungame_maps/` were downloaded from
+[maps.cs-bg.info](https://maps.cs-bg.info/maps/cs/) and are not covered by the
+MIT License. Their rights and the rights to the accompanying resources remain
+with their respective authors and rights holders. See
+[Third-party assets](THIRD_PARTY_ASSETS.md).
+
 ## Support the project
 
 If CS 1.6 Server CP is useful to your server or community, you can support its

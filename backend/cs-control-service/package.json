@@ -1,6 +1,7 @@
 {
   "name": "cs-control-service",
   "version": "1.0.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "description": "CS 1.6 fleet control API",
