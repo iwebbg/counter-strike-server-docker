@@ -87,6 +87,10 @@ Docker Compose, така и с опционален интерактивен CS 
 - start, stop, restart, live logs и remove за спрени panel-managed containers;
 - Edit wizard с controlled recreate за име, режим, max players, port, passwords,
   start map и rotation, който запазва същите logs/data volumes;
+- постоянни `SERVER_ID` URL/API адреси, които оцеляват след recreate, image
+  update и restore, с backward compatibility за стари container-ID връзки;
+- per-server gameplay editor за welcome message, warmup, spawn protection,
+  semiclip, GunGame double jump, AFK, RTV и killstreak HUD/звуци;
 - current/target image ID, Up to date/Update available badges, player-aware
   confirmation и sequential Update all с per-server rollback;
 - map rotation checklist при create и live map manager с search/select all;
@@ -184,10 +188,12 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 
 ## Следващи логични задачи
 
-1. Scheduled retention и off-host backup destinations.
-2. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
-3. Integration tests/CI за build, container boot, A2S, RCON и admin persistence.
-4. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
+1. Configuration templates/clone/import/export и versioned configuration history.
+2. Health-aware recreate progress, RCON rotation и resource/network limits.
+3. Scheduled retention и off-host backup destinations.
+4. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
+5. Integration tests/CI за build, container boot, A2S, RCON, recreate и persistence.
+6. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
 
 ## Продължаване в следваща сесия
 

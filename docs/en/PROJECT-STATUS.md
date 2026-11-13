@@ -81,6 +81,10 @@ and automatic port allocation.
 - create, start, stop, restart, logs, and safe removal;
 - automatic or manual host port and one-time generated RCON password display;
 - controlled Edit/recreate while preserving data and log volumes;
+- stable `SERVER_ID` URLs and APIs that survive recreate, image update, and
+  restore, while retaining backward compatibility with container-ID links;
+- a per-server gameplay editor for the welcome message, warmup, spawn
+  protection, semiclip, GunGame double jump, AFK, RTV, and killstreak HUD/sounds;
 - immutable image detection, update badges, single/Fleet Update all, and rollback;
 - mode-specific map rotation and live RCON map changes;
 - ZIP map package upload, listing, replacement, and guarded deletion;
@@ -155,10 +159,12 @@ not be exposed directly to the Internet.
 
 ## Next logical tasks
 
-1. Scheduled retention and off-host backup destinations.
-2. Identity provider/VPN hardening in front of the HTTPS reverse proxy.
-3. CI integration tests for build, boot, A2S, RCON, and persistence.
-4. Steam ID discovery help and AMXX flag descriptions in the UI.
+1. Configuration templates/clone/import/export and versioned configuration history.
+2. Health-aware recreate progress, RCON rotation, and resource/network limits.
+3. Scheduled retention and off-host backup destinations.
+4. Identity provider/VPN hardening in front of the HTTPS reverse proxy.
+5. CI integration tests for build, boot, A2S, RCON, recreate, and persistence.
+6. Steam ID discovery help and AMXX flag descriptions in the UI.
 
 ## Continue in another session
 

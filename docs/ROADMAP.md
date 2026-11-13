@@ -43,6 +43,19 @@
 - [x] audit log екран, API permission matrix и Owner/Admin/Moderator/Viewer роли;
 - [ ] optional external identity provider и по-фини custom permissions.
 
+## Server configuration track
+
+- [x] постоянен `SERVER_ID` в panel URL и API с backward compatibility за container ID;
+- [x] allowlisted per-server gameplay настройки за welcome, warmup, spawn
+      protection, semiclip, double jump, AFK, RTV и killstreak известия;
+- [ ] reusable configuration templates, безопасен JSON import/export и Clone server;
+- [ ] versioned configuration history, visual diff и operator-attributed rollback;
+- [ ] health-aware recreate progress с player warning и видим rollback result;
+- [ ] RCON rotation с еднократно показване на новата стойност;
+- [ ] read-only Compose configuration assistant и `.env` change preview;
+- [ ] allowlisted network, CPU и memory limits за panel-managed instances;
+- [ ] integration tests за stable ID, recreate, update, restore и volume persistence.
+
 ## Community и progression
 
 - [x] achievements и badges;

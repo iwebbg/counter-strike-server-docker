@@ -40,6 +40,19 @@ Statuses guide future sessions and are not delivery-date promises.
 - [x] audit UI, API permission matrix, and Owner/Admin/Moderator/Viewer roles;
 - [ ] optional external identity provider and finer custom permissions.
 
+## Server configuration track
+
+- [x] stable `SERVER_ID` in panel URLs and APIs with container-ID backward compatibility;
+- [x] allowlisted per-server gameplay settings for welcome, warmup, spawn
+      protection, semiclip, double jump, AFK, RTV, and killstreak announcements;
+- [ ] reusable configuration templates, safe JSON import/export, and Clone server;
+- [ ] versioned configuration history, visual diff, and operator-attributed rollback;
+- [ ] health-aware recreate progress with player warning and visible rollback result;
+- [ ] RCON rotation with one-time display of the new value;
+- [ ] read-only Compose configuration assistant and `.env` change preview;
+- [ ] allowlisted network, CPU, and memory limits for panel-managed instances;
+- [ ] integration tests for stable ID, recreate, update, restore, and volume persistence.
+
 ## Community and progression
 
 - [x] achievements and badges;
