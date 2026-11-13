@@ -278,6 +278,14 @@ const messages = {
     supportViaPaypal: "Подкрепа чрез PayPal",
     externalPaymentNotice:
       "Платежните страници се отварят само след ваш клик. InterWeb не получава данните на картата ви през контролния панел.",
+    notFoundEyebrow: "НЕПОЗНАТ МАРШРУТ",
+    notFoundTitle: "Тази страница не съществува.",
+    notFoundDescription:
+      "Адресът може да е сгрешен, страницата да е преместена или функционалността все още да не е активирана.",
+    goToDashboard: "Към таблото",
+    goBack: "Назад",
+    getHelp: "Получете помощ",
+    notFoundHint: "Ако сте стигнали тук от линк в панела, докладвайте проблема.",
   },
   en: {
     dashboard: "Dashboard",
@@ -556,6 +564,14 @@ const messages = {
     supportViaPaypal: "Support via PayPal",
     externalPaymentNotice:
       "Payment pages open only after you click. InterWeb does not receive your card details through the Control Panel.",
+    notFoundEyebrow: "UNKNOWN ROUTE",
+    notFoundTitle: "This page does not exist.",
+    notFoundDescription:
+      "The address may be incorrect, the page may have moved, or the feature may not be enabled yet.",
+    goToDashboard: "Go to dashboard",
+    goBack: "Go back",
+    getHelp: "Get help",
+    notFoundHint: "If a Control Panel link brought you here, please report the problem.",
   },
 } as const;
 
