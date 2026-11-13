@@ -48,7 +48,7 @@ async function waitForServer(client, instanceId) {
 const owner = await new Client().login("owner@e2e.test", "e2e-owner-password");
 const suffix = Date.now().toString(36);
 const operators = [];
-let instanceId;
+const instanceIds = new Set();
 
 try {
   for (const role of ["admin", "moderator", "viewer"]) {
@@ -91,7 +91,8 @@ try {
     },
     201,
   );
-  instanceId = created.data.instanceId;
+  const instanceId = created.data.instanceId;
+  instanceIds.add(instanceId);
   assert.match(instanceId, /^[a-z0-9-]+$/);
   await waitForServer(owner, instanceId);
 
@@ -139,6 +140,32 @@ try {
   await byRole.admin.request("PUT", `/servers/${instanceId}`, editableConfiguration);
   await waitForServer(owner, instanceId);
 
+  const exported = await byRole.admin.request("GET", `/servers/${instanceId}/configuration/export`);
+  assert.equal(exported.data.schemaVersion, 1);
+  assert.equal(exported.data.configuration.rconPassword, "");
+  assert.equal(exported.data.configuration.serverPassword, "");
+  const template = await byRole.admin.request(
+    "POST",
+    `/servers/${instanceId}/configuration-templates`,
+    { name: `E2E template ${suffix}`, description: "Temporary E2E template" },
+    201,
+  );
+  const templates = await byRole.admin.request("GET", "/configuration-templates");
+  assert.ok(templates.data.templates.some((candidate) => candidate.id === template.data.id));
+
+  const clone = await byRole.admin.request(
+    "POST",
+    `/servers/${instanceId}/clone`,
+    { name: `E2E Clone ${suffix}`, port: null, startImmediately: false },
+    201,
+  );
+  instanceIds.add(clone.data.serverId);
+  const cloneConfiguration = await byRole.admin.request("GET", `/servers/${clone.data.serverId}/configuration`);
+  assert.equal(cloneConfiguration.data.welcomeMessage, "E2E control-plane test server");
+  await byRole.admin.request("DELETE", `/servers/${clone.data.serverId}`);
+  instanceIds.delete(clone.data.serverId);
+  await byRole.admin.request("DELETE", `/configuration-templates/${template.data.id}`);
+
   await byRole.admin.request(
     "POST",
     `/servers/${instanceId}/backups`,
@@ -154,11 +181,11 @@ try {
 
   await byRole.admin.request("POST", `/servers/${instanceId}/stop`, {});
   await byRole.admin.request("DELETE", `/servers/${instanceId}`);
-  instanceId = undefined;
+  instanceIds.delete(instanceId);
 
   console.log("E2E control-plane checks passed for owner, admin, moderator and viewer.");
 } finally {
-  if (instanceId) {
+  for (const instanceId of instanceIds) {
     await owner.request("POST", `/servers/${instanceId}/stop`, {}).catch(() => {});
     await owner.request("DELETE", `/servers/${instanceId}`).catch(() => {});
   }
