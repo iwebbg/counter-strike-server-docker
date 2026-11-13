@@ -31,7 +31,16 @@ public plugin_init()
 
 public plugin_cfg()
 {
-    new host[64], user[64], pass[64], database[64];
+    // Ensure Docker-generated SQL cvars are applied before this plugin reads
+    // them. Depending on plugin order, AMXX may otherwise still expose the
+    // default 127.0.0.1 values during plugin_cfg().
+    server_cmd("exec addons/amxmodx/configs/sql.cfg");
+    server_exec();
+
+    // setup generates 64-character hexadecimal passwords. Pawn strings need
+    // one additional cell for the terminator, otherwise charsmax truncates
+    // the credential to 63 characters and MariaDB rejects every connection.
+    new host[128], user[128], pass[128], database[128];
     get_cvar_string("amx_sql_host", host, charsmax(host));
     get_cvar_string("amx_sql_user", user, charsmax(user));
     get_cvar_string("amx_sql_pass", pass, charsmax(pass));
