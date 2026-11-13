@@ -45,24 +45,26 @@ MariaDB няма публикуван host port. Game containers и панелъ
 
 ## Какво се записва
 
-| Таблица                  | Данни                                                                   |
-| ------------------------ | ----------------------------------------------------------------------- |
-| `cs_servers`             | Persistent server registry, mode, port, state, map и heartbeat          |
-| `cs_players`             | Steam ID, текущо име, first/last seen и брой връзки                     |
-| `cs_player_names`        | История на използваните имена                                           |
-| `cs_player_server_stats` | Kills, deaths, headshots, damage, hits, playtime, rounds и GunGame wins |
-| `cs_player_sessions`     | Connect/disconnect история и продължителност                            |
-| `cs_map_stats`           | Played count, rounds, kills и player time по карта                      |
-| `cs_gungame_progress`    | Current/highest level и победи                                          |
-| `cs_achievements`        | Achievement каталог и thresholds                                        |
-| `cs_player_achievements` | Отключени achievements                                                  |
-| `cs_seasons`             | Сезони, период и active state                                           |
-| `cs_season_stats`        | Отделен seasonal ranking                                                |
-| `cs_admins`              | Server-scoped и fleet-wide (`*`) администратори                         |
-| `cs_bans`                | Fleet/server scope, duration, revoke и причина                          |
-| `cs_moderation_actions`  | Неизменяем audit на kick, ban и unban действия                          |
-| `panel_audit_logs`       | Login, permissions и действия на операторите в контролния панел         |
-| `cs_schema_migrations`   | Версия на приложената схема                                             |
+| Таблица                        | Данни                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| `cs_servers`                   | Persistent server registry, mode, port, state, map и heartbeat          |
+| `cs_players`                   | Steam ID, текущо име, first/last seen и брой връзки                     |
+| `cs_player_names`              | История на използваните имена                                           |
+| `cs_player_server_stats`       | Kills, deaths, headshots, damage, hits, playtime, rounds и GunGame wins |
+| `cs_player_sessions`           | Connect/disconnect история и продължителност                            |
+| `cs_map_stats`                 | Played count, rounds, kills и player time по карта                      |
+| `cs_gungame_progress`          | Current/highest level и победи                                          |
+| `cs_achievements`              | Achievement каталог и thresholds                                        |
+| `cs_player_achievements`       | Отключени achievements                                                  |
+| `cs_seasons`                   | Сезони, период и active state                                           |
+| `cs_season_stats`              | Отделен seasonal ranking                                                |
+| `cs_admins`                    | Server-scoped и fleet-wide (`*`) администратори                         |
+| `cs_bans`                      | Fleet/server scope, duration, revoke и причина                          |
+| `cs_moderation_actions`        | Неизменяем audit на kick, ban и unban действия                          |
+| `panel_audit_logs`             | Login, permissions и действия на операторите в контролния панел         |
+| `users.custom_permissions`     | Optional JSON permission override за custom оператори                   |
+| `panel_operator_server_scopes` | Ограничение на оператор до избрани server IDs                           |
+| `cs_schema_migrations`         | Версия на приложената схема                                             |
 
 RCON, panel и database паролите не се записват в статистическите таблици.
 

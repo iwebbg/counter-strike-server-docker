@@ -156,11 +156,18 @@ security boundary.
 | `moderator` | Viewer plus kick/ban, revoke, and map management/change                 |
 | `admin`     | Moderator plus lifecycle, configuration, AMXX admins, backup, and audit |
 | `owner`     | Admin plus create/edit/reset/delete operators                           |
+| `custom`    | Only explicitly selected permissions and optional selected servers      |
 
 The first bootstrap account is an Owner. Only Owners see **Operators**. An
 Owner cannot restrict or remove their own account or demote/delete the final
 active Owner. Role, status, and password changes revoke the affected user's
 active sessions.
+
+When creating or editing an operator, an Owner can select individual API
+permissions and restrict access to specific panel-managed servers. The backend
+enforces the server scope and filters the server list; attempts to reach another
+instance return `SERVER_SCOPE_DENIED`. Owner permissions cannot be reduced this
+way.
 
 ## Audit log
 

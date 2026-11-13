@@ -8,14 +8,84 @@ import { Modal } from "@/components/ui/modal";
 import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
+import type { Server } from "@/lib/types";
 
-type Operator = { id: string; name: string; email: string; role: string; active: boolean; preferredLocale: string };
+type Operator = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+  preferredLocale: string;
+  customPermissions: string[] | null;
+  serverScopes: string[];
+};
 const pageSize = 10;
+const permissionCodes = [
+  "servers.read",
+  "servers.operate",
+  "servers.manage",
+  "players.moderate",
+  "maps.manage",
+  "admins.manage",
+  "backups.manage",
+  "stats.read",
+  "seasons.manage",
+  "moderation.manage",
+  "audit.read",
+  "operators.manage",
+];
+
+function AccessFields({ servers, operator }: { servers: Server[]; operator?: Operator }) {
+  const { t } = useI18n();
+  return (
+    <>
+      <fieldset className="full access-fieldset">
+        <legend>{t("customPermissions")}</legend>
+        <p>{t("customPermissionsHint")}</p>
+        <div className="access-check-grid">
+          {permissionCodes.map((permission) => (
+            <label className="checkbox" key={permission}>
+              <input
+                type="checkbox"
+                name="customPermissions"
+                value={permission}
+                defaultChecked={operator?.customPermissions?.includes(permission)}
+              />
+              <span>{permission}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset className="full access-fieldset">
+        <legend>{t("serverAccess")}</legend>
+        <p>{t("serverAccessHint")}</p>
+        <div className="access-check-grid">
+          {servers.map((server) => {
+            const id = server.serverId || server.id;
+            return (
+              <label className="checkbox" key={id}>
+                <input
+                  type="checkbox"
+                  name="serverScopes"
+                  value={id}
+                  defaultChecked={operator?.serverScopes.includes(id)}
+                />
+                <span>{server.name}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+    </>
+  );
+}
 
 export default function OperatorsPage() {
   const { t } = useI18n();
   const toast = useToast();
   const [operators, setOperators] = useState<Operator[]>([]);
+  const [servers, setServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -26,7 +96,12 @@ export default function OperatorsPage() {
   const [pending, setPending] = useState(false);
   const load = useCallback(async () => {
     try {
-      setOperators((await api<{ operators: Operator[] }>("/operators")).operators);
+      const [operatorData, serverData] = await Promise.all([
+        api<{ operators: Operator[] }>("/operators"),
+        api<{ servers: Server[] }>("/servers"),
+      ]);
+      setOperators(operatorData.operators);
+      setServers(serverData.servers);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("requestFailed"));
     } finally {
@@ -56,14 +131,17 @@ export default function OperatorsPage() {
     const form = new FormData(event.currentTarget);
     setPending(true);
     try {
+      const role = String(form.get("role"));
       await api("/operators", {
         method: "POST",
         body: JSON.stringify({
           name: form.get("name"),
           email: form.get("email"),
           password: form.get("password"),
-          role: form.get("role"),
+          role,
           preferredLocale: form.get("preferredLocale"),
+          ...(role === "custom" ? { customPermissions: form.getAll("customPermissions") } : {}),
+          serverScopes: form.getAll("serverScopes"),
         }),
       });
       toast.success(t("operatorCreated"));
@@ -81,9 +159,16 @@ export default function OperatorsPage() {
     const form = new FormData(event.currentTarget);
     setPending(true);
     try {
+      const role = String(form.get("role"));
       await api(`/operators/${editing.id}`, {
         method: "PUT",
-        body: JSON.stringify({ name: form.get("name"), role: form.get("role"), active: form.get("active") === "on" }),
+        body: JSON.stringify({
+          name: form.get("name"),
+          role,
+          active: form.get("active") === "on",
+          ...(role === "custom" ? { customPermissions: form.getAll("customPermissions") } : {}),
+          serverScopes: form.getAll("serverScopes"),
+        }),
       });
       toast.success(t("operatorUpdated"));
       setEditing(null);
@@ -132,6 +217,7 @@ export default function OperatorsPage() {
       <option value="moderator">{t("moderator")}</option>
       <option value="admin">{t("roleAdmin")}</option>
       <option value="owner">{t("roleOwner")}</option>
+      <option value="custom">{t("roleCustom")}</option>
     </>
   );
   return (
@@ -174,7 +260,9 @@ export default function OperatorsPage() {
                     ? "moderator"
                     : operator.role === "admin"
                       ? "roleAdmin"
-                      : "roleOwner",
+                      : operator.role === "owner"
+                        ? "roleOwner"
+                        : "roleCustom",
               )}
             </span>
             <span className={operator.active ? "status-text active" : "status-text"}>
@@ -215,6 +303,7 @@ export default function OperatorsPage() {
             <span>{t("role")}</span>
             <select name="role">{roleOptions}</select>
           </label>
+          <AccessFields servers={servers} />
           <label>
             <span>{t("preferredLanguage")}</span>
             <select name="preferredLocale">
@@ -258,6 +347,7 @@ export default function OperatorsPage() {
               <input name="active" type="checkbox" defaultChecked={editing.active} />
               <span>{t("active")}</span>
             </label>
+            <AccessFields servers={servers} operator={editing} />
             <footer className="form-actions full">
               <button type="button" className="button ghost" onClick={() => setEditing(null)}>
                 {t("cancel")}

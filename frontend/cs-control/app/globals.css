@@ -1117,6 +1117,31 @@ button:disabled {
 .form-grid .full {
   grid-column: 1/-1;
 }
+.access-fieldset {
+  margin: 0;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.access-fieldset > p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.access-check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.access-check-grid .checkbox {
+  min-height: 36px;
+  margin: 0;
+  padding: 7px 9px;
+  border: 1px solid rgba(115, 180, 73, 0.14);
+  border-radius: 7px;
+  background: rgba(8, 24, 19, 0.65);
+  font: 11px monospace;
+}
 .configuration-section-title {
   margin: 10px 0 0;
   padding: 15px 0 7px;

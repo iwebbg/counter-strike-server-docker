@@ -151,6 +151,40 @@ try {
   assert.match(instanceId, /^[a-z0-9-]+$/);
   await waitForServer(owner, instanceId);
 
+  const scopedEmail = `custom-${suffix}@e2e.test`;
+  const scopedPassword = "e2e-custom-password";
+  const scopedOperator = await owner.request(
+    "POST",
+    "/operators",
+    {
+      name: "E2E scoped operator",
+      email: scopedEmail,
+      password: scopedPassword,
+      role: "custom",
+      preferredLocale: "en",
+      customPermissions: ["servers.read", "players.moderate"],
+      serverScopes: [instanceId],
+    },
+    201,
+  );
+  const scopedClient = await new Client().login(scopedEmail, scopedPassword);
+  operators.push({
+    id: scopedOperator.data.id,
+    role: "custom",
+    email: scopedEmail,
+    password: scopedPassword,
+    client: scopedClient,
+  });
+  const scopedServers = await scopedClient.request("GET", "/servers");
+  assert.deepEqual(
+    scopedServers.data.servers.map((server) => server.serverId),
+    [instanceId],
+  );
+  await scopedClient.request("GET", `/servers/${instanceId}/players`);
+  await scopedClient.request("GET", `/servers/${instanceId}/maps`);
+  await scopedClient.request("PUT", `/servers/${instanceId}/maps`, { maps: ["de_dust2"] }, 403);
+  await scopedClient.request("GET", "/servers/not-in-scope/players", undefined, 403);
+
   await byRole.viewer.request("GET", `/servers/${instanceId}/players`);
   await byRole.viewer.request("GET", `/servers/${instanceId}/logs`);
   await byRole.viewer.request("POST", `/servers/${instanceId}/stop`, {}, 403);

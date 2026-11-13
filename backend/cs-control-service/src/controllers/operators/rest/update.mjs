@@ -1,4 +1,4 @@
-import { PERMISSIONS, ROLES } from "../../../auth/permissions.mjs";
+import { ALL_PERMISSIONS, PERMISSIONS, ROLES } from "../../../auth/permissions.mjs";
 import checkAuth from "../../../middlewares/checkAuth.mjs";
 import { updateOperator } from "../services/OperatorService.mjs";
 
@@ -24,6 +24,18 @@ export default {
         role: { type: "string", enum: ROLES },
         active: { type: "boolean" },
         preferredLocale: { type: "string", enum: ["bg", "en"] },
+        customPermissions: {
+          type: "array",
+          items: { type: "string", enum: ALL_PERMISSIONS },
+          uniqueItems: true,
+          maxItems: ALL_PERMISSIONS.length,
+        },
+        serverScopes: {
+          type: "array",
+          items: { type: "string", pattern: "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$" },
+          uniqueItems: true,
+          maxItems: 100,
+        },
       },
       additionalProperties: false,
     },

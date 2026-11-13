@@ -40,24 +40,26 @@ the internal Docker network.
 
 ## Stored data
 
-| Table                    | Purpose                                                            |
-| ------------------------ | ------------------------------------------------------------------ |
-| `cs_servers`             | Persistent server registry, mode, port, state, map, heartbeat      |
-| `cs_players`             | Steam ID, current name, first/last seen, connection count          |
-| `cs_player_names`        | Name history                                                       |
-| `cs_player_server_stats` | Kills, deaths, headshots, damage, hits, time, rounds, GunGame wins |
-| `cs_player_sessions`     | Connection/disconnection history and duration                      |
-| `cs_map_stats`           | Plays, rounds, kills, and player time by map                       |
-| `cs_gungame_progress`    | Current/highest level and wins                                     |
-| `cs_achievements`        | Achievement catalog and thresholds                                 |
-| `cs_player_achievements` | Unlocked achievements                                              |
-| `cs_seasons`             | Season periods and active state                                    |
-| `cs_season_stats`        | Seasonal rankings                                                  |
-| `cs_admins`              | Server-scoped and fleet-wide (`*`) administrators                  |
-| `cs_bans`                | Fleet/server scope, duration, revoke state, and reason             |
-| `cs_moderation_actions`  | Append-only kick, ban, and unban history                           |
-| `panel_audit_logs`       | Panel login, permission, operator, and fleet actions               |
-| `users` / `oauth_*`      | Panel identities and access/refresh sessions                       |
+| Table                          | Purpose                                                            |
+| ------------------------------ | ------------------------------------------------------------------ |
+| `cs_servers`                   | Persistent server registry, mode, port, state, map, heartbeat      |
+| `cs_players`                   | Steam ID, current name, first/last seen, connection count          |
+| `cs_player_names`              | Name history                                                       |
+| `cs_player_server_stats`       | Kills, deaths, headshots, damage, hits, time, rounds, GunGame wins |
+| `cs_player_sessions`           | Connection/disconnection history and duration                      |
+| `cs_map_stats`                 | Plays, rounds, kills, and player time by map                       |
+| `cs_gungame_progress`          | Current/highest level and wins                                     |
+| `cs_achievements`              | Achievement catalog and thresholds                                 |
+| `cs_player_achievements`       | Unlocked achievements                                              |
+| `cs_seasons`                   | Season periods and active state                                    |
+| `cs_season_stats`              | Seasonal rankings                                                  |
+| `cs_admins`                    | Server-scoped and fleet-wide (`*`) administrators                  |
+| `cs_bans`                      | Fleet/server scope, duration, revoke state, and reason             |
+| `cs_moderation_actions`        | Append-only kick, ban, and unban history                           |
+| `panel_audit_logs`             | Panel login, permission, operator, and fleet actions               |
+| `users` / `oauth_*`            | Panel identities and access/refresh sessions                       |
+| `users.custom_permissions`     | Optional JSON permission override for custom operators             |
+| `panel_operator_server_scopes` | Restricts an operator to selected server IDs                       |
 
 RCON, panel, and database passwords are not stored in player-statistics tables.
 

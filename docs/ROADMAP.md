@@ -42,7 +42,7 @@
 - [x] scheduled retention и off-host backup destinations;
 - [x] audit log екран, API permission matrix и Owner/Admin/Moderator/Viewer роли;
 - [x] optional trusted forward-auth SSO за съществуващи operator акаунти;
-- [ ] по-фини custom permissions извън вградените роли.
+- [x] custom permissions и optional per-server access scopes извън вградените роли.
 
 ## Server configuration track
 

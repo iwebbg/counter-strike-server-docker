@@ -201,11 +201,10 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 
 ## Следващи логични задачи
 
-1. По-фини custom operator permissions.
-2. Scheduled community events, например Friday Night GunGame.
-3. ReHLDS/ReGameDLL experimental image и compatibility matrix.
-4. FragZone telemetry integration като отделен бъдещ track.
-5. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
+1. Scheduled community events, например Friday Night GunGame.
+2. ReHLDS/ReGameDLL experimental image и compatibility matrix.
+3. FragZone telemetry integration като отделен бъдещ track.
+4. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
 
 ## Продължаване в следваща сесия
 

@@ -4,8 +4,10 @@ export type SessionUser = {
   id: string;
   name: string;
   email: string;
-  role: "owner" | "admin" | "moderator" | "viewer";
+  role: "owner" | "admin" | "moderator" | "viewer" | "custom";
   permissions: string[];
+  customPermissions?: string[] | null;
+  serverScopes?: string[];
   preferredLocale?: Locale;
 };
 

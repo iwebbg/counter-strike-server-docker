@@ -165,12 +165,19 @@ off-host destination приема проверен `PUT` upload и SHA-256 heade
 | `moderator` | Viewer плюс kick/ban, revoke и управление/смяна на карти                 |
 | `admin`     | Moderator плюс lifecycle, configuration, AMXX admins, backup и audit log |
 | `owner`     | Admin плюс създаване, промяна, password reset и изтриване на оператори   |
+| `custom`    | Само изрично избраните permissions и, по желание, избрани сървъри        |
 
 Първият bootstrap акаунт е `owner`. Migration-ът повишава старите `admin` и
 `operator` акаунти до `owner`, за да не бъде загубен достъпът. Само Owner вижда
 **Operators**. Не може да премахне или ограничи собствения си акаунт, нито да
 изтрие/понижи последния активен Owner. Промяна на role/status или password
 прекратява съществуващите сесии на засегнатия оператор.
+
+При създаване или редакция Owner може да избере отделни API permissions и да
+ограничи оператора до конкретни panel-managed сървъри. Server scope-ът се
+проверява от backend-а и филтрира списъка със сървъри; опит за достъп до друга
+инстанция връща `SERVER_SCOPE_DENIED`. Owner permissions не могат да бъдат
+ограничавани по този начин.
 
 ## Audit log
 

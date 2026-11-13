@@ -39,7 +39,7 @@ Statuses guide future sessions and are not delivery-date promises.
 - [x] scheduled retention and off-host backup destinations;
 - [x] audit UI, API permission matrix, and Owner/Admin/Moderator/Viewer roles;
 - [x] optional trusted forward-auth SSO for existing operator accounts;
-- [ ] finer custom permissions beyond the built-in roles.
+- [x] custom permissions and optional per-server access scopes beyond the built-in roles.
 
 ## Server configuration track
 

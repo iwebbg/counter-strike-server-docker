@@ -25,7 +25,7 @@ export default {
       200,
       "SUCCESS",
       await statsOverview(new Db(), {
-        serverId: req.validated.query.serverId ?? null,
+        serverId: req.validated.query.serverId ?? req.user.serverScopes?.[0] ?? null,
         seasonId: req.validated.query.seasonId ? Number(req.validated.query.seasonId) : null,
       }),
     ),

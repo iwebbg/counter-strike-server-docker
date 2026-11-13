@@ -17,6 +17,11 @@ export function configurePassport() {
           .where("token.expires_at", ">", new Date())
           .select("user.*")
           .first();
+        if (row) {
+          row.serverScopes = (
+            await db("panel_operator_server_scopes").where({ user_id: row.id }).select("server_id")
+          ).map((entry) => entry.server_id);
+        }
         return row ? done(null, publicUser(row), { scope: "*" }) : done(null, false);
       } catch (error) {
         return done(error, false);

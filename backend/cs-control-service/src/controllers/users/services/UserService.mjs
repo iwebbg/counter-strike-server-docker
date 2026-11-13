@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import authConfig from "../../../config/auth.mjs";
 import Db from "../../../utils/Db.mjs";
 import Redis from "../../../utils/Redis.mjs";
-import { normalizeRole, permissionsForRole } from "../../../auth/permissions.mjs";
+import { normalizeRole, parseCustomPermissions, permissionsForUser } from "../../../auth/permissions.mjs";
 
 export const normalizedEmail = (value) =>
   String(value ?? "")
@@ -11,14 +11,19 @@ export const normalizedEmail = (value) =>
     .toLowerCase();
 const token = () => crypto.randomBytes(32).toString("hex");
 const expiresAt = (seconds) => new Date(Date.now() + seconds * 1000);
-export const publicUser = (user) => ({
-  id: user.id,
-  name: user.name,
-  email: user.email,
-  preferred_locale: user.preferred_locale ?? "bg",
-  role: normalizeRole(user.role),
-  permissions: permissionsForRole(user.role),
-});
+export const publicUser = (user) => {
+  const customPermissions = parseCustomPermissions(user.custom_permissions);
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    preferred_locale: user.preferred_locale ?? "bg",
+    role: normalizeRole(user.role),
+    customPermissions,
+    permissions: permissionsForUser({ ...user, customPermissions }),
+    serverScopes: normalizeRole(user.role) === "owner" ? [] : Array.isArray(user.serverScopes) ? user.serverScopes : [],
+  };
+};
 
 export class UserService {
   constructor() {
@@ -27,11 +32,15 @@ export class UserService {
   }
 
   async findByEmail(email) {
-    return (
-      (await this.db.db())("users")
-        .where({ normalized_email: normalizedEmail(email) })
-        .first() ?? null
+    const db = await this.db.db();
+    const user = await db("users")
+      .where({ normalized_email: normalizedEmail(email) })
+      .first();
+    if (!user) return null;
+    user.serverScopes = (await db("panel_operator_server_scopes").where({ user_id: user.id }).select("server_id")).map(
+      (entry) => entry.server_id,
     );
+    return user;
   }
 
   async authenticate(email, password) {
@@ -93,6 +102,9 @@ export class UserService {
       const access = await trx("oauth_access_tokens").where({ id: refresh.access_token_id }).first();
       const user = access ? await trx("users").where({ id: access.user_id, active: true }).first() : null;
       if (!user) return null;
+      user.serverScopes = (
+        await trx("panel_operator_server_scopes").where({ user_id: user.id }).select("server_id")
+      ).map((entry) => entry.server_id);
       await trx("oauth_refresh_tokens").where({ id: refresh.id }).update({ revoked: true });
       await trx("oauth_access_tokens").where({ id: refresh.access_token_id }).update({ revoked: true });
       const session = await this.createSession(user, trx);
