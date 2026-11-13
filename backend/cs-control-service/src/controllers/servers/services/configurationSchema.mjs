@@ -62,6 +62,7 @@ export const configurationDocumentSchema = {
   type: "object",
   properties: {
     schemaVersion: { type: "integer", const: 1 },
+    exportedAt: { type: "string", format: "date-time" },
     configuration: editableConfigurationSchema,
   },
   required: ["schemaVersion", "configuration"],

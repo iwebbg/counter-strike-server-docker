@@ -39,7 +39,13 @@ test("normalizes reusable configurations without exporting secrets", () => {
 
 test("accepts only versioned allowlisted configuration documents", () => {
   const safe = normalizeConfiguration(configuration);
-  assert.equal(validate({ schemaVersion: 1, configuration: safe }, configurationDocumentSchema), null);
+  assert.equal(
+    validate(
+      { schemaVersion: 1, exportedAt: "2026-11-13T12:00:00.000Z", configuration: safe },
+      configurationDocumentSchema,
+    ),
+    null,
+  );
   assert.ok(validate({ schemaVersion: 2, configuration: safe }, configurationDocumentSchema));
   assert.ok(
     validate(

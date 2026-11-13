@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/components/i18n-provider";
+import { ConfigurationTools } from "@/components/servers/configuration-tools";
 import { api } from "@/lib/api";
 
 type Configuration = {
@@ -128,6 +129,7 @@ export function ConfigurationPanel({
           <p className="eyebrow">{t("instanceConfiguration")}</p>
           <h2>{t("editServer")}</h2>
         </div>
+        <ConfigurationTools serverId={serverId} serverName={data.name} onChanged={onUpdated} />
       </header>
       <form className="form-grid configuration-form" onSubmit={submit}>
         <label className="full">
