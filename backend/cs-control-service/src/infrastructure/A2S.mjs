@@ -4,6 +4,8 @@ const QUERY = Buffer.concat([
   Buffer.from([0xff, 0xff, 0xff, 0xff, 0x54]),
   Buffer.from("Source Engine Query\0", "binary"),
 ]);
+const configuredTimeout = Number(process.env.A2S_TIMEOUT_MS || 900);
+const defaultTimeout = Number.isFinite(configuredTimeout) && configuredTimeout > 0 ? configuredTimeout : 900;
 
 function readCString(buffer, state) {
   const end = buffer.indexOf(0, state.offset);
@@ -46,7 +48,7 @@ export function parseA2SInfo(buffer) {
   throw new Error(`Unsupported A2S response type: ${type}`);
 }
 
-export function queryA2S(host, port, timeoutMs = 900) {
+export function queryA2S(host, port, timeoutMs = defaultTimeout) {
   return new Promise((resolve, reject) => {
     const socket = dgram.createSocket("udp4");
     let challenged = false;

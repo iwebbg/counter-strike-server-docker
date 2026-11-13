@@ -90,15 +90,18 @@ class Client {
 }
 
 async function waitForServer(client, instanceId) {
+  let lastServer = null;
   for (let attempt = 0; attempt < 60; attempt += 1) {
     const payload = await client.request("GET", "/servers");
     const server = payload.data.servers.find((candidate) => candidate.serverId === instanceId);
+    lastServer = server || null;
     // Docker reports the process as running before HLDS has opened its query
     // and RCON sockets. A successful A2S response populates `map`, so wait for
     // that application-level signal before exercising the live APIs.
     if (server?.state === "running" && server.map) return server;
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
+  diagnoseManagedServer(instanceId, lastServer);
   throw new Error(`Server ${instanceId} did not become query-ready.`);
 }
 
@@ -124,6 +127,39 @@ function dockerContainerByLabels(labels) {
     .filter(Boolean);
   assert.equal(ids.length, 1, `Expected one Docker container with labels ${labels.join(", ")}, received ${ids.length}`);
   return ids[0];
+}
+
+function diagnoseManagedServer(instanceId, lastServer) {
+  console.error(`Server ${instanceId} readiness snapshot: ${JSON.stringify(lastServer)}`);
+  try {
+    const containerId = dockerContainerByLabels([`com.cs16.instance-id=${instanceId}`]);
+    const state = execFileSync(
+      "docker",
+      [
+        "container",
+        "inspect",
+        "--format",
+        "status={{.State.Status}} running={{.State.Running}} oom={{.State.OOMKilled}} exit={{.State.ExitCode}} restarts={{.RestartCount}} error={{json .State.Error}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} image={{.Config.Image}} networks={{json .NetworkSettings.Networks}}",
+        containerId,
+      ],
+      { encoding: "utf8" },
+    );
+    console.error(`Managed server state: ${state.trim()}`);
+    const processes = execFileSync(
+      "docker",
+      ["container", "exec", containerId, "sh", "-c", "ps -ef; printf '\\n/proc/net/udp:\\n'; cat /proc/net/udp"],
+      { encoding: "utf8" },
+    );
+    console.error(processes.trim());
+    const logs = execFileSync("docker", ["container", "logs", "--tail", "200", containerId], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    console.error(`Managed server logs:\n${logs.trim()}`);
+  } catch (error) {
+    console.error(`Unable to collect managed server diagnostics: ${error.message}`);
+    if (error.stderr) console.error(String(error.stderr).trim());
+  }
 }
 
 function restartControlApi() {

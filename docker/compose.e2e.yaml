@@ -9,6 +9,8 @@ services:
       PANEL_ALLOWED_NETWORKS: cs16-e2e_default
       SERVER_IMAGE: cs16-server:e2e-target
       SERVER_READY_TIMEOUT_MS: 5000
+      A2S_TIMEOUT_MS: 3000
+      RCON_TIMEOUT_MS: 3000
       PORT_RANGE_START: 29015
       PORT_RANGE_END: 29025
       DB_ENABLED: "1"

@@ -1,6 +1,8 @@
 import dgram from "node:dgram";
 
 const header = Buffer.from([0xff, 0xff, 0xff, 0xff]);
+const configuredTimeout = Number(process.env.RCON_TIMEOUT_MS || 1800);
+const defaultTimeout = Number.isFinite(configuredTimeout) && configuredTimeout > 0 ? configuredTimeout : 1800;
 
 function packet(command) {
   return Buffer.concat([header, Buffer.from(`${command}\n`, "utf8")]);
@@ -10,7 +12,7 @@ function quote(value) {
   return `"${String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
 }
 
-function receive(socket, timeout = 1800) {
+function receive(socket, timeout = defaultTimeout) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("RCON response timed out")), timeout);
     socket.once("message", (message) => {
@@ -57,7 +59,7 @@ export async function rconCommand(host, port, password, command) {
     const challengeResponse = receive(socket);
     socket.send(packet("challenge rcon"), port, host);
     const challenge = parseRconChallenge(await challengeResponse);
-    const commandResponse = receive(socket, 1200);
+    const commandResponse = receive(socket);
     socket.send(packet(`rcon ${challenge} ${quote(password)} ${command}`), port, host);
     try {
       return await commandResponse;
