@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "@/components/session-provider";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
+import { useI18n } from "@/components/i18n-provider";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 type Ban = {
   id: number;
@@ -27,8 +29,10 @@ type Action = {
 export function ModerationDashboard() {
   const toast = useToast();
   const { user } = useSession();
+  const { t, locale } = useI18n();
   const [bans, setBans] = useState<Ban[]>([]);
   const [actions, setActions] = useState<Action[]>([]);
+  const [revokeId, setRevokeId] = useState<number | null>(null);
   const load = useCallback(async () => {
     try {
       const [banData, history] = await Promise.all([
@@ -44,11 +48,12 @@ export function ModerationDashboard() {
   useEffect(() => {
     load();
   }, [load]);
-  async function revoke(id: number) {
-    if (!confirm("Revoke this ban?")) return;
+  async function revoke() {
+    if (revokeId === null) return;
     try {
-      await api(`/bans/${id}/revoke`, { method: "POST" });
-      toast.success("Ban revoked");
+      await api(`/bans/${revokeId}/revoke`, { method: "POST" });
+      toast.success(t("banRevoked"));
+      setRevokeId(null);
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "REQUEST_FAILED");
@@ -58,47 +63,59 @@ export function ModerationDashboard() {
     <div className="moderation-grid">
       <section className="panel">
         <header>
-          <p className="eyebrow">FLEET SAFETY</p>
-          <h3>Active bans</h3>
+          <p className="eyebrow">{t("fleetSafety")}</p>
+          <h3>{t("activeBans")}</h3>
         </header>
         {bans.slice(0, 12).map((ban) => (
           <div className="community-row" key={ban.id}>
             <span>
               <strong>{ban.playerName || ban.steamId}</strong>
               <small>
-                {ban.reason} · {ban.serverId || "entire fleet"}
+                {ban.reason} · {ban.serverId || t("entireFleet")}
               </small>
             </span>
-            <code>{ban.expiresAt ? new Date(ban.expiresAt).toLocaleDateString() : "PERMANENT"}</code>
+            <code>
+              {ban.expiresAt
+                ? new Date(ban.expiresAt).toLocaleDateString(locale === "bg" ? "bg-BG" : "en-GB")
+                : t("permanent")}
+            </code>
             {user?.permissions.includes("moderation.manage") && (
-              <button className="danger-action" onClick={() => revoke(ban.id)}>
-                Revoke
+              <button className="danger-action" onClick={() => setRevokeId(ban.id)}>
+                {t("revoke")}
               </button>
             )}
           </div>
         ))}
-        {!bans.length && <p className="empty-copy">No active database bans.</p>}
+        {!bans.length && <p className="empty-copy">{t("noActiveBans")}</p>}
       </section>
       <section className="panel">
         <header>
-          <p className="eyebrow">AUDIT</p>
-          <h3>Moderation history</h3>
+          <p className="eyebrow">{t("audit")}</p>
+          <h3>{t("moderationHistory")}</h3>
         </header>
         {actions.slice(0, 12).map((item) => (
           <div className="community-row" key={item.id}>
             <span>
               <strong>
-                {item.action.toUpperCase()} · {item.playerName || item.steamId || "system"}
+                {item.action.toUpperCase()} · {item.playerName || item.steamId || t("system")}
               </strong>
               <small>
-                {item.reason} · {item.serverId || "fleet"}
+                {item.reason} · {item.serverId || t("fleet")}
               </small>
             </span>
-            <code>{new Date(item.createdAt).toLocaleDateString()}</code>
+            <code>{new Date(item.createdAt).toLocaleDateString(locale === "bg" ? "bg-BG" : "en-GB")}</code>
           </div>
         ))}
-        {!actions.length && <p className="empty-copy">No moderation events yet.</p>}
+        {!actions.length && <p className="empty-copy">{t("noModerationEvents")}</p>}
       </section>
+      <ConfirmModal
+        open={revokeId !== null}
+        onOpenChange={(open) => !open && setRevokeId(null)}
+        title={t("revokeBan")}
+        description={t("revokeBanConfirm")}
+        confirmLabel={t("revoke")}
+        onConfirm={revoke}
+      />
     </div>
   );
 }

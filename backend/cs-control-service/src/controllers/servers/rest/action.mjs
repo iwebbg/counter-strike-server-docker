@@ -16,14 +16,14 @@ export default {
       type: "object",
       properties: {
         id: { type: "string", pattern: "^[a-f0-9]{12,64}$" },
-        action: { type: "string", enum: ["start", "stop", "restart"] },
+        action: { type: "string", enum: ["start", "stop", "restart", "pause", "unpause"] },
       },
       required: ["id", "action"],
       additionalProperties: false,
     },
     body: {},
   },
-  docs: { tags: ["Servers"], description: "Start, stop or restart a server." },
+  docs: { tags: ["Servers"], description: "Start, stop, restart, pause or resume a server." },
   middlewares: [checkAuth],
   entryPoint: async (req, res) =>
     res.jsonOk(200, "SUCCESS", await serverAction(req.validated.path.id, req.validated.path.action)),

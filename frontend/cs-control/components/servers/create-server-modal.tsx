@@ -94,11 +94,11 @@ export function CreateServerModal({
           <legend>{t("gameMode")}</legend>
           <button type="button" className={mode === "classic" ? "selected" : ""} onClick={() => changeMode("classic")}>
             <b>Classic</b>
-            <small>Competitive CS 1.6</small>
+            <small>{t("classicDescription")}</small>
           </button>
           <button type="button" className={mode === "gungame" ? "selected" : ""} onClick={() => changeMode("gungame")}>
             <b>GunGame</b>
-            <small>Progressive weapons</small>
+            <small>{t("gungameDescription")}</small>
           </button>
         </fieldset>
         <label>
@@ -132,7 +132,7 @@ export function CreateServerModal({
         </fieldset>
         <label>
           <span>{t("hostPort")}</span>
-          <input name="port" inputMode="numeric" placeholder="Automatic" />
+          <input name="port" inputMode="numeric" placeholder={t("automatic")} />
         </label>
         <label>
           <span>{t("serverPassword")}</span>
@@ -140,7 +140,7 @@ export function CreateServerModal({
         </label>
         <label className="full">
           <span>{t("rconPassword")}</span>
-          <input name="rconPassword" type="password" placeholder="Securely generated when blank" />
+          <input name="rconPassword" type="password" placeholder={t("generatedWhenBlank")} />
         </label>
         <label className="full">
           <span>{t("fullAdmins")}</span>

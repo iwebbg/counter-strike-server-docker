@@ -847,7 +847,16 @@ export { createServer, listServers };
 
 export async function serverAction(id, action) {
   await assertControlled(id);
-  const suffix = action === "stop" ? "/stop?t=30" : action === "restart" ? "/restart?t=30" : "/start";
+  const suffix =
+    action === "stop"
+      ? "/stop?t=30"
+      : action === "restart"
+        ? "/restart?t=30"
+        : action === "pause"
+          ? "/pause"
+          : action === "unpause"
+            ? "/unpause"
+            : "/start";
   await docker.request("POST", `/containers/${id}${suffix}`);
   if (action === "start") await applyInheritedAdmins(id);
   return { status: action };

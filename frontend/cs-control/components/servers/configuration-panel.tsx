@@ -79,7 +79,7 @@ export function ConfigurationPanel({ serverId, onUpdated }: { serverId: string; 
           clearServerPassword: form.get("clearServerPassword") === "on",
         }),
       });
-      toast.success("Server saved and recreated");
+      toast.success(t("serverSaved"));
       await load();
       onUpdated();
     } catch (error) {
@@ -88,12 +88,12 @@ export function ConfigurationPanel({ serverId, onUpdated }: { serverId: string; 
       setPending(false);
     }
   }
-  if (!data) return <p className="empty-copy">Loading configuration…</p>;
+  if (!data) return <p className="empty-copy">{t("loadingConfiguration")}</p>;
   return (
     <section className="management-panel">
       <header>
         <div>
-          <p className="eyebrow">INSTANCE CONFIGURATION</p>
+          <p className="eyebrow">{t("instanceConfiguration")}</p>
           <h2>{t("editServer")}</h2>
         </div>
       </header>
@@ -148,19 +148,19 @@ export function ConfigurationPanel({ serverId, onUpdated }: { serverId: string; 
           <input
             name="serverPassword"
             type="password"
-            placeholder={data.hasServerPassword ? "Leave blank to preserve" : "No password configured"}
+            placeholder={data.hasServerPassword ? t("leaveBlankPreserve") : t("noPasswordConfigured")}
           />
         </label>
         <label className="checkbox full">
           <input name="clearServerPassword" type="checkbox" />
-          <span>Remove current server password</span>
+          <span>{t("removeServerPassword")}</span>
         </label>
         <label className="full">
           <span>{t("rconPassword")}</span>
           <input
             name="rconPassword"
             type="password"
-            placeholder={data.hasRconPassword ? "Leave blank to preserve" : "Set a secure password"}
+            placeholder={data.hasRconPassword ? t("leaveBlankPreserve") : t("setSecurePassword")}
           />
         </label>
         <div className="volume-note full">Persistent volumes: {data.volumes.join(", ")}</div>

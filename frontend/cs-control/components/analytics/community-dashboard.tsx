@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useToast } from "@/components/ui/toast";
 import { useSession } from "@/components/session-provider";
 import { api } from "@/lib/api";
+import { useI18n } from "@/components/i18n-provider";
+import { Modal } from "@/components/ui/modal";
 
 type Overview = {
   summary: {
@@ -38,11 +39,13 @@ const duration = (seconds: number) =>
       : `${(seconds / 86400).toFixed(1)}d`;
 export function CommunityDashboard() {
   const toast = useToast();
+  const { t } = useI18n();
   const { user } = useSession();
   const [data, setData] = useState<Overview | null>(null);
   const [status, setStatus] = useState<{ enabled: boolean; connected: boolean } | null>(null);
   const [server, setServer] = useState("");
   const [season, setSeason] = useState("");
+  const [seasonOpen, setSeasonOpen] = useState(false);
   const load = useCallback(async () => {
     try {
       const db = await api<{ enabled: boolean; connected: boolean }>("/database/status");
@@ -59,12 +62,14 @@ export function CommunityDashboard() {
   useEffect(() => {
     load();
   }, [load]);
-  async function createSeason() {
-    const name = prompt("New season name", "Season 2");
+  async function createSeason(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = String(new FormData(event.currentTarget).get("name") || "").trim();
     if (!name) return;
     try {
       await api("/seasons", { method: "POST", body: JSON.stringify({ name }) });
-      toast.success(`${name}: active season`);
+      toast.success(t("seasonCreated", { name }));
+      setSeasonOpen(false);
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "REQUEST_FAILED");
@@ -73,8 +78,8 @@ export function CommunityDashboard() {
   if (status && !status.connected)
     return (
       <section className="panel database-disabled">
-        <strong>MariaDB analytics are optional.</strong>
-        <span>Enable the database stack to display rankings, sessions and achievements.</span>
+        <strong>{t("mariadbOptional")}</strong>
+        <span>{t("mariadbEnableHint")}</span>
       </section>
     );
   const summary = data?.summary;
@@ -82,15 +87,15 @@ export function CommunityDashboard() {
     <section className="community-section">
       <header className="community-heading">
         <div>
-          <p className="eyebrow">COMMUNITY DATA</p>
-          <h2>Stats & moderation</h2>
+          <p className="eyebrow">{t("communityData")}</p>
+          <h2>{t("statsModeration")}</h2>
         </div>
         <div>
           <span className={`database-badge ${status?.connected ? "connected" : ""}`}>
-            {status?.connected ? "MARIADB CONNECTED" : "CHECKING MARIADB…"}
+            {t(status?.connected ? "mariadbConnected" : "checkingMariaDb")}
           </span>
           <select value={server} onChange={(event) => setServer(event.target.value)}>
-            <option value="">All servers</option>
+            <option value="">{t("allServers")}</option>
             {data?.servers.map((item) => (
               <option key={item.serverId} value={item.serverId}>
                 {item.name}
@@ -98,7 +103,7 @@ export function CommunityDashboard() {
             ))}
           </select>
           <select value={season} onChange={(event) => setSeason(event.target.value)}>
-            <option value="">All time</option>
+            <option value="">{t("allTime")}</option>
             {data?.seasons.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -106,42 +111,45 @@ export function CommunityDashboard() {
             ))}
           </select>
           {user?.permissions.includes("seasons.manage") && (
-            <button className="button ghost" onClick={createSeason}>
-              ＋ Season
+            <button className="button ghost" onClick={() => setSeasonOpen(true)}>
+              ＋ {t("newSeason")}
             </button>
           )}
-          <button className="icon-button" onClick={load}>
-            <RefreshCw size={16} />
-          </button>
         </div>
       </header>
       <div className="community-metrics">
         <article>
-          <span>Players</span>
+          <span>{t("players")}</span>
           <strong>{summary?.players || 0}</strong>
-          <small>unique Steam IDs</small>
+          <small>{t("uniqueSteamIds")}</small>
         </article>
         <article>
-          <span>Kills</span>
+          <span>{t("kills")}</span>
           <strong>{summary?.kills || 0}</strong>
-          <small>{((summary?.kills || 0) / Math.max(summary?.deaths || 0, 1)).toFixed(2)} fleet K/D</small>
+          <small>
+            {((summary?.kills || 0) / Math.max(summary?.deaths || 0, 1)).toFixed(2)} {t("fleetKd")}
+          </small>
         </article>
         <article>
-          <span>Headshots</span>
+          <span>{t("headshots")}</span>
           <strong>{summary?.headshots || 0}</strong>
-          <small>{Math.round(((summary?.headshots || 0) / Math.max(summary?.kills || 0, 1)) * 100)}% of kills</small>
+          <small>
+            {Math.round(((summary?.headshots || 0) / Math.max(summary?.kills || 0, 1)) * 100)}% {t("percentOfKills")}
+          </small>
         </article>
         <article>
-          <span>Playtime</span>
+          <span>{t("playtime")}</span>
           <strong>{duration(summary?.playtimeSeconds || 0)}</strong>
-          <small>{summary?.gungameWins || 0} GunGame wins</small>
+          <small>
+            {summary?.gungameWins || 0} {t("gungameWins")}
+          </small>
         </article>
       </div>
       <div className="community-grid">
         <article className="panel ranking">
           <header>
-            <p className="eyebrow">LEADERBOARD</p>
-            <h3>Top players</h3>
+            <p className="eyebrow">{t("leaderboard")}</p>
+            <h3>{t("topPlayers")}</h3>
           </header>
           {data?.ranking.slice(0, 10).map((player, index) => (
             <div className="community-row" key={player.steamId}>
@@ -158,14 +166,16 @@ export function CommunityDashboard() {
         </article>
         <article className="panel">
           <header>
-            <p className="eyebrow">ROTATION</p>
-            <h3>Popular maps</h3>
+            <p className="eyebrow">{t("rotation")}</p>
+            <h3>{t("popularMaps")}</h3>
           </header>
           {data?.maps.slice(0, 8).map((map) => (
             <div className="community-row" key={map.mapName}>
               <span>
                 <strong>{map.mapName}</strong>
-                <small>{map.kills} kills</small>
+                <small>
+                  {map.kills} {t("kills")}
+                </small>
               </span>
               <code>{map.timesPlayed}×</code>
             </div>
@@ -173,8 +183,8 @@ export function CommunityDashboard() {
         </article>
         <article className="panel">
           <header>
-            <p className="eyebrow">ACTIVITY</p>
-            <h3>Recent sessions</h3>
+            <p className="eyebrow">{t("activity")}</p>
+            <h3>{t("recentSessions")}</h3>
           </header>
           {data?.sessions.slice(0, 8).map((session, index) => (
             <div className="community-row" key={`${session.steamId}-${index}`}>
@@ -188,8 +198,8 @@ export function CommunityDashboard() {
         </article>
         <article className="panel">
           <header>
-            <p className="eyebrow">PROGRESSION</p>
-            <h3>Achievements</h3>
+            <p className="eyebrow">{t("progression")}</p>
+            <h3>{t("achievements")}</h3>
           </header>
           {data?.achievements.slice(0, 8).map((item, index) => (
             <div className="community-row" key={`${item.steamId}-${index}`}>
@@ -201,6 +211,20 @@ export function CommunityDashboard() {
           ))}
         </article>
       </div>
+      <Modal open={seasonOpen} onOpenChange={setSeasonOpen} title={t("newSeason")} eyebrow={t("communityData")}>
+        <form className="form-grid" onSubmit={createSeason}>
+          <label className="full">
+            <span>{t("newSeasonName")}</span>
+            <input name="name" required autoFocus />
+          </label>
+          <footer className="form-actions full">
+            <button type="button" className="button ghost" onClick={() => setSeasonOpen(false)}>
+              {t("cancel")}
+            </button>
+            <button className="button primary">{t("save")}</button>
+          </footer>
+        </form>
+      </Modal>
     </section>
   );
 }

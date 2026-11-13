@@ -7,6 +7,7 @@ import {
   Map,
   PackageOpen,
   Pencil,
+  Pause,
   Play,
   RefreshCw,
   ShieldCheck,
@@ -30,13 +31,14 @@ export function ServerCard({
   server: Server;
   permissions: string[];
   pending: boolean;
-  onAction: (action: "start" | "stop" | "restart") => void;
+  onAction: (action: "start" | "stop" | "restart" | "pause" | "unpause") => void;
   onLogs: () => void;
   onRemove: () => void;
   onUpdate: () => void;
 }) {
   const { t } = useI18n();
   const running = server.state === "running";
+  const paused = server.state === "paused";
   const operate = permissions.includes("servers.operate");
   const manage = permissions.includes("servers.manage");
   const manageAdmins = permissions.includes("admins.manage");
@@ -48,7 +50,9 @@ export function ServerCard({
         <div className="server-title">
           <span className={`server-orb ${running ? "live" : ""}`} />
           <div>
-            <h3>{server.name}</h3>
+            <h3>
+              <Link href={detailUrl(server.managedBy === "panel" ? "configuration" : "players")}>{server.name}</Link>
+            </h3>
             <code>{server.containerName}</code>
             {server.imageId && <small>IMAGE {server.imageId.replace("sha256:", "").slice(0, 12)}</small>}
           </div>
@@ -85,7 +89,18 @@ export function ServerCard({
       </div>
       <footer className="server-actions">
         {operate &&
-          (running ? (
+          (paused ? (
+            <>
+              <button className="primary-action" disabled={pending} onClick={() => onAction("unpause")}>
+                <Play size={14} />
+                {t("resume")}
+              </button>
+              <button disabled={pending} onClick={() => onAction("stop")}>
+                <Square size={13} />
+                {t("stop")}
+              </button>
+            </>
+          ) : running ? (
             <>
               <button disabled={pending} onClick={() => onAction("stop")}>
                 <Square size={13} />
@@ -94,6 +109,10 @@ export function ServerCard({
               <button disabled={pending} onClick={() => onAction("restart")}>
                 <RefreshCw size={14} />
                 {t("restart")}
+              </button>
+              <button disabled={pending} onClick={() => onAction("pause")}>
+                <Pause size={14} />
+                {t("pause")}
               </button>
             </>
           ) : (
@@ -112,7 +131,7 @@ export function ServerCard({
             {t("edit")}
           </Link>
         )}
-        {running ? (
+        {running || paused ? (
           <Link className="card-link" href={detailUrl("players")}>
             <Users size={14} />
             {t("players")}

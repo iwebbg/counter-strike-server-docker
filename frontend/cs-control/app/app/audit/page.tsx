@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Filter } from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
 import { useToast } from "@/components/ui/toast";
+import { Pagination } from "@/components/ui/pagination";
 import { api } from "@/lib/api";
 
 type AuditEvent = {
@@ -30,6 +31,8 @@ export default function AuditPage() {
   const toast = useToast();
   const [data, setData] = useState<AuditPayload>({ events: [], actions: [], operators: [] });
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
   const load = useCallback(
     async (params = "") => {
       try {
@@ -52,13 +55,15 @@ export default function AuditPage() {
       if (value) params.set(key, value);
     }
     setQuery(params.toString());
+    setPage(1);
     load(params.size ? `&${params}` : "");
   }
+  const visibleEvents = data.events.slice((page - 1) * pageSize, page * pageSize);
   return (
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">CONTROL PLANE HISTORY</p>
+          <p className="eyebrow">{t("controlPlaneHistory")}</p>
           <h1>{t("auditTitle")}</h1>
           <p>{t("auditDescription")}</p>
         </div>
@@ -86,23 +91,23 @@ export default function AuditPage() {
           <option value="">
             {t("result")}: {t("all")}
           </option>
-          <option value="success">Success</option>
-          <option value="failure">Failure</option>
-          <option value="denied">Denied</option>
+          <option value="success">{t("success")}</option>
+          <option value="failure">{t("failure")}</option>
+          <option value="denied">{t("denied")}</option>
         </select>
         <button className="button primary">
           <Filter size={16} />
-          Filter
+          {t("filter")}
         </button>
       </form>
       <section className="panel audit-list">
-        {data.events.map((event) => (
+        {visibleEvents.map((event) => (
           <article key={event.id}>
             <span className={`audit-status ${event.status}`}>{event.status}</span>
             <div>
               <strong>{event.action}</strong>
               <small>
-                {event.actorName || event.actorEmail || "System"}
+                {event.actorName || event.actorEmail || t("system")}
                 {event.serverId && ` · ${event.serverId}`}
                 {(event.targetName || event.targetId) && ` · ${event.targetName || event.targetId}`}
               </small>
@@ -115,7 +120,8 @@ export default function AuditPage() {
             </code>
           </article>
         ))}
-        {!data.events.length && <p className="empty-copy">No audit events{query ? " for this filter" : ""}.</p>}
+        {!data.events.length && <p className="empty-copy">{t(query ? "noAuditEventsFiltered" : "noAuditEvents")}</p>}
+        <Pagination page={page} pageSize={pageSize} totalItems={data.events.length} onPageChange={setPage} />
       </section>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
 import { useSession } from "@/components/session-provider";
 import { ServerCard } from "@/components/servers/server-card";
@@ -9,6 +9,7 @@ import { CreateServerModal } from "@/components/servers/create-server-modal";
 import { useServers } from "@/components/servers/use-servers";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
+import { Pagination } from "@/components/ui/pagination";
 import { api } from "@/lib/api";
 import type { Server } from "@/lib/types";
 
@@ -18,13 +19,24 @@ export default function ServersPage() {
   const toast = useToast();
   const { data, loading, error, reload } = useServers();
   const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [pending, setPending] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [logs, setLogs] = useState<{ name: string; value: string } | null>(null);
-  const servers = useMemo(
-    () => (data?.servers || []).filter((server) => filter === "all" || server.state === filter),
-    [data, filter],
-  );
+  const servers = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return (data?.servers || []).filter(
+      (server) =>
+        (filter === "all" || server.state === filter) &&
+        (!needle ||
+          [server.name, server.containerName, server.mode, server.map || ""].some((value) =>
+            value.toLowerCase().includes(needle),
+          )),
+    );
+  }, [data, filter, query]);
+  const pageSize = 6;
+  const visibleServers = servers.slice((page - 1) * pageSize, page * pageSize);
   const outdated = (data?.servers || []).filter((server) => server.managedBy === "panel" && server.updateAvailable);
   async function mutate(server: Server, task: () => Promise<unknown>, success: string) {
     setPending(server.id);
@@ -38,7 +50,7 @@ export default function ServersPage() {
       setPending("");
     }
   }
-  const action = (server: Server, value: "start" | "stop" | "restart") =>
+  const action = (server: Server, value: "start" | "stop" | "restart" | "pause" | "unpause") =>
     mutate(server, () => api(`/servers/${server.id}/${value}`, { method: "POST" }), `${server.name}: ${value}`);
   const showLogs = async (server: Server) => {
     try {
@@ -52,15 +64,11 @@ export default function ServersPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">INSTANCES</p>
+          <p className="eyebrow">{t("instances")}</p>
           <h1>{t("serversTitle")}</h1>
           <p>{t("serversDescription")}</p>
         </div>
         <div className="heading-actions">
-          <button className="button ghost" onClick={reload}>
-            <RefreshCw size={16} />
-            {t("refresh")}
-          </button>
           {user?.permissions.includes("servers.manage") && outdated.length > 1 && (
             <button
               className="button ghost"
@@ -88,19 +96,50 @@ export default function ServersPage() {
         </div>
       </section>
       {error && <div className="error-banner">{error}</div>}
-      <div className="filter-row">
-        <button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
-          {t("all")}
-        </button>
-        <button className={filter === "running" ? "active" : ""} onClick={() => setFilter("running")}>
-          {t("online")}
-        </button>
-        <button className={filter === "exited" ? "active" : ""} onClick={() => setFilter("exited")}>
-          {t("stopped")}
-        </button>
+      <div className="list-controls">
+        <label className="search-field">
+          <Search size={16} />
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
+            placeholder={t("search")}
+          />
+        </label>
+        <div className="filter-row">
+          <button
+            className={filter === "all" ? "active" : ""}
+            onClick={() => {
+              setFilter("all");
+              setPage(1);
+            }}
+          >
+            {t("all")}
+          </button>
+          <button
+            className={filter === "running" ? "active" : ""}
+            onClick={() => {
+              setFilter("running");
+              setPage(1);
+            }}
+          >
+            {t("online")}
+          </button>
+          <button
+            className={filter === "exited" ? "active" : ""}
+            onClick={() => {
+              setFilter("exited");
+              setPage(1);
+            }}
+          >
+            {t("stopped")}
+          </button>
+        </div>
       </div>
       <section className="server-grid">
-        {servers.map((server) => (
+        {visibleServers.map((server) => (
           <ServerCard
             key={server.id}
             server={server}
@@ -118,6 +157,7 @@ export default function ServersPage() {
           />
         ))}
       </section>
+      <Pagination page={page} pageSize={pageSize} totalItems={servers.length} onPageChange={setPage} />
       {loading && <p className="empty-copy">{t("loading")}</p>}
       {!loading && !servers.length && <p className="empty-copy">{t("noServers")}</p>}
       <CreateServerModal open={createOpen} onOpenChange={setCreateOpen} onCreated={reload} />

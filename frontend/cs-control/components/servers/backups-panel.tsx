@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Download, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Download, RotateCcw, Search, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/components/i18n-provider";
 import { api } from "@/lib/api";
+import { Pagination } from "@/components/ui/pagination";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { Modal } from "@/components/ui/modal";
 
 type Backup = {
   filename: string;
@@ -20,6 +23,13 @@ export function BackupsPanel({ containerId, serverKey }: { containerId: string; 
   const [backups, setBackups] = useState<Backup[]>([]);
   const [logs, setLogs] = useState(false);
   const [database, setDatabase] = useState(false);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [deleting, setDeleting] = useState<Backup | null>(null);
+  const [restoring, setRestoring] = useState<Backup | null>(null);
+  const [restoreDatabase, setRestoreDatabase] = useState(false);
+  const [pending, setPending] = useState(false);
+  const pageSize = 10;
   const load = useCallback(async () => {
     try {
       setBackups((await api<{ backups: Backup[] }>(`/backups?serverId=${encodeURIComponent(serverKey)}`)).backups);
@@ -30,54 +40,64 @@ export function BackupsPanel({ containerId, serverKey }: { containerId: string; 
   useEffect(() => {
     load();
   }, [load]);
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return needle
+      ? backups.filter((item) => `${item.name} ${item.kind} ${item.filename}`.toLowerCase().includes(needle))
+      : backups;
+  }, [backups, query]);
+  const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
   async function create() {
     try {
       await api(`/servers/${containerId}/backups`, {
         method: "POST",
         body: JSON.stringify({ includeLogs: logs, includeDatabase: database }),
       });
-      toast.success("Backup created");
+      toast.success(t("backupCreated"));
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "REQUEST_FAILED");
     }
   }
-  async function remove(item: Backup) {
-    if (!confirm(`Delete backup ${item.name}?`)) return;
+  async function remove() {
+    if (!deleting) return;
+    setPending(true);
     try {
-      await api(`/backups/${encodeURIComponent(item.filename)}`, { method: "DELETE" });
-      toast.success("Backup deleted");
+      await api(`/backups/${encodeURIComponent(deleting.filename)}`, { method: "DELETE" });
+      toast.success(t("backupDeleted"));
+      setDeleting(null);
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "REQUEST_FAILED");
+    } finally {
+      setPending(false);
     }
   }
-  async function restore(item: Backup) {
-    if (!confirm("Restore this backup? A safety backup will be created first.")) return;
-    const restoreDatabase =
-      item.includes.database && confirm("Restore MariaDB too? All controlled servers will stop temporarily.");
+  async function restore() {
+    if (!restoring) return;
+    setPending(true);
     try {
-      await api(`/servers/${containerId}/backups/${encodeURIComponent(item.filename)}/restore`, {
+      await api(`/servers/${containerId}/backups/${encodeURIComponent(restoring.filename)}/restore`, {
         method: "POST",
-        body: JSON.stringify({ restoreLogs: item.includes.logs, restoreDatabase }),
+        body: JSON.stringify({ restoreLogs: restoring.includes.logs, restoreDatabase }),
       });
-      toast.success("Backup restored");
+      toast.success(t("backupRestored"));
+      setRestoring(null);
+      setRestoreDatabase(false);
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "REQUEST_FAILED");
+    } finally {
+      setPending(false);
     }
   }
   return (
     <section className="management-panel">
       <header>
         <div>
-          <p className="eyebrow">RECOVERY CENTER</p>
+          <p className="eyebrow">{t("recoveryCenter")}</p>
           <h2>{t("backupRestore")}</h2>
         </div>
-        <button className="button ghost" onClick={load}>
-          <RefreshCw size={15} />
-          {t("refresh")}
-        </button>
       </header>
       <div className="backup-create">
         <label>
@@ -92,11 +112,24 @@ export function BackupsPanel({ containerId, serverKey }: { containerId: string; 
           {t("createBackup")}
         </button>
       </div>
+      <div className="table-toolbar">
+        <label className="search-field">
+          <Search size={16} />
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
+            placeholder={t("search")}
+          />
+        </label>
+      </div>
       <div className="package-list">
-        {backups.map((item) => (
+        {visible.map((item) => (
           <article key={item.filename}>
             <div>
-              <strong>{item.kind === "safety" ? "Safety backup" : item.name}</strong>
+              <strong>{item.kind === "safety" ? t("safetyBackup") : item.name}</strong>
               <span>
                 {new Date(item.createdAt).toLocaleString()} · {(item.size / 1048576).toFixed(1)} MiB
               </span>
@@ -111,18 +144,54 @@ export function BackupsPanel({ containerId, serverKey }: { containerId: string; 
                 <Download size={14} />
                 {t("download")}
               </a>
-              <button onClick={() => restore(item)}>
+              <button onClick={() => setRestoring(item)}>
                 <RotateCcw size={14} />
                 {t("restore")}
               </button>
-              <button className="danger-action" onClick={() => remove(item)}>
+              <button className="danger-action" onClick={() => setDeleting(item)}>
                 <Trash2 size={14} />
-                Delete
+                {t("delete")}
               </button>
             </div>
           </article>
         ))}
       </div>
+      <Pagination page={page} pageSize={pageSize} totalItems={filtered.length} onPageChange={setPage} />
+      <ConfirmModal
+        open={Boolean(deleting)}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title={t("deleteBackup")}
+        description={t("deleteBackupConfirm", { name: deleting?.name || "" })}
+        confirmLabel={t("delete")}
+        pending={pending}
+        onConfirm={remove}
+      />
+      <Modal
+        open={Boolean(restoring)}
+        onOpenChange={(open) => !open && setRestoring(null)}
+        title={t("restoreBackup")}
+        eyebrow={t("recoveryCenter")}
+      >
+        <p className="modal-copy">{t("restoreBackupConfirm")}</p>
+        {restoring?.includes.database && (
+          <label className="scope-field">
+            <input
+              type="checkbox"
+              checked={restoreDatabase}
+              onChange={(event) => setRestoreDatabase(event.target.checked)}
+            />
+            {t("restoreDatabaseToo")}
+          </label>
+        )}
+        <footer className="form-actions">
+          <button className="button ghost" onClick={() => setRestoring(null)}>
+            {t("cancel")}
+          </button>
+          <button className="button primary" disabled={pending} onClick={restore}>
+            {t("restore")}
+          </button>
+        </footer>
+      </Modal>
     </section>
   );
 }
