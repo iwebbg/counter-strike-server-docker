@@ -5,6 +5,7 @@ ARG STEAMCMD_URL=https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux
 ARG METAMOD_VERSION=1.21.1-am
 ARG AMXX_VERSION=1.9.0-git5303
 ARG AMXX_RELEASE=1.9.0.5303
+ARG STEAMCMD_ATTEMPTS=5
 
 ENV DEBIAN_FRONTEND=noninteractive \
     HLDS_DIR=/opt/hlds \
@@ -20,18 +21,10 @@ RUN dpkg --add-architecture i386 \
  && mkdir -p /opt/steamcmd "${HLDS_DIR}" \
  && chown -R hlds:hlds /opt/steamcmd "${HLDS_DIR}" /home/hlds
 
+COPY --chmod=0755 docker/install_hlds.sh /usr/local/bin/install-hlds
+
 USER hlds
-RUN curl -fsSL --retry 5 "${STEAMCMD_URL}" | tar -xz -C /opt/steamcmd \
- && for attempt in 1 2 3; do \
-      /opt/steamcmd/steamcmd.sh \
-        +force_install_dir "${HLDS_DIR}" \
-        +login anonymous \
-        +app_set_config 90 mod cstrike \
-        +app_update 90 -beta steam_legacy validate \
-        +quit || true; \
-      test -f "${HLDS_DIR}/cstrike/liblist.gam" && break; \
-    done \
- && test -f "${HLDS_DIR}/cstrike/liblist.gam" \
+RUN /usr/local/bin/install-hlds "${STEAMCMD_URL}" "${HLDS_DIR}" "${STEAMCMD_ATTEMPTS}" \
  && mkdir -p /home/hlds/.steam/sdk32 \
  && ln -sf /opt/steamcmd/linux32/steamclient.so /home/hlds/.steam/sdk32/steamclient.so
 
