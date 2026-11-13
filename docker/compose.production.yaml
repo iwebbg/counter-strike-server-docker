@@ -23,6 +23,8 @@ services:
     depends_on:
       panel:
         condition: service_healthy
+      panel-web:
+        condition: service_healthy
     security_opt:
       - no-new-privileges:true
 

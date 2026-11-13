@@ -1,11 +1,2 @@
 node_modules/
-dist/
-coverage/
-test-results/
-*.min.js
-*.map
-package-lock.json
-data/
-classic_maps/
-gungame_maps/
-vendor/
+.next/

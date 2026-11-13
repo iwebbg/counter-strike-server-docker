@@ -7,8 +7,8 @@
   },
   "scripts": {
     "prepare": "husky",
-    "format": "prettier --write --no-error-on-unmatched-pattern \"backend/**/*.{js,mjs,cjs,json}\" \"panel/**/*.{js,mjs,cjs,json,css,html}\"",
-    "format:check": "prettier --check --no-error-on-unmatched-pattern \"backend/**/*.{js,mjs,cjs,json}\" \"panel/**/*.{js,mjs,cjs,json,css,html}\""
+    "format": "prettier --write --no-error-on-unmatched-pattern \"backend/**/*.{js,mjs,cjs,json}\" \"frontend/**/*.{js,mjs,cjs,ts,tsx,json,css,html}\"",
+    "format:check": "prettier --check --no-error-on-unmatched-pattern \"backend/**/*.{js,mjs,cjs,json}\" \"frontend/**/*.{js,mjs,cjs,ts,tsx,json,css,html}\""
   },
   "lint-staged": {
     "*.{js,mjs,cjs,jsx,ts,tsx,json,jsonc,css,md,yml,yaml,html}": "prettier --write --ignore-unknown"

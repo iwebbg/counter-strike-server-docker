@@ -1,6 +1,10 @@
 .git
 .env
 data
+node_modules
+**/node_modules
+.next
+**/.next
 *.log
 *.ztmp
 

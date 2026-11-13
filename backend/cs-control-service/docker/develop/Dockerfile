@@ -10,6 +10,5 @@ COPY backend/cs-control-service/package*.json ./
 RUN npm ci
 
 COPY backend/cs-control-service/ ./
-COPY panel/public ./public
 
 CMD ["npm", "run", "start:dev"]

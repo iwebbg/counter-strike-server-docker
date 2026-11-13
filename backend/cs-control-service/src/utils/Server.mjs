@@ -7,16 +7,11 @@ import { rateLimit } from "express-rate-limit";
 import expressWinston from "express-winston";
 import helmet from "helmet";
 import passport from "passport";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import winston from "winston";
 import loggerConfig from "../config/logger.mjs";
 import serverConfig from "../config/server.mjs";
 import { configurePassport } from "./configurePassport.mjs";
 import createRouter from "./helpers/router.mjs";
-
-const directory = path.dirname(fileURLToPath(import.meta.url));
-const publicDirectory = path.resolve(directory, "../../public");
 
 export function jsonValueReplacer(key, value) {
   if (typeof value !== "bigint") return value;
@@ -118,11 +113,6 @@ class Server {
     this.app.use(passport.initialize());
     this.app.use("/api", cors({ origin: process.env.CORS_ORIGIN ?? false, credentials: true }), await createRouter());
     this.app.get("/health", (req, res) => res.jsonOk(200, "HEALTHY", { service: serverConfig.serviceName }));
-    this.app.use(express.static(publicDirectory, { etag: false, lastModified: false, maxAge: 0 }));
-    this.app.get("/{*path}", (req, res, next) => {
-      if (req.path.startsWith("/api/")) return next();
-      return res.sendFile(path.join(publicDirectory, "index.html"));
-    });
     this.app.use((error, req, res, next) => {
       if (loggerConfig.showErrorLogs) {
         console.error("HTTP request failed", { requestId: req.requestId, route: error.route, message: error.message });

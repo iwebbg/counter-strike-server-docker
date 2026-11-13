@@ -1,32 +1,20 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-function browserGlobals(language) {
-  Object.defineProperty(globalThis, "localStorage", {
-    configurable: true,
-    value: {
-      getItem: () => language,
-      setItem: () => {},
-    },
-  });
-  Object.defineProperty(globalThis, "navigator", {
-    configurable: true,
-    value: { language },
-  });
-}
+const messagesUrl = new URL("../../../frontend/cs-control/i18n/messages.ts", import.meta.url);
+const providerUrl = new URL("../../../frontend/cs-control/components/i18n-provider.tsx", import.meta.url);
 
-test("i18n defaults to English strings and locale formatting", async () => {
-  browserGlobals("en");
-  const { getLocale, t } = await import("../../../panel/public/i18n.js?language=en");
-  assert.equal(getLocale(), "en-US");
-  assert.equal(t("mapsSaved", { count: 3 }), "3 map(s) saved to the rotation.");
-  assert.equal(t("healthy"), "healthy");
+test("Next.js frontend ships Bulgarian and English navigation catalogs", async () => {
+  const source = await readFile(messagesUrl, "utf8");
+  for (const value of ["Табло", "Сървъри", "Оператори", "Журнал", "Dashboard", "Servers", "Operators", "Audit log"]) {
+    assert.ok(source.includes(value), `Missing i18n value: ${value}`);
+  }
 });
 
-test("i18n loads Bulgarian and interpolates dynamic values", async () => {
-  browserGlobals("bg");
-  const { getLocale, t } = await import("../../../panel/public/i18n.js?language=bg");
-  assert.equal(getLocale(), "bg-BG");
-  assert.equal(t("mapsSaved", { count: 3 }), "3 карти са запазени в ротацията.");
-  assert.equal(t("healthy"), "работи");
+test("language provider persists the BG/EN selection", async () => {
+  const source = await readFile(providerUrl, "utf8");
+  assert.match(source, /cs16-panel-language/);
+  assert.match(source, /saved === "en" \? "en" : "bg"/);
+  assert.match(source, /document\.documentElement\.lang = next/);
 });

@@ -15,6 +15,8 @@ services:
     depends_on:
       panel:
         condition: service_healthy
+      panel-web:
+        condition: service_healthy
     networks:
       default: {}
       external-proxy:

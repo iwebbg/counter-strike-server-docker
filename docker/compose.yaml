@@ -133,6 +133,42 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  panel-web:
+    profiles: ["panel"]
+    build:
+      context: .
+      dockerfile: frontend/docker/prod/Dockerfile
+      args:
+        NEXT_PUBLIC_APP_NAME: CS 1.6 Server CP
+    image: cs16-control-web:local
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-cs_control_session}
+      NEXT_PUBLIC_APP_NAME: CS 1.6 Server CP
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      panel:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
 volumes:
   cs16_logs:
   cs16_amxx_data:

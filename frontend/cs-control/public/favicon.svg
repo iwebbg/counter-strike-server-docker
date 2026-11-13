@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path fill="#0c1714" stroke="#baff35" d="M5 5h44l10 10v44H5z"/>
+  <path fill="#17231b" d="M49 5v10h10z"/>
+  <text x="32" y="40" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#baff35">CS</text>
+</svg>
