@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import { queryA2S } from "../../../infrastructure/A2S.mjs";
 import { DockerClient, demuxDockerStream } from "../../../infrastructure/Docker.mjs";
 import { parseStatusPlayers, rconCommand } from "../../../infrastructure/Rcon.mjs";
-import { createTar } from "../../../infrastructure/Tar.mjs";
 import Db from "../../../utils/Db.mjs";
 import {
   globalAdmins,
@@ -18,7 +17,6 @@ import {
   validateAdmins,
   validateCreateInput,
   validateEditInput,
-  validateMapUpload,
   validateModerationInput,
 } from "./schemas.mjs";
 const config = {
@@ -473,29 +471,6 @@ async function restorePersistentMapcycle(inspect, content) {
   await volumeCommand(dataVolume(inspect), script, content ? [content] : []);
 }
 
-async function validateCustomMapArchive(files) {
-  const helperName = `cs16-map-validator-${crypto.randomUUID().slice(0, 8)}`;
-  let helper = null;
-  try {
-    helper = await docker.request("POST", `/containers/create?name=${helperName}`, {
-      Image: config.image,
-      User: "hlds",
-      Entrypoint: ["/usr/local/bin/install-custom-map-resources"],
-      Cmd: ["/upload/resources", "/opt/hlds/cstrike"],
-      Labels: { "com.cs16.temporary": "true" },
-    });
-    const archive = createTar(files.map((file) => ({ path: `upload/resources/${file.path}`, content: file.content })));
-    await docker.request("PUT", `/containers/${helper.Id}/archive?path=/`, archive, "application/x-tar");
-    await docker.request("POST", `/containers/${helper.Id}/start`);
-    const result = await docker.request("POST", `/containers/${helper.Id}/wait?condition=not-running`);
-    const logs = await docker.request("GET", `/containers/${helper.Id}/logs?stdout=1&stderr=1`);
-    const output = demuxDockerStream(logs);
-    if (result.StatusCode !== 0) throw new Error(output.trim() || "Map package validation failed");
-  } finally {
-    if (helper?.Id) await docker.request("DELETE", `/containers/${helper.Id}?force=1&v=0`).catch(() => {});
-  }
-}
-
 async function ensureVolume(name) {
   await docker.request("POST", "/volumes/create", { Name: name, Labels: { "com.cs16.controlled": "true" } });
 }
@@ -913,82 +888,6 @@ export async function getMaps(id) {
 export async function updateMaps(id, input) {
   const inspect = await requireRunning(id);
   return saveMaps(id, inspect, input.maps);
-}
-
-export async function uploadMapPackage(id, input) {
-  const inspect = await assertControlled(id);
-  const values = validateMapUpload(input);
-  const serverMode = envValue(inspect, "SERVER_MODE", "classic");
-  if (values.mode !== serverMode) throw new Error(`This server accepts only ${serverMode} map packages`);
-
-  const targetImage = await docker.request("GET", `/images/${encodeURIComponent(config.image)}/json`);
-  if (inspect.Image !== targetImage.Id) throw new Error("Update the server image before uploading custom maps");
-
-  const builtInMaps = new Set(
-    Object.values(modeMaps)
-      .flat()
-      .map((map) => map.toLowerCase()),
-  );
-  const existingMap = values.maps.find((map) => builtInMaps.has(map.toLowerCase()));
-  if (existingMap) throw new Error(`Map ${existingMap} is already included in the server image`);
-
-  const volume = dataVolume(inspect);
-  const existingOutput = await volumeCommand(
-    volume,
-    "if [ -d /data/custom_maps/resources ]; then find /data/custom_maps/resources -type f -printf '%P\\n'; fi",
-  );
-  const existingPaths = new Set(
-    existingOutput
-      .split("\n")
-      .map((path) => path.trim().toLowerCase())
-      .filter(Boolean),
-  );
-  const duplicate = values.files.find((file) => existingPaths.has(file.path.toLowerCase()));
-  if (duplicate) throw new Error(`Custom resource already exists: ${duplicate.path}`);
-
-  await validateCustomMapArchive(values.files);
-  const categoryOutput = await volumeCommand(
-    volume,
-    `if [ -f /data/custom_maps/categories/${values.mode}.txt ]; then cat /data/custom_maps/categories/${values.mode}.txt; fi`,
-  );
-  const category = [
-    ...new Set([
-      ...categoryOutput
-        .split("\n")
-        .map((map) => map.trim())
-        .filter(Boolean),
-      ...values.maps,
-    ]),
-  ];
-  const archive = createTar([
-    ...values.files.map((file) => ({ path: `custom_maps/resources/${file.path}`, content: file.content })),
-    {
-      path: `custom_maps/categories/${values.mode}.txt`,
-      content: Buffer.from(`${category.join("\n")}\n`),
-    },
-  ]);
-  await docker.request(
-    "PUT",
-    `/containers/${inspect.Id}/archive?path=${encodeURIComponent(dataMountTarget)}`,
-    archive,
-    "application/x-tar",
-  );
-  if (inspect.State?.Running) {
-    await runExec(inspect.Id, [
-      "/usr/local/bin/install-custom-map-resources",
-      `${customMapsRoot}/resources`,
-      "/opt/hlds/cstrike",
-    ]);
-  }
-  return {
-    status: "uploaded",
-    mode: values.mode,
-    maps: values.maps,
-    files: values.files.length,
-    bytes: values.files.reduce((total, file) => total + file.content.length, 0),
-    persistent: true,
-    availableNow: Boolean(inspect.State?.Running),
-  };
 }
 
 export async function changeMap(id, map) {

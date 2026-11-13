@@ -221,23 +221,19 @@ function normalizeMapResourcePath(value) {
   return normalized;
 }
 
-export function validateMapUpload(input) {
-  const mode = input?.mode === "classic" || input?.mode === "gungame" ? input.mode : null;
+export function validateMapFiles(modeInput, entries) {
+  const mode = modeInput === "classic" || modeInput === "gungame" ? modeInput : null;
   if (!mode) throw new Error("Map upload mode must be classic or gungame");
-  if (!Array.isArray(input?.files) || input.files.length < 1 || input.files.length > 128) {
+  if (!Array.isArray(entries) || entries.length < 1 || entries.length > 128) {
     throw new Error("Map package must contain between 1 and 128 files");
   }
   const files = [];
   const paths = new Set();
   let totalBytes = 0;
-  for (const entry of input.files) {
+  for (const entry of entries) {
     const path = normalizeMapResourcePath(entry?.path);
-    const encoded = String(entry?.content || "");
-    if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
-      throw new Error(`Invalid base64 content for ${path}`);
-    }
-    const content = Buffer.from(encoded, "base64");
-    if (!content.length) throw new Error(`Empty map resource: ${path}`);
+    const content = Buffer.isBuffer(entry?.content) ? entry.content : null;
+    if (!content?.length) throw new Error(`Empty map resource: ${path}`);
     totalBytes += content.length;
     if (totalBytes > 32 * 1024 * 1024) throw new Error("Map package exceeds the 32 MiB upload limit");
     const key = path.toLowerCase();
@@ -250,4 +246,17 @@ export function validateMapUpload(input) {
   if (maps.some((map) => !/^[a-zA-Z0-9_]+$/.test(map)))
     throw new Error("Uploaded map names contain unsupported characters");
   return { mode, files, maps };
+}
+
+export function validateMapUpload(input) {
+  const decoded = Array.isArray(input?.files)
+    ? input.files.map((entry) => {
+        const encoded = String(entry?.content || "");
+        if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
+          throw new Error(`Invalid base64 content for ${entry?.path || "(unknown)"}`);
+        }
+        return { path: entry.path, content: Buffer.from(encoded, "base64") };
+      })
+    : input?.files;
+  return validateMapFiles(input?.mode, decoded);
 }

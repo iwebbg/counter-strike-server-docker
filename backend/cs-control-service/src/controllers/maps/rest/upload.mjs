@@ -1,5 +1,5 @@
 import checkAuth from "../../../middlewares/checkAuth.mjs";
-import { uploadMapPackage } from "../../servers/services/ServersService.mjs";
+import { uploadExtractedPackage } from "../services/MapPackageService.mjs";
 
 export default {
   route: "/servers/:id/maps/upload",
@@ -10,7 +10,7 @@ export default {
     action: "map.package.upload",
     targetType: "server",
     serverId: req.validated.path.id,
-    metadata: { files: req.validated.body.files?.length || 0 },
+    metadata: { files: req.validated.body.files?.length || 0, source: "folder" },
   }),
   validation: {
     query: {},
@@ -46,5 +46,5 @@ export default {
   docs: { tags: ["Maps"], description: "Validate and persist a custom map package for one server." },
   middlewares: [checkAuth],
   entryPoint: async (req, res) =>
-    res.jsonOk(201, "MAP_PACKAGE_UPLOADED", await uploadMapPackage(req.validated.path.id, req.validated.body)),
+    res.jsonOk(201, "MAP_PACKAGE_UPLOADED", await uploadExtractedPackage(req.validated.path.id, req.validated.body)),
 };
