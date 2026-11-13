@@ -53,6 +53,9 @@
         </div>
         <div class="topbar-actions">
           <span id="connectionState" class="connection"><i></i> Docker connected</span>
+          <span id="currentRole" class="badge role-badge"></span>
+          <button id="openAuditButton" class="button ghost small hidden" type="button">Audit log</button>
+          <button id="openOperatorsButton" class="button ghost small hidden" type="button">Operators</button>
           <label class="language-control"
             ><span class="sr-only">Language</span
             ><select data-language-selector aria-label="Language">
@@ -540,6 +543,89 @@
           <button class="button ghost" type="button" data-close-backups>Close</button>
         </footer>
       </form>
+    </dialog>
+
+    <dialog id="auditDialog" class="management-dialog">
+      <header class="dialog-header">
+        <div>
+          <p class="eyebrow">CONTROL PLANE HISTORY</p>
+          <h2>Audit log</h2>
+        </div>
+        <button class="close-button" type="button" data-close-audit aria-label="Close">×</button>
+      </header>
+      <div class="management-body">
+        <div class="audit-filters">
+          <label class="field"
+            ><span>Operator</span
+            ><select id="auditOperatorFilter">
+              <option value="">All operators</option>
+            </select></label
+          >
+          <label class="field"
+            ><span>Server</span
+            ><select id="auditServerFilter">
+              <option value="">All servers</option>
+            </select></label
+          >
+          <label class="field"
+            ><span>Action</span
+            ><select id="auditActionFilter">
+              <option value="">All actions</option>
+            </select></label
+          >
+          <label class="field"
+            ><span>Result</span
+            ><select id="auditStatusFilter">
+              <option value="">All results</option>
+              <option value="success">Success</option>
+              <option value="failure">Failure</option>
+              <option value="denied">Denied</option>
+            </select></label
+          >
+          <label class="field"><span>From</span><input id="auditFromFilter" type="datetime-local" /></label>
+          <label class="field"><span>To</span><input id="auditToFilter" type="datetime-local" /></label>
+        </div>
+        <div class="management-toolbar">
+          <p class="muted">Latest 200 actions matching the selected filters.</p>
+          <button id="refreshAuditButton" class="button ghost" type="button">Apply filters</button>
+        </div>
+        <div id="auditRows" class="audit-rows"><p class="muted">Loading audit log…</p></div>
+      </div>
+    </dialog>
+
+    <dialog id="operatorsDialog" class="management-dialog">
+      <header class="dialog-header">
+        <div>
+          <p class="eyebrow">ACCESS CONTROL</p>
+          <h2>Operators</h2>
+        </div>
+        <button class="close-button" type="button" data-close-operators aria-label="Close">×</button>
+      </header>
+      <div class="management-body">
+        <form id="createOperatorForm" class="operator-create-form">
+          <label class="field"><span>Name</span><input name="name" required minlength="2" maxlength="128" /></label>
+          <label class="field"><span>Email</span><input name="email" type="email" required maxlength="254" /></label>
+          <label class="field"
+            ><span>Initial password</span
+            ><input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"
+          /></label>
+          <label class="field"
+            ><span>Role</span
+            ><select name="role">
+              <option value="viewer">Viewer</option>
+              <option value="moderator">Moderator</option>
+              <option value="admin">Admin</option>
+              <option value="owner">Owner</option>
+            </select></label
+          >
+          <button class="button primary" type="submit">＋ Add operator</button>
+        </form>
+        <div class="role-guide">
+          <span><b>Viewer</b> Read only</span><span><b>Moderator</b> Players &amp; maps</span
+          ><span><b>Admin</b> Server operations</span><span><b>Owner</b> Operators &amp; full access</span>
+        </div>
+        <div id="operatorRows" class="operator-rows"><p class="muted">Loading operators…</p></div>
+      </div>
     </dialog>
 
     <dialog id="profileDialog" class="profile-dialog">

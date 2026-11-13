@@ -17,6 +17,8 @@ const state = {
   uploadServer: null,
   backupsServer: null,
   backups: [],
+  operators: [],
+  auditEvents: [],
   statsLoading: false,
   databaseConnected: false,
 };
@@ -34,6 +36,8 @@ const adminsDialog = $("#adminsDialog");
 const mapsDialog = $("#mapsDialog");
 const playersDialog = $("#playersDialog");
 const backupsDialog = $("#backupsDialog");
+const auditDialog = $("#auditDialog");
+const operatorsDialog = $("#operatorsDialog");
 const profileDialog = $("#profileDialog");
 const toast = $("#toast");
 const maps = {
@@ -118,6 +122,7 @@ async function api(path, options = {}, allowRefresh = true) {
 function showApp() {
   authView.classList.add("hidden");
   appView.classList.remove("hidden");
+  applyPermissionUi();
 }
 
 function showAuth(message = "") {
@@ -133,6 +138,18 @@ function shortImageId(value) {
     .slice(0, 12);
 }
 
+function can(permission) {
+  return state.user?.permissions?.includes(permission) === true;
+}
+
+function applyPermissionUi() {
+  $("#currentRole").textContent = state.user?.role?.toUpperCase() || "";
+  $("#openAuditButton").classList.toggle("hidden", !can("audit.read"));
+  $("#openOperatorsButton").classList.toggle("hidden", !can("operators.manage"));
+  $("#openCreateButton").classList.toggle("hidden", !can("servers.manage"));
+  $("#newSeasonButton").classList.toggle("hidden", !can("seasons.manage"));
+}
+
 function serverCard(server) {
   const online = server.state === "running";
   const canRemove = server.managedBy === "panel" && !online;
@@ -142,6 +159,8 @@ function serverCard(server) {
   const currentImage = shortImageId(server.imageId) || "—";
   const targetImage = shortImageId(server.targetImageId) || "—";
   const imageTitle = `${t("currentImage")}: ${server.imageId || "—"}\n${t("availableImage")}: ${server.targetImageId || "—"}`;
+  const canOperate = can("servers.operate");
+  const canManage = can("servers.manage");
   return `
     <article class="server-card ${online ? "online" : ""}" data-id="${server.id}">
       <div class="card-head">
@@ -155,20 +174,16 @@ function serverCard(server) {
         <div><span>${t("port")}</span><strong>:${server.port ?? "—"}</strong></div>
       </div>
       <div class="card-actions">
-        ${
-          online
-            ? `<button class="button ghost" data-action="stop">■ ${t("stop")}</button><button class="button ghost" data-action="restart">↻ ${t("restart")}</button>`
-            : `<button class="button primary" data-action="start">▶ ${t("start")}</button>`
-        }
+        ${canOperate ? (online ? `<button class="button ghost" data-action="stop">■ ${t("stop")}</button><button class="button ghost" data-action="restart">↻ ${t("restart")}</button>` : `<button class="button primary" data-action="start">▶ ${t("start")}</button>`) : ""}
         <button class="button ghost" data-action="logs">${t("logs")}</button>
-        ${server.managedBy === "panel" ? `<button class="button ghost" data-action="edit">${t("edit")}</button>` : ""}
-        ${server.updateAvailable ? `<button class="button ghost update-button" data-action="update">${t("update")}</button>` : ""}
+        ${canManage && server.managedBy === "panel" ? `<button class="button ghost" data-action="edit">${t("edit")}</button>` : ""}
+        ${canManage && server.updateAvailable ? `<button class="button ghost update-button" data-action="update">${t("update")}</button>` : ""}
         <button class="button ghost" data-action="players" ${online ? "" : `disabled title="${t("viewPlayersHint")}"`}>${t("players")}</button>
         <button class="button ghost" data-action="maps" ${online ? "" : `disabled title="${t("manageMapsHint")}"`}>${t("maps")}</button>
-        <button class="button ghost" data-action="upload-maps" ${server.updateAvailable ? `disabled title="${t("updateBeforeUpload")}"` : ""}>${t("uploadMaps")}</button>
-        <button class="button ghost" data-action="admins" ${online ? "" : `disabled title="${t("manageAdminsHint")}"`}>${t("admins")}</button>
-        ${server.managedBy === "panel" ? `<button class="button ghost" data-action="backups">${t("backups")}</button>` : ""}
-        ${canRemove ? `<button class="button ghost danger" data-action="remove">${t("remove")}</button>` : ""}
+        ${canManage ? `<button class="button ghost" data-action="upload-maps" ${server.updateAvailable ? `disabled title="${t("updateBeforeUpload")}"` : ""}>${t("uploadMaps")}</button>` : ""}
+        ${can("admins.manage") ? `<button class="button ghost" data-action="admins" ${online ? "" : `disabled title="${t("manageAdminsHint")}"`}>${t("admins")}</button>` : ""}
+        ${can("backups.manage") && server.managedBy === "panel" ? `<button class="button ghost" data-action="backups">${t("backups")}</button>` : ""}
+        ${canManage && canRemove ? `<button class="button ghost danger" data-action="remove">${t("remove")}</button>` : ""}
       </div>
     </article>`;
 }
@@ -183,7 +198,7 @@ function render() {
   const capacity = online.reduce((total, server) => total + (server.liveMaxPlayers || server.maxPlayers || 0), 0);
   const updates = state.servers.filter((server) => server.updateAvailable);
   const updateAll = $("#updateAllButton");
-  updateAll.classList.toggle("hidden", updates.length === 0);
+  updateAll.classList.toggle("hidden", updates.length === 0 || !can("servers.manage"));
   updateAll.textContent = t("updateAllCount", { count: updates.length });
   $("#totalMetric").textContent = state.servers.length;
   $("#onlineMetric").textContent = online.length;
@@ -707,8 +722,8 @@ function renderServerMaps() {
   $("#serverMapGrid").innerHTML = payload.available
     .map((map) => {
       return `<div class="server-map-choice" data-server-map-row data-map-name="${escapeHtml(map.toLowerCase())}">
-      <label><input type="checkbox" data-server-map value="${escapeHtml(map)}" ${payload.selected.includes(map) ? "checked" : ""}><span><b>${escapeHtml(map)}</b>${payload.current === map ? `<small>${t("nowPlaying")}</small>` : ""}</span></label>
-      ${payload.current === map ? "" : `<button class="play-map" type="button" data-play-map="${escapeHtml(map)}">${t("playNow")}</button>`}
+      <label><input type="checkbox" data-server-map value="${escapeHtml(map)}" ${payload.selected.includes(map) ? "checked" : ""} ${can("maps.manage") ? "" : "disabled"}><span><b>${escapeHtml(map)}</b>${payload.current === map ? `<small>${t("nowPlaying")}</small>` : ""}</span></label>
+      ${payload.current === map || !can("maps.manage") ? "" : `<button class="play-map" type="button" data-play-map="${escapeHtml(map)}">${t("playNow")}</button>`}
     </div>`;
     })
     .join("");
@@ -721,6 +736,10 @@ async function openMaps(server) {
   $("#currentMapName").textContent = server.map || t("loading");
   $("#serverMapGrid").innerHTML = `<p class="muted">${t("loadingMaps")}</p>`;
   $("#mapSearch").value = "";
+  $("#uploadMapFolderButton").classList.toggle("hidden", !can("servers.manage"));
+  $("#selectAllMaps").classList.toggle("hidden", !can("maps.manage"));
+  $("#clearAllMaps").classList.toggle("hidden", !can("maps.manage"));
+  $("#saveMapsButton").classList.toggle("hidden", !can("maps.manage"));
   mapsDialog.showModal();
   try {
     state.mapsPayload = await api(`/api/servers/${server.id}/maps`);
@@ -930,6 +949,163 @@ $("#backupRows").addEventListener("click", async (event) => {
 $("#refreshBackupsButton").addEventListener("click", loadBackups);
 document.querySelectorAll("[data-close-backups]").forEach((button) => button.addEventListener("click", closeBackups));
 
+function operatorRoleOptions(selected) {
+  return ["viewer", "moderator", "admin", "owner"]
+    .map(
+      (role) => `<option value="${role}" ${role === selected ? "selected" : ""}>${t(`operatorRole_${role}`)}</option>`,
+    )
+    .join("");
+}
+
+function renderOperators() {
+  $("#operatorRows").innerHTML = state.operators.length
+    ? state.operators
+        .map(
+          (operator) => `<article class="operator-row" data-operator-id="${operator.id}">
+            <div class="operator-identity"><label class="field"><span>${t("name")}</span><input data-operator-name value="${escapeHtml(operator.name)}" maxlength="128"></label><span>${escapeHtml(operator.email)}${operator.id === state.user.id ? ` · ${t("currentUser")}` : ""}</span></div>
+            <label class="field"><span>${t("role")}</span><select data-operator-role>${operatorRoleOptions(operator.role)}</select></label>
+            <label class="toggle compact"><input data-operator-active type="checkbox" ${operator.active ? "checked" : ""}><i></i><span><b>${t(operator.active ? "active" : "inactive")}</b></span></label>
+            <div class="operator-actions"><button class="button ghost" type="button" data-operator-save>${t("save")}</button><button class="button ghost" type="button" data-operator-password>${t("password")}</button><button class="button ghost danger" type="button" data-operator-delete>${t("remove")}</button></div>
+          </article>`,
+        )
+        .join("")
+    : `<p class="muted">${t("noOperators")}</p>`;
+}
+
+async function loadOperators() {
+  $("#operatorRows").innerHTML = `<p class="muted">${t("loadingOperators")}</p>`;
+  try {
+    const payload = await api("/api/operators");
+    state.operators = payload.operators;
+    renderOperators();
+  } catch (error) {
+    $("#operatorRows").innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+$("#openOperatorsButton").addEventListener("click", async () => {
+  operatorsDialog.showModal();
+  await loadOperators();
+});
+document.querySelector("[data-close-operators]").addEventListener("click", () => operatorsDialog.close());
+
+$("#createOperatorForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!event.currentTarget.reportValidity()) return;
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  const values = Object.fromEntries(new FormData(event.currentTarget));
+  values.preferredLocale = getLocale().startsWith("bg") ? "bg" : "en";
+  button.disabled = true;
+  try {
+    await api("/api/operators", { method: "POST", body: JSON.stringify(values) });
+    event.currentTarget.reset();
+    notify(t("operatorCreated"));
+    await loadOperators();
+  } catch (error) {
+    notify(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("#operatorRows").addEventListener("click", async (event) => {
+  const row = event.target.closest("[data-operator-id]");
+  if (!row) return;
+  const operator = state.operators.find((entry) => entry.id === row.dataset.operatorId);
+  if (!operator) return;
+  const clicked = event.target.closest("button");
+  if (!clicked) return;
+  clicked.disabled = true;
+  try {
+    if (clicked.matches("[data-operator-save]")) {
+      await api(`/api/operators/${operator.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: row.querySelector("[data-operator-name]").value,
+          role: row.querySelector("[data-operator-role]").value,
+          active: row.querySelector("[data-operator-active]").checked,
+        }),
+      });
+      notify(t("operatorUpdated"));
+    } else if (clicked.matches("[data-operator-password]")) {
+      const password = prompt(t("newOperatorPassword", { email: operator.email }));
+      if (password === null) return;
+      if (password.length < 12) throw new Error(t("passwordLength"));
+      await api(`/api/operators/${operator.id}/password`, {
+        method: "PUT",
+        body: JSON.stringify({ password }),
+      });
+      notify(t("operatorPasswordChanged"));
+    } else if (clicked.matches("[data-operator-delete]")) {
+      if (!confirm(t("deleteOperatorConfirm", { email: operator.email }))) return;
+      await api(`/api/operators/${operator.id}`, { method: "DELETE" });
+      notify(t("operatorDeleted"));
+    }
+    await loadOperators();
+  } catch (error) {
+    notify(error.message, true);
+  } finally {
+    clicked.disabled = false;
+  }
+});
+
+function auditDate(value) {
+  return value ? new Date(value).toISOString() : "";
+}
+
+function fillAuditFilters(payload) {
+  const operator = $("#auditOperatorFilter");
+  const action = $("#auditActionFilter");
+  const server = $("#auditServerFilter");
+  const selections = { operator: operator.value, action: action.value, server: server.value };
+  operator.innerHTML = `<option value="">${t("allOperators")}</option>${payload.operators.map((item) => `<option value="${item.id}">${escapeHtml(item.name || item.email)}</option>`).join("")}`;
+  action.innerHTML = `<option value="">${t("allActions")}</option>${payload.actions.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("")}`;
+  server.innerHTML = `<option value="">${t("allServers")}</option>${state.servers.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("")}`;
+  operator.value = selections.operator;
+  action.value = selections.action;
+  server.value = selections.server;
+}
+
+function renderAuditEvents() {
+  $("#auditRows").innerHTML = state.auditEvents.length
+    ? state.auditEvents
+        .map(
+          (event) =>
+            `<article class="audit-row"><span class="audit-status ${event.status}">${escapeHtml(event.status)}</span><div><strong>${escapeHtml(event.action)}</strong><span>${escapeHtml(event.actorName || event.actorEmail || t("system"))}${event.serverId ? ` · ${escapeHtml(event.serverId)}` : ""}${event.targetName ? ` · ${escapeHtml(event.targetName)}` : ""}</span></div><code title="${escapeHtml(event.requestId || "")}">${formatDate(event.createdAt)}</code></article>`,
+        )
+        .join("")
+    : `<p class="muted">${t("noAuditEvents")}</p>`;
+}
+
+async function loadAudit() {
+  $("#auditRows").innerHTML = `<p class="muted">${t("loadingAudit")}</p>`;
+  const params = new URLSearchParams({ limit: "200" });
+  const values = {
+    operatorId: $("#auditOperatorFilter").value,
+    serverId: $("#auditServerFilter").value,
+    action: $("#auditActionFilter").value,
+    status: $("#auditStatusFilter").value,
+    from: auditDate($("#auditFromFilter").value),
+    to: auditDate($("#auditToFilter").value),
+  };
+  Object.entries(values).forEach(([key, value]) => value && params.set(key, value));
+  try {
+    const payload = await api(`/api/audit-logs?${params}`);
+    state.auditEvents = payload.events;
+    fillAuditFilters(payload);
+    renderAuditEvents();
+  } catch (error) {
+    $("#auditRows").innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+$("#openAuditButton").addEventListener("click", async () => {
+  auditDialog.showModal();
+  await loadAudit();
+});
+$("#refreshAuditButton").addEventListener("click", loadAudit);
+document.querySelector("[data-close-audit]").addEventListener("click", () => auditDialog.close());
+
 $("#mapSearch").addEventListener("input", (event) => {
   const query = event.target.value.trim().toLowerCase();
   document
@@ -995,7 +1171,7 @@ function playerRow(player) {
     <span class="player-stat">${player.frags}</span>
     <span class="player-stat">${player.ping} ms</span>
     <span class="player-stat">${escapeHtml(player.time)}</span>
-    <div class="player-actions"><button class="button ghost" type="button" data-player-action="kick">${t("kick")}</button><button class="button ghost danger" type="button" data-player-action="ban">${t("ban")}</button></div>
+    <div class="player-actions">${can("players.moderate") ? `<button class="button ghost" type="button" data-player-action="kick">${t("kick")}</button><button class="button ghost danger" type="button" data-player-action="ban">${t("ban")}</button>` : "—"}</div>
   </div>`;
 }
 
@@ -1185,7 +1361,7 @@ async function loadAnalytics(silent = false) {
       ? bans.bans
           .map(
             (ban) =>
-              `<div class="data-row ban-row"><span><b>${escapeHtml(ban.playerName || ban.steamId)}</b><small>${escapeHtml(ban.steamId)}</small></span><span><b>${escapeHtml(ban.reason)}</b><small>${ban.serverId ? t("serverScope", { id: escapeHtml(ban.serverId) }) : t("entireFleet")}</small></span><code>${ban.expiresAt ? formatDate(ban.expiresAt) : t("permanent")}</code><button class="button ghost danger" type="button" data-revoke-ban="${ban.id}">${t("revoke")}</button></div>`,
+              `<div class="data-row ban-row"><span><b>${escapeHtml(ban.playerName || ban.steamId)}</b><small>${escapeHtml(ban.steamId)}</small></span><span><b>${escapeHtml(ban.reason)}</b><small>${ban.serverId ? t("serverScope", { id: escapeHtml(ban.serverId) }) : t("entireFleet")}</small></span><code>${ban.expiresAt ? formatDate(ban.expiresAt) : t("permanent")}</code>${can("moderation.manage") ? `<button class="button ghost danger" type="button" data-revoke-ban="${ban.id}">${t("revoke")}</button>` : ""}</div>`,
           )
           .join("")
       : emptyRows(t("noBans"));

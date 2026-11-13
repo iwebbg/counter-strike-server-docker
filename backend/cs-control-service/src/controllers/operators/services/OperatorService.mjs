@@ -69,6 +69,7 @@ export async function updateOperator(id, values, actorId) {
   const operator = await operatorById(db, id);
   const nextRole = values.role ?? normalizeRole(operator.role);
   const nextActive = values.active ?? Boolean(operator.active);
+  const securityChanged = nextRole !== normalizeRole(operator.role) || nextActive !== Boolean(operator.active);
   if (id === actorId && (nextRole !== "owner" || !nextActive)) throw httpError(409, "CANNOT_RESTRICT_CURRENT_OPERATOR");
   await assertOwnerRemains(db, operator, nextRole, nextActive);
   const changes = { updated_at: new Date() };
@@ -77,7 +78,7 @@ export async function updateOperator(id, values, actorId) {
   if (values.active !== undefined) changes.active = values.active;
   if (values.preferredLocale !== undefined) changes.preferred_locale = values.preferredLocale;
   await db("users").where({ id }).update(changes);
-  if (values.role !== undefined || values.active !== undefined) await new UserService().revokeUserSessions(id);
+  if (securityChanged) await new UserService().revokeUserSessions(id);
   return publicOperator(await operatorById(db, id));
 }
 

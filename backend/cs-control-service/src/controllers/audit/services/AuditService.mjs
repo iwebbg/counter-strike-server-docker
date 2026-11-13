@@ -74,5 +74,9 @@ export async function listAuditLogs(filters = {}) {
     }
   }
   const actions = await db("panel_audit_logs").distinct("action").orderBy("action");
-  return { events, actions: actions.map((row) => row.action) };
+  const operators = await db("panel_audit_logs")
+    .whereNotNull("actor_user_id")
+    .distinct("actor_user_id as id", "actor_name as name", "actor_email as email")
+    .orderBy("actor_name");
+  return { events, actions: actions.map((row) => row.action), operators };
 }

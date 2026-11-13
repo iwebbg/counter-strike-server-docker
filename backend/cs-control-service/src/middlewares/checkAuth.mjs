@@ -19,11 +19,12 @@ export default async function checkAuth(req, res, next) {
   if (!accessToken) return res.jsonError(401, "UNAUTHORIZED");
   const service = new UserService();
   const cached = await service.getUserCache(accessToken);
-  if (cached) {
+  if (cached && Array.isArray(cached.permissions)) {
     req.userCurrentSession = accessToken;
     req.user = cached;
     return next();
   }
+  if (cached) await service.deleteUserCache(accessToken);
   return passport.authenticate("bearer", { session: false }, async (error, user) => {
     if (error || !user) return res.jsonError(401, "UNAUTHORIZED");
     req.userCurrentSession = accessToken;
