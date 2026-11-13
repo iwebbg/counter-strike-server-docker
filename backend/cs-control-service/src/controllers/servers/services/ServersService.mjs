@@ -542,10 +542,14 @@ async function ensureVolume(name) {
   await docker.request("POST", "/volumes/create", { Name: name, Labels: { "com.cs16.controlled": "true" } });
 }
 
-async function createServer(input) {
+async function createServer(input, options = {}) {
   const values = validateCreateInput(input, config.portStart, config.portEnd);
   const port = await selectPort(values.port);
-  const instanceId = crypto.randomUUID().slice(0, 8);
+  const requestedInstanceId = String(options.instanceId || "").trim();
+  if (requestedInstanceId && !/^[a-z0-9][a-z0-9-]{0,63}$/.test(requestedInstanceId)) {
+    throw new Error("Invalid preserved server ID");
+  }
+  const instanceId = requestedInstanceId || crypto.randomUUID().slice(0, 8);
   const containerName = `cs16-instance-${instanceId}`;
   const volumePrefix = `cs16_${instanceId}`;
   const rconPassword = values.rconPassword || crypto.randomBytes(18).toString("base64url");
