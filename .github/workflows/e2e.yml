@@ -1,0 +1,35 @@
+name: Full E2E
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  control-plane:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --prefix backend/cs-control-service
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: rehlds
+          load: true
+          tags: cs16-server:local
+          cache-from: type=gha,scope=cs16-images
+          cache-to: type=gha,mode=max,scope=cs16-images
+      - run: npm run test:e2e --prefix backend/cs-control-service
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cs16-e2e-diagnostics
+          path: /tmp/cs16-e2e-control-plane.log
+          if-no-files-found: warn

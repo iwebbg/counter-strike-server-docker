@@ -14,6 +14,11 @@ npm run format:check
 
 ## Docker E2E
 
+The heavy E2E test does not block automatic CI because it depends on UDP/A2S/RCON
+behavior on the GitHub-hosted runner. Run it when needed through
+`Actions → Full E2E → Run workflow`. Automatic CI runs the unit/contract tests,
+frontend build, Compose validation, and the ReHLDS image smoke test.
+
 The local game image must exist first:
 
 ```bash
@@ -38,4 +43,5 @@ of persistent `running`, `stopped`, and `paused` desired states.
 
 On completion, it automatically removes the temporary containers, network, database/backup volumes, and test CS server volumes. The main `cs16` Compose project and its data remain unchanged.
 
-On failure, the runner prints service status and recent logs before cleanup.
+On failure, the runner prints service status and recent logs before cleanup and
+uploads a `cs16-e2e-diagnostics` artifact.

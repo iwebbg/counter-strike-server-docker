@@ -14,6 +14,11 @@ npm run format:check
 
 ## Docker E2E
 
+Тежкият E2E тест не блокира автоматичния CI, защото зависи от UDP/A2S/RCON
+поведението на GitHub hosted runner. В GitHub го стартирайте при нужда от
+`Actions → Full E2E → Run workflow`. Автоматичният CI изпълнява unit/contract
+тестовете, frontend build-а, Compose validation и ReHLDS image smoke test-а.
+
 Първо трябва да съществува локалният game image:
 
 ```bash
@@ -38,4 +43,5 @@ desired state възстановява `running`, `stopped` и `paused` точн
 
 При приключване временните контейнери, мрежа, database/backup volumes и volumes на тестовия CS сървър се премахват автоматично. Основният Compose project `cs16` и неговите данни не се променят.
 
-При неуспех runner-ът отпечатва статусите и последните логове преди cleanup.
+При неуспех runner-ът отпечатва статусите и последните логове преди cleanup и
+качва artifact `cs16-e2e-diagnostics`.
