@@ -5,6 +5,7 @@ export default {
   route: "/servers",
   method: "GET",
   bearerAuth: true,
+  permission: "servers.read",
   validation: { query: {}, path: {}, body: {} },
   docs: { tags: ["Servers"], description: "List controlled CS servers." },
   middlewares: [checkAuth],

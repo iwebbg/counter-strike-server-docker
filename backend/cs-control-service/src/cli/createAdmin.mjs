@@ -27,7 +27,7 @@ if (name.length < 2 || !email.includes("@") || password.length < 12) {
         email,
         normalized_email: email,
         password: await bcrypt.hash(password, 12),
-        role: "admin",
+        role: "owner",
         preferred_locale: "bg",
         active: true,
         email_verified_at: new Date(),

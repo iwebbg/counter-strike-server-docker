@@ -5,6 +5,7 @@ export default {
   route: "/backups",
   method: "GET",
   bearerAuth: true,
+  permission: "backups.manage",
   validation: {
     query: {
       type: "object",

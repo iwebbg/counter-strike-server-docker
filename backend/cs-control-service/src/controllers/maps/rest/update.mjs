@@ -4,6 +4,8 @@ export default {
   route: "/servers/:id/maps",
   method: "PUT",
   bearerAuth: true,
+  permission: "maps.manage",
+  audit: (req) => ({ action: "map.rotation.update", targetType: "server", serverId: req.validated.path.id }),
   validation: {
     query: {},
     path: {

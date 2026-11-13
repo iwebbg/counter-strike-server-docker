@@ -4,6 +4,7 @@ export default {
   route: "/servers/:id/logs",
   method: "GET",
   bearerAuth: true,
+  permission: "servers.read",
   validation: {
     query: {},
     path: {

@@ -5,6 +5,13 @@ export default {
   route: "/servers/:id/backups/:filename/restore",
   method: "POST",
   bearerAuth: true,
+  permission: "backups.manage",
+  audit: (req) => ({
+    action: "backup.restore",
+    targetType: "backup",
+    targetId: req.validated.path.filename,
+    serverId: req.validated.path.id,
+  }),
   validation: {
     query: {},
     path: {

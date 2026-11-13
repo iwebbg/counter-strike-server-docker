@@ -4,6 +4,13 @@ export default {
   route: "/servers/:id/maps/change",
   method: "POST",
   bearerAuth: true,
+  permission: "maps.manage",
+  audit: (req) => ({
+    action: "map.change",
+    targetType: "map",
+    targetName: req.validated.body.map,
+    serverId: req.validated.path.id,
+  }),
   validation: {
     query: {},
     path: {

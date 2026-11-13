@@ -4,6 +4,7 @@ export default {
   route: "/database/status",
   method: "GET",
   bearerAuth: true,
+  permission: "stats.read",
   validation: { query: {}, path: {}, body: {} },
   docs: { tags: ["Stats"], description: "Return MariaDB connectivity." },
   middlewares: [checkAuth],

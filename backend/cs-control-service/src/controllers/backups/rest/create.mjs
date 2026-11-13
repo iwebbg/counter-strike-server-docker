@@ -5,6 +5,8 @@ export default {
   route: "/servers/:id/backups",
   method: "POST",
   bearerAuth: true,
+  permission: "backups.manage",
+  audit: (req) => ({ action: "backup.create", targetType: "server", serverId: req.validated.path.id }),
   validation: {
     query: {},
     path: {

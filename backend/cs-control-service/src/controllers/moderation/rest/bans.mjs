@@ -5,6 +5,7 @@ export default {
   route: "/bans",
   method: "GET",
   bearerAuth: true,
+  permission: "stats.read",
   validation: { query: {}, path: {}, body: {} },
   docs: { tags: ["Moderation"], description: "Return active database bans." },
   middlewares: [checkAuth],

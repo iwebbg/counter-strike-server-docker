@@ -5,6 +5,8 @@ export default {
   route: "/backups/:filename/download",
   method: "GET",
   bearerAuth: true,
+  permission: "backups.manage",
+  audit: (req) => ({ action: "backup.download", targetType: "backup", targetId: req.validated.path.filename }),
   validation: {
     query: {},
     path: {

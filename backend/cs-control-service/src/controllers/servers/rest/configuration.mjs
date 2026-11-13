@@ -5,6 +5,7 @@ export default {
   route: "/servers/:id/configuration",
   method: "GET",
   bearerAuth: true,
+  permission: "servers.manage",
   validation: {
     query: {},
     path: {

@@ -4,6 +4,7 @@ export default {
   route: "/servers/:id/admins",
   method: "GET",
   bearerAuth: true,
+  permission: "admins.manage",
   validation: {
     query: {},
     path: {

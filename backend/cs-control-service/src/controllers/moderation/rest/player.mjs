@@ -4,6 +4,18 @@ export default {
   route: "/servers/:id/players/:userId/:action",
   method: "POST",
   bearerAuth: true,
+  permission: "players.moderate",
+  audit: (req) => ({
+    action: `player.${req.validated.path.action}`,
+    targetType: "player",
+    targetId: req.validated.path.userId,
+    serverId: req.validated.path.id,
+    metadata: {
+      reason: req.validated.body.reason,
+      minutes: req.validated.body.minutes,
+      scope: req.validated.body.scope,
+    },
+  }),
   validation: {
     query: {},
     path: {

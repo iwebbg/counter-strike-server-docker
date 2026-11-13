@@ -5,6 +5,8 @@ export default {
   route: "/fleet/server-images",
   method: "PUT",
   bearerAuth: true,
+  permission: "servers.manage",
+  audit: { action: "fleet.image.update", targetType: "fleet" },
   validation: { query: {}, path: {}, body: {} },
   docs: {
     tags: ["Servers"],

@@ -4,6 +4,8 @@ export default {
   route: "/servers/:id/admins",
   method: "PUT",
   bearerAuth: true,
+  permission: "admins.manage",
+  audit: (req) => ({ action: "admins.update", targetType: "server", serverId: req.validated.path.id }),
   validation: {
     query: {},
     path: {

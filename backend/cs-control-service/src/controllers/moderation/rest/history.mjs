@@ -5,6 +5,7 @@ export default {
   route: "/moderation/history",
   method: "GET",
   bearerAuth: true,
+  permission: "stats.read",
   validation: { query: {}, path: {}, body: {} },
   docs: { tags: ["Moderation"], description: "Return moderation history." },
   middlewares: [checkAuth],

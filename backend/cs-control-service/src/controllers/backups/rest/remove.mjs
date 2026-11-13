@@ -5,6 +5,8 @@ export default {
   route: "/backups/:filename",
   method: "DELETE",
   bearerAuth: true,
+  permission: "backups.manage",
+  audit: (req) => ({ action: "backup.delete", targetType: "backup", targetId: req.validated.path.filename }),
   validation: {
     query: {},
     path: {

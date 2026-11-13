@@ -4,6 +4,8 @@ export default {
   route: "/servers/:id",
   method: "DELETE",
   bearerAuth: true,
+  permission: "servers.manage",
+  audit: (req) => ({ action: "server.delete", targetType: "server", serverId: req.validated.path.id }),
   validation: {
     query: {},
     path: {

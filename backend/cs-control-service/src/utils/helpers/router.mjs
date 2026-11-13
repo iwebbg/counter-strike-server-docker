@@ -3,6 +3,8 @@ import loggerConfig from "../../config/logger.mjs";
 import serverConfig from "../../config/server.mjs";
 import Swagger from "./Swagger.mjs";
 import { validate } from "./validator.mjs";
+import requirePermission from "../../middlewares/requirePermission.mjs";
+import { writeAudit } from "../../controllers/audit/services/AuditService.mjs";
 
 const validationMiddleware = (rest, location, source) => (req, res, next) => {
   const schema = rest.validation?.[location];
@@ -37,16 +39,31 @@ export default async function createRouter() {
     }
     if (!supportedMethods.has(rest.method)) throw new Error(`Unsupported REST method: ${rest.method}`);
     docs.set(rest);
+    const routeMiddlewares = [...(rest.middlewares ?? [])];
+    if (rest.permission) routeMiddlewares.push(requirePermission(rest.permission));
     router[rest.method.toLowerCase()](
       rest.route,
       validationMiddleware(rest, "query", (req) => req.query ?? {}),
       validationMiddleware(rest, "path", (req) => req.params ?? {}),
       validationMiddleware(rest, "body", bodyInput),
-      ...(rest.middlewares ?? []),
+      ...routeMiddlewares,
       async (req, res, next) => {
         try {
-          return await rest.entryPoint(req, res, next);
+          const result = await rest.entryPoint(req, res, next);
+          if (rest.audit) {
+            const context = typeof rest.audit === "function" ? rest.audit(req) : rest.audit;
+            await writeAudit(req, { ...context, status: "success" });
+          }
+          return result;
         } catch (error) {
+          if (rest.audit) {
+            const context = typeof rest.audit === "function" ? rest.audit(req) : rest.audit;
+            await writeAudit(req, {
+              ...context,
+              status: "failure",
+              metadata: { ...context.metadata, error: error.message },
+            });
+          }
           error.route = `${rest.method} ${rest.route}`;
           return next(error);
         }

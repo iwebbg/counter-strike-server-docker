@@ -5,6 +5,8 @@ export default {
   route: "/bans/:id/revoke",
   method: "POST",
   bearerAuth: true,
+  permission: "moderation.manage",
+  audit: (req) => ({ action: "ban.revoke", targetType: "ban", targetId: req.validated.path.id }),
   validation: {
     query: {},
     path: {

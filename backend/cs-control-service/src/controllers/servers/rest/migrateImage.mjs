@@ -5,6 +5,8 @@ export default {
   route: "/servers/:id/image",
   method: "PUT",
   bearerAuth: true,
+  permission: "servers.manage",
+  audit: (req) => ({ action: "server.image.update", targetType: "server", serverId: req.validated.path.id }),
   validation: {
     query: {},
     path: {

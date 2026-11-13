@@ -5,6 +5,8 @@ export default {
   route: "/servers",
   method: "POST",
   bearerAuth: true,
+  permission: "servers.manage",
+  audit: (req) => ({ action: "server.create", targetType: "server", targetName: req.validated.body.name }),
   validation: {
     query: {},
     path: {},

@@ -4,6 +4,12 @@ export default {
   route: "/servers/:id/:action",
   method: "POST",
   bearerAuth: true,
+  permission: "servers.operate",
+  audit: (req) => ({
+    action: `server.${req.validated.path.action}`,
+    targetType: "server",
+    serverId: req.validated.path.id,
+  }),
   validation: {
     query: {},
     path: {

@@ -5,6 +5,7 @@ export default {
   route: "/stats/players/:steamId",
   method: "GET",
   bearerAuth: true,
+  permission: "stats.read",
   validation: {
     query: {},
     path: {

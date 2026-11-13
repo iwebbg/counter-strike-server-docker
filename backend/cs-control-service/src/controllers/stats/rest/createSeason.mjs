@@ -5,6 +5,8 @@ export default {
   route: "/seasons",
   method: "POST",
   bearerAuth: true,
+  permission: "seasons.manage",
+  audit: (req) => ({ action: "season.create", targetType: "season", targetName: req.validated.body.name }),
   validation: {
     query: {},
     path: {},

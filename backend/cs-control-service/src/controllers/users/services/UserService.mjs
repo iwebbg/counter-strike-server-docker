@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import authConfig from "../../../config/auth.mjs";
 import Db from "../../../utils/Db.mjs";
 import Redis from "../../../utils/Redis.mjs";
+import { normalizeRole, permissionsForRole } from "../../../auth/permissions.mjs";
 
 export const normalizedEmail = (value) =>
   String(value ?? "")
@@ -15,7 +16,8 @@ export const publicUser = (user) => ({
   name: user.name,
   email: user.email,
   preferred_locale: user.preferred_locale ?? "bg",
-  role: user.role ?? "operator",
+  role: normalizeRole(user.role),
+  permissions: permissionsForRole(user.role),
 });
 
 export class UserService {
@@ -126,5 +128,17 @@ export class UserService {
   }
   async deleteUserCache(accessToken) {
     return this.redis.delete(`userSession_${accessToken}`);
+  }
+
+  async revokeUserSessions(userId) {
+    const db = await this.db.db();
+    const accessTokens = await db("oauth_access_tokens").where({ user_id: userId }).select("id");
+    await db.transaction(async (trx) => {
+      const ids = accessTokens.map((entry) => entry.id);
+      if (!ids.length) return;
+      await trx("oauth_refresh_tokens").whereIn("access_token_id", ids).update({ revoked: true });
+      await trx("oauth_access_tokens").whereIn("id", ids).update({ revoked: true });
+    });
+    await Promise.all(accessTokens.map((entry) => this.deleteUserCache(entry.id)));
   }
 }

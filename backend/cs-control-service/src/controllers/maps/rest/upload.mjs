@@ -5,6 +5,13 @@ export default {
   route: "/servers/:id/maps/upload",
   method: "POST",
   bearerAuth: true,
+  permission: "servers.manage",
+  audit: (req) => ({
+    action: "map.package.upload",
+    targetType: "server",
+    serverId: req.validated.path.id,
+    metadata: { files: req.validated.body.files?.length || 0 },
+  }),
   validation: {
     query: {},
     path: {

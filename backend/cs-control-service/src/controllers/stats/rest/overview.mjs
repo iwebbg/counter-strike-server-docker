@@ -5,6 +5,7 @@ export default {
   route: "/stats/overview",
   method: "GET",
   bearerAuth: true,
+  permission: "stats.read",
   validation: {
     query: {
       type: "object",
