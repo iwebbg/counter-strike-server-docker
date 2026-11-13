@@ -93,10 +93,13 @@ async function waitForServer(client, instanceId) {
   for (let attempt = 0; attempt < 60; attempt += 1) {
     const payload = await client.request("GET", "/servers");
     const server = payload.data.servers.find((candidate) => candidate.serverId === instanceId);
-    if (server?.state === "running") return server;
+    // Docker reports the process as running before HLDS has opened its query
+    // and RCON sockets. A successful A2S response populates `map`, so wait for
+    // that application-level signal before exercising the live APIs.
+    if (server?.state === "running" && server.map) return server;
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  throw new Error(`Server ${instanceId} did not enter the running state.`);
+  throw new Error(`Server ${instanceId} did not become query-ready.`);
 }
 
 async function waitForServerState(client, instanceId, expectedState) {
