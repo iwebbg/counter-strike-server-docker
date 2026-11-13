@@ -1295,6 +1295,10 @@ button:disabled {
   margin-top: 5px;
   color: var(--muted);
 }
+
+.evidence-row {
+  grid-template-columns: minmax(260px, 2fr) 110px minmax(180px, 1fr) 140px;
+}
 .switch-label {
   display: flex;
   align-items: center;

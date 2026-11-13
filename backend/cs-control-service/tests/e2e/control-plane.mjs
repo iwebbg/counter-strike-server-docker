@@ -81,6 +81,12 @@ class Client {
     assert.equal(payload.data.user.email, email);
     return this;
   }
+
+  async download(path) {
+    const response = await fetch(`${api}${path}`, { headers: { Cookie: this.cookie } });
+    assert.equal(response.status, 200, `GET ${path}: expected a downloadable file`);
+    return Buffer.from(await response.arrayBuffer());
+  }
 }
 
 async function waitForServer(client, instanceId) {
@@ -154,6 +160,26 @@ try {
   await byRole.moderator.request("PUT", `/servers/${instanceId}/maps`, { maps: ["de_dust2"] });
   await byRole.moderator.request("GET", `/servers/${instanceId}/admins`, undefined, 403);
   await byRole.moderator.request("POST", `/servers/${instanceId}/stop`, {}, 403);
+
+  await byRole.viewer.request("GET", `/servers/${instanceId}/evidence`, undefined, 403);
+  const evidenceStarted = await byRole.moderator.request("POST", `/servers/${instanceId}/evidence/start`, {}, 201);
+  assert.match(evidenceStarted.data.filename, /^evidence-/);
+  const activeEvidence = await byRole.moderator.request("GET", `/servers/${instanceId}/evidence`);
+  assert.equal(activeEvidence.data.recording, true);
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  const evidenceStopped = await byRole.moderator.request("POST", `/servers/${instanceId}/evidence/stop`, {});
+  assert.equal(evidenceStopped.data.recording, false);
+  execFileSync("docker", [
+    "exec",
+    created.data.id,
+    "sh",
+    "-c",
+    "mkdir -p /opt/hlds/cstrike/logs/evidence && printf 'e2e-hltv-demo' > /opt/hlds/cstrike/logs/evidence/e2e-evidence.dem",
+  ]);
+  const storedEvidence = await byRole.moderator.request("GET", `/servers/${instanceId}/evidence`);
+  assert.ok(storedEvidence.data.recordings.some((entry) => entry.filename === "e2e-evidence.dem"));
+  const demo = await byRole.moderator.download(`/servers/${instanceId}/evidence/e2e-evidence.dem`);
+  assert.ok(demo.length > 0);
 
   await byRole.admin.request("GET", `/servers/${instanceId}/admins`);
   await byRole.admin.request("PUT", `/servers/${instanceId}/admins`, {

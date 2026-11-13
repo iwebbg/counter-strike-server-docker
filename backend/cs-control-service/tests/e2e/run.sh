@@ -18,6 +18,11 @@ cleanup() {
     "${compose[@]}" logs --no-color --tail 200 mariadb redis panel || true
   fi
 
+  while IFS= read -r evidence_id; do
+    [[ -z "$evidence_id" ]] && continue
+    docker container rm --force "$evidence_id" >/dev/null
+  done < <(docker container ls --all --quiet --filter network=cs16-e2e_default --filter label=com.cs16.evidence=true)
+
   while IFS= read -r container_id; do
     [[ -z "$container_id" ]] && continue
     instance_id="$(docker inspect --format '{{ index .Config.Labels "com.cs16.instance-id" }}' "$container_id")"

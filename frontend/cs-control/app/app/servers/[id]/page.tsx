@@ -13,11 +13,12 @@ import { MapsPanel } from "@/components/servers/maps-panel";
 import { AdminsPanel } from "@/components/servers/admins-panel";
 import { PackagesPanel } from "@/components/servers/packages-panel";
 import { BackupsPanel } from "@/components/servers/backups-panel";
+import { EvidencePanel } from "@/components/servers/evidence-panel";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 
-const tabs = ["configuration", "players", "maps", "admins", "packages", "backups"] as const;
+const tabs = ["configuration", "players", "maps", "admins", "packages", "backups", "evidence"] as const;
 type Tab = (typeof tabs)[number];
 export default function ServerManagementPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,7 +38,8 @@ export default function ServerManagementPage() {
     )
     .filter((item) => item !== "admins" || permissions.includes("admins.manage"))
     .filter((item) => item !== "packages" || permissions.includes("servers.manage"))
-    .filter((item) => item !== "backups" || (server?.managedBy === "panel" && permissions.includes("backups.manage")));
+    .filter((item) => item !== "backups" || (server?.managedBy === "panel" && permissions.includes("backups.manage")))
+    .filter((item) => item !== "evidence" || permissions.includes("moderation.manage"));
   const availableTabsKey = availableTabs.join(",");
   useEffect(() => {
     if (!server) return;
@@ -167,6 +169,7 @@ export default function ServerManagementPage() {
       {tab === "maps" && <MapsPanel serverId={id} canManage={permissions.includes("maps.manage")} />}{" "}
       {tab === "admins" && <AdminsPanel serverId={id} />} {tab === "packages" && <PackagesPanel serverId={id} />}{" "}
       {tab === "backups" && <BackupsPanel containerId={id} serverKey={server.serverId || server.containerName} />}
+      {tab === "evidence" && <EvidencePanel serverId={id} />}
       <Modal
         open={logs !== null}
         onOpenChange={(open) => !open && setLogs(null)}

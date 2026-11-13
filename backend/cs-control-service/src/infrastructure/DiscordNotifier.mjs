@@ -12,6 +12,8 @@ const importantActions = new Set([
   "ban.revoke",
   "backup.restore",
   "backup.policy.run",
+  "evidence.start",
+  "evidence.stop",
 ]);
 
 export function validDiscordWebhook(value) {

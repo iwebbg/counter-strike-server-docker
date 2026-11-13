@@ -63,6 +63,39 @@ export class DockerClient {
       request.end();
     });
   }
+
+  writeStdin(containerId, value, timeoutMs = 3000) {
+    return new Promise((resolve, reject) => {
+      const request = http.request({
+        socketPath: this.socketPath,
+        method: "POST",
+        path: `/containers/${encodeURIComponent(containerId)}/attach?stream=1&stdin=1&stdout=0&stderr=0`,
+        headers: { Connection: "Upgrade", Upgrade: "tcp" },
+      });
+      const timer = setTimeout(() => {
+        request.destroy();
+        reject(new DockerError("Docker attach stdin timed out", 504));
+      }, timeoutMs);
+      request.on("upgrade", (response, socket) => {
+        socket.write(String(value), () => {
+          setTimeout(() => {
+            socket.destroy();
+            clearTimeout(timer);
+            resolve();
+          }, 100);
+        });
+      });
+      request.on("response", (response) => {
+        clearTimeout(timer);
+        reject(new DockerError("Docker attach stdin was rejected", response.statusCode));
+      });
+      request.on("error", (error) => {
+        clearTimeout(timer);
+        reject(new DockerError(`Cannot attach Docker stdin: ${error.message}`, 503));
+      });
+      request.end();
+    });
+  }
 }
 
 export function demuxDockerStream(buffer) {
