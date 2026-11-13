@@ -25,7 +25,7 @@ export default function ServerManagementPage() {
   const { user } = useSession();
   const { t } = useI18n();
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>("configuration");
+  const [tab, setTab] = useState<Tab | null>(null);
   const [pending, setPending] = useState(false);
   const [logs, setLogs] = useState<string | null>(null);
   const server = data?.servers.find((item) => item.id === id);

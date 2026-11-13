@@ -3,6 +3,7 @@ import { queryA2S } from "../../../infrastructure/A2S.mjs";
 import { DockerClient, demuxDockerStream } from "../../../infrastructure/Docker.mjs";
 import { parseStatusPlayers, rconCommand } from "../../../infrastructure/Rcon.mjs";
 import Db from "../../../utils/Db.mjs";
+import { conflict } from "../../../utils/HttpError.mjs";
 import {
   globalAdmins,
   recordModeration,
@@ -88,7 +89,7 @@ async function assertControlled(id) {
 
 function assertPanelManaged(inspect) {
   if (inspect.Config?.Labels?.["com.cs16.managed-by"] !== "panel") {
-    throw new Error("Compose-managed servers cannot be edited from the panel");
+    throw conflict("COMPOSE_MANAGED_SERVER");
   }
 }
 
