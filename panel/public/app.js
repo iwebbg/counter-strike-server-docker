@@ -14,7 +14,9 @@ const state = {
   playersServer: null,
   playersTimer: null,
   editServer: null,
-  uploadServer: null,
+  mapPackagesServer: null,
+  mapPackagesPayload: null,
+  replaceMapPackage: null,
   backupsServer: null,
   backups: [],
   operators: [],
@@ -34,6 +36,7 @@ const logsDialog = $("#logsDialog");
 const credentialDialog = $("#credentialDialog");
 const adminsDialog = $("#adminsDialog");
 const mapsDialog = $("#mapsDialog");
+const mapPackagesDialog = $("#mapPackagesDialog");
 const playersDialog = $("#playersDialog");
 const backupsDialog = $("#backupsDialog");
 const auditDialog = $("#auditDialog");
@@ -180,7 +183,7 @@ function serverCard(server) {
         ${canManage && server.updateAvailable ? `<button class="button ghost update-button" data-action="update">${t("update")}</button>` : ""}
         <button class="button ghost" data-action="players" ${online ? "" : `disabled title="${t("viewPlayersHint")}"`}>${t("players")}</button>
         <button class="button ghost" data-action="maps" ${online ? "" : `disabled title="${t("manageMapsHint")}"`}>${t("maps")}</button>
-        ${canManage ? `<button class="button ghost" data-action="upload-maps" ${server.updateAvailable ? `disabled title="${t("updateBeforeUpload")}"` : ""}>${t("uploadMaps")}</button>` : ""}
+        ${canManage ? `<button class="button ghost" data-action="map-packages" ${server.updateAvailable ? `disabled title="${t("updateBeforeUpload")}"` : ""}>${t("mapPackages")}</button>` : ""}
         ${can("admins.manage") ? `<button class="button ghost" data-action="admins" ${online ? "" : `disabled title="${t("manageAdminsHint")}"`}>${t("admins")}</button>` : ""}
         ${can("backups.manage") && server.managedBy === "panel" ? `<button class="button ghost" data-action="backups">${t("backups")}</button>` : ""}
         ${canManage && canRemove ? `<button class="button ghost danger" data-action="remove">${t("remove")}</button>` : ""}
@@ -535,8 +538,8 @@ serverGrid.addEventListener("click", async (event) => {
     return;
   }
 
-  if (action === "upload-maps") {
-    chooseMapPackage(server);
+  if (action === "map-packages") {
+    await openMapPackages(server);
     return;
   }
 
@@ -736,7 +739,7 @@ async function openMaps(server) {
   $("#currentMapName").textContent = server.map || t("loading");
   $("#serverMapGrid").innerHTML = `<p class="muted">${t("loadingMaps")}</p>`;
   $("#mapSearch").value = "";
-  $("#uploadMapFolderButton").classList.toggle("hidden", !can("servers.manage"));
+  $("#manageMapPackagesButton").classList.toggle("hidden", !can("servers.manage"));
   $("#selectAllMaps").classList.toggle("hidden", !can("maps.manage"));
   $("#clearAllMaps").classList.toggle("hidden", !can("maps.manage"));
   $("#saveMapsButton").classList.toggle("hidden", !can("maps.manage"));
@@ -754,13 +757,6 @@ async function openMaps(server) {
   }
 }
 
-function chooseMapPackage(server) {
-  state.uploadServer = server;
-  const input = $("#mapPackageInput");
-  input.value = "";
-  input.click();
-}
-
 async function fileBase64(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let binary = "";
@@ -771,51 +767,139 @@ async function fileBase64(file) {
   return btoa(binary);
 }
 
-$("#mapPackageInput").addEventListener("change", async (event) => {
-  const server = state.uploadServer;
-  const files = [...event.target.files];
-  if (!server || !files.length) return;
-  if (files.length > 128) {
-    notify(t("mapPackageFileLimit"), true);
-    return;
+function resetPackageReplace() {
+  state.replaceMapPackage = null;
+  $("#replacePackageNotice").classList.add("hidden");
+  $("#replacePackageNotice span").textContent = "";
+  $("#uploadMapPackageButton").textContent = t("uploadValidate");
+}
+
+function renderMapPackages() {
+  const payload = state.mapPackagesPayload;
+  const rows = $("#mapPackageRows");
+  if (!payload?.packages.length) {
+    rows.innerHTML = `<p class="muted">${t("noMapPackages")}</p>`;
+  } else {
+    rows.innerHTML = payload.packages
+      .map((item) => {
+        const active = item.maps.some((map) => payload.selected.includes(map));
+        const playing = item.maps.includes(payload.current);
+        return `<article class="package-row" data-package-id="${item.id}"><div class="package-info"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.maps.join(", "))}</span><small>${item.files.length} ${t("filesLabel")} · ${formatBytes(item.bytes)} · ${escapeHtml(item.source.toUpperCase())}</small><div class="badges"><span class="badge mode">${escapeHtml(item.mode)}</span>${playing ? `<span class="badge update">${t("nowPlaying")}</span>` : ""}${active ? `<span class="badge current">${t("inRotation")}</span>` : ""}</div></div><div class="package-actions"><button class="button ghost" type="button" data-replace-package>${t("replace")}</button><button class="button ghost danger" type="button" data-delete-package ${playing || active ? "disabled" : ""}>${t("remove")}</button></div></article>`;
+      })
+      .join("");
   }
-  const totalBytes = files.reduce((total, file) => total + file.size, 0);
-  if (totalBytes > 32 * 1024 * 1024) {
-    notify(t("mapPackageSizeLimit"), true);
-    return;
-  }
-  if (!confirm(t("uploadMapConfirm", { name: server.name, count: files.length }))) return;
-  notify(t("uploadingMaps"));
+  const unmanaged = $("#unmanagedMapResources");
+  unmanaged.classList.toggle("hidden", !payload?.unmanagedFiles);
+  unmanaged.textContent = payload?.unmanagedFiles ? t("unmanagedResources", { count: payload.unmanagedFiles }) : "";
+}
+
+async function loadMapPackages() {
+  if (!state.mapPackagesServer) return;
+  $("#mapPackageRows").innerHTML = `<p class="muted">${t("loadingMapPackages")}</p>`;
   try {
-    const payload = {
-      mode: server.mode,
-      files: await Promise.all(
-        files.map(async (file) => ({
-          path: file.webkitRelativePath || file.name,
-          content: await fileBase64(file),
-        })),
-      ),
-    };
-    const result = await api(`/api/servers/${server.id}/maps/upload`, {
+    state.mapPackagesPayload = await api(`/api/servers/${state.mapPackagesServer.id}/map-packages`);
+    $("#mapPackageMode").value = "auto";
+    renderMapPackages();
+  } catch (error) {
+    $("#mapPackageRows").innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function openMapPackages(server) {
+  state.mapPackagesServer = server;
+  state.mapPackagesPayload = null;
+  resetPackageReplace();
+  $("#mapPackagesTitle").textContent = t("serverMapPackages", { name: server.name });
+  $("#mapPackageZip").value = "";
+  $("#mapPackageName").value = "";
+  mapPackagesDialog.showModal();
+  await loadMapPackages();
+}
+
+function closeMapPackages() {
+  state.mapPackagesServer = null;
+  state.mapPackagesPayload = null;
+  resetPackageReplace();
+  mapPackagesDialog.close();
+}
+
+$("#manageMapPackagesButton").addEventListener("click", async () => {
+  const server = state.mapsServer;
+  if (!server) return;
+  closeMaps();
+  await openMapPackages(server);
+});
+
+$("#mapPackageForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!state.mapPackagesServer || !event.currentTarget.reportValidity()) return;
+  const file = $("#mapPackageZip").files[0];
+  if (!file?.name.toLowerCase().endsWith(".zip")) return notify(t("zipRequired"), true);
+  if (file.size > 32 * 1024 * 1024) return notify(t("mapPackageSizeLimit"), true);
+  const button = $("#uploadMapPackageButton");
+  button.disabled = true;
+  button.textContent = t("uploadingMaps");
+  try {
+    const result = await api(`/api/servers/${state.mapPackagesServer.id}/map-packages/zip`, {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        filename: file.name,
+        name: $("#mapPackageName").value.trim() || undefined,
+        mode: $("#mapPackageMode").value,
+        content: await fileBase64(file),
+        replacePackageId: state.replaceMapPackage?.id,
+      }),
     });
-    notify(t("mapsUploaded", { maps: result.maps.join(", "), count: result.files }));
-    if (state.mapsServer?.id === server.id && mapsDialog.open) {
-      closeMaps();
-      await openMaps(server);
-    }
+    notify(
+      t(result.status === "replaced" ? "mapPackageReplaced" : "mapPackageUploaded", { name: result.package.name }),
+    );
+    $("#mapPackageZip").value = "";
+    $("#mapPackageName").value = "";
+    resetPackageReplace();
+    await loadMapPackages();
+    await refresh(true);
   } catch (error) {
     notify(error.message, true);
   } finally {
-    state.uploadServer = null;
-    event.target.value = "";
+    button.disabled = false;
+    button.textContent = state.replaceMapPackage ? t("replacePackage") : t("uploadValidate");
   }
 });
 
-$("#uploadMapFolderButton").addEventListener("click", () => {
-  if (state.mapsServer) chooseMapPackage(state.mapsServer);
+$("#mapPackageRows").addEventListener("click", async (event) => {
+  const row = event.target.closest("[data-package-id]");
+  if (!row || !state.mapPackagesPayload || !state.mapPackagesServer) return;
+  const item = state.mapPackagesPayload.packages.find((entry) => entry.id === row.dataset.packageId);
+  if (!item) return;
+  if (event.target.closest("[data-replace-package]")) {
+    state.replaceMapPackage = item;
+    $("#replacePackageNotice").classList.remove("hidden");
+    $("#replacePackageNotice span").textContent = t("replacingPackage", { name: item.name });
+    $("#mapPackageName").value = item.name;
+    $("#mapPackageMode").value = item.mode;
+    $("#uploadMapPackageButton").textContent = t("replacePackage");
+    $("#mapPackageZip").focus();
+    return;
+  }
+  const button = event.target.closest("[data-delete-package]");
+  if (!button || !confirm(t("deleteMapPackageConfirm", { name: item.name }))) return;
+  button.disabled = true;
+  try {
+    await api(`/api/servers/${state.mapPackagesServer.id}/map-packages/${item.id}`, { method: "DELETE" });
+    notify(t("mapPackageDeleted", { name: item.name }));
+    await loadMapPackages();
+    await refresh(true);
+  } catch (error) {
+    notify(error.message, true);
+    button.disabled = false;
+  }
 });
+
+$("#cancelPackageReplace").addEventListener("click", resetPackageReplace);
+$("#refreshMapPackagesButton").addEventListener("click", loadMapPackages);
+document
+  .querySelectorAll("[data-close-map-packages]")
+  .forEach((button) => button.addEventListener("click", closeMapPackages));
 
 function closeMaps() {
   state.mapsServer = null;
@@ -1476,6 +1560,10 @@ window.addEventListener("i18n:change", () => {
     const category = state.mapsPayload.mode === "gungame" ? "GUNGAME" : "CLASSIC";
     $("#mapCategoryHint").textContent = t("categoryMaps", { category });
     renderServerMaps();
+  }
+  if (state.mapPackagesPayload && state.mapPackagesServer) {
+    $("#mapPackagesTitle").textContent = t("serverMapPackages", { name: state.mapPackagesServer.name });
+    renderMapPackages();
   }
   if (state.authenticated) loadAnalytics(true).catch(() => {});
   translateDocument();

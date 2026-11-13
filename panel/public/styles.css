@@ -1072,6 +1072,69 @@ dialog::backdrop {
   border-color: var(--lime);
   background: var(--lime);
 }
+.package-upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+}
+.package-replace-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  color: var(--lime);
+  border: 1px solid rgba(201, 255, 74, 0.3);
+  border-radius: 9px;
+  background: rgba(201, 255, 74, 0.055);
+  font-size: 12px;
+}
+.package-rows {
+  display: grid;
+  gap: 9px;
+}
+.package-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.11);
+}
+.package-info {
+  min-width: 0;
+}
+.package-info > strong,
+.package-info > span,
+.package-info > small {
+  display: block;
+}
+.package-info > span {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--cyan);
+  font:
+    11px ui-monospace,
+    monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.package-info > small {
+  margin: 5px 0 8px;
+  color: var(--muted);
+}
+.package-actions {
+  display: flex;
+  flex: none;
+  gap: 7px;
+}
+.package-actions .button {
+  padding: 8px 11px;
+  font-size: 10px;
+}
 .players-dialog {
   width: min(920px, calc(100% - 28px));
   max-height: calc(100vh - 28px);
@@ -1808,6 +1871,16 @@ dialog::backdrop {
   .map-check-grid,
   .server-map-grid {
     grid-template-columns: 1fr;
+  }
+  .package-upload-grid {
+    grid-template-columns: 1fr;
+  }
+  .package-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .package-actions {
+    justify-content: flex-start;
   }
   .map-toolbar {
     align-items: stretch;

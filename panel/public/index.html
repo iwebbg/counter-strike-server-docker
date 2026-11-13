@@ -464,7 +464,7 @@
               ><span>⌕</span><input id="mapSearch" type="search" placeholder="Filter installed maps…"
             /></label>
             <div>
-              <button id="uploadMapFolderButton" class="text-button" type="button">Upload map folder</button>
+              <button id="manageMapPackagesButton" class="text-button" type="button">Map packages</button>
               <button id="selectAllMaps" class="text-button" type="button">Select all</button
               ><button id="clearAllMaps" class="text-button" type="button">Clear</button>
             </div>
@@ -478,6 +478,57 @@
         <footer class="dialog-footer">
           <button class="button ghost" type="button" data-close-maps>Cancel</button>
           <button id="saveMapsButton" class="button primary" type="submit">Save rotation</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog id="mapPackagesDialog" class="maps-dialog">
+      <form id="mapPackageForm">
+        <header class="dialog-header">
+          <div>
+            <p class="eyebrow">CUSTOM CONTENT</p>
+            <h2 id="mapPackagesTitle">Map packages</h2>
+          </div>
+          <button class="close-button" type="button" data-close-map-packages aria-label="Close">×</button>
+        </header>
+        <div class="maps-body">
+          <p class="edit-warning">
+            Upload a ZIP containing maps/*.bsp and optional WAD, models, sounds, sprites or gfx resources. Archives are
+            validated before persistent installation.
+          </p>
+          <div id="replacePackageNotice" class="package-replace-notice hidden">
+            <span></span><button id="cancelPackageReplace" class="text-button" type="button">Cancel replacement</button>
+          </div>
+          <div class="package-upload-grid">
+            <label class="field wide"
+              ><span>ZIP package</span><input id="mapPackageZip" type="file" accept=".zip,application/zip" required
+            /></label>
+            <label class="field"
+              ><span>Display name <small>optional</small></span
+              ><input id="mapPackageName" maxlength="80"
+            /></label>
+            <label class="field"
+              ><span>Map category</span
+              ><select id="mapPackageMode">
+                <option value="auto">Auto detect</option>
+                <option value="classic">Classic</option>
+                <option value="gungame">GunGame</option>
+              </select></label
+            >
+          </div>
+          <button id="uploadMapPackageButton" class="button primary" type="submit">Upload &amp; validate</button>
+          <div class="backup-history-head">
+            <div>
+              <span class="eyebrow">PERSISTENT CONTENT</span>
+              <h3>Installed packages</h3>
+            </div>
+            <button id="refreshMapPackagesButton" class="icon-button" type="button" title="Refresh packages">↻</button>
+          </div>
+          <div id="mapPackageRows" class="package-rows"><p class="muted">Loading packages…</p></div>
+          <p id="unmanagedMapResources" class="admin-hint hidden"></p>
+        </div>
+        <footer class="dialog-footer">
+          <button class="button ghost" type="button" data-close-map-packages>Close</button>
         </footer>
       </form>
     </dialog>
@@ -650,8 +701,6 @@
       <p id="connectHint" class="connect-hint"></p>
       <button class="button primary full" data-close-credential type="button">Done</button>
     </dialog>
-
-    <input id="mapPackageInput" type="file" webkitdirectory directory multiple hidden />
 
     <div id="toast" class="toast" role="status" popover="manual"></div>
     <script type="module" src="/app.js"></script>
