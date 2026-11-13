@@ -136,9 +136,16 @@ try {
     killstreakEnabled: configuration.killstreakEnabled,
     killstreakSoundsEnabled: configuration.killstreakSoundsEnabled,
     killstreakHudEnabled: configuration.killstreakHudEnabled,
+    cpuLimit: 0.5,
+    memoryLimitMb: 256,
+    network: "cs16-e2e_default",
   };
   await byRole.admin.request("PUT", `/servers/${instanceId}`, editableConfiguration);
   await waitForServer(owner, instanceId);
+  const limitedConfiguration = await byRole.admin.request("GET", `/servers/${instanceId}/configuration`);
+  assert.equal(limitedConfiguration.data.cpuLimit, 0.5);
+  assert.equal(limitedConfiguration.data.memoryLimitMb, 256);
+  assert.equal(limitedConfiguration.data.network, "cs16-e2e_default");
 
   const exported = await byRole.admin.request("GET", `/servers/${instanceId}/configuration/export`);
   assert.equal(exported.data.schemaVersion, 1);

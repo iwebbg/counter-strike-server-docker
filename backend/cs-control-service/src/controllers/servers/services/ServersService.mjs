@@ -23,6 +23,10 @@ import {
 const config = {
   image: process.env.SERVER_IMAGE || "cs16-server:local",
   network: process.env.PANEL_NETWORK || "cs16_default",
+  allowedNetworks: (process.env.PANEL_ALLOWED_NETWORKS || process.env.PANEL_NETWORK || "cs16_default")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
   portStart: parseInteger(process.env.PORT_RANGE_START || 27015, "PORT_RANGE_START", 1024, 65535),
   portEnd: parseInteger(process.env.PORT_RANGE_END || 27115, "PORT_RANGE_END", 1024, 65535),
   dbEnabled: process.env.DB_ENABLED === "1",
@@ -443,13 +447,17 @@ function normalizedMounts(inspect) {
   }));
 }
 
-function networkConfig(inspect) {
+function networkConfig(inspect, selectedNetwork = null) {
+  if (selectedNetwork) return { EndpointsConfig: { [selectedNetwork]: {} } };
   const names = Object.keys(inspect.NetworkSettings?.Networks || {});
   const networks = names.length ? names : [config.network];
   return { EndpointsConfig: Object.fromEntries(networks.map((name) => [name, {}])) };
 }
 
-function containerPayload(inspect, { env, labels, port, image = inspect.Config.Image }) {
+function containerPayload(
+  inspect,
+  { env, labels, port, image = inspect.Config.Image, cpuLimit = null, memoryLimitMb = null, network = null },
+) {
   const currentBindings = inspect.HostConfig?.PortBindings || {};
   const hostIp = currentBindings["27015/udp"]?.[0]?.HostIp || "0.0.0.0";
   return {
@@ -466,8 +474,10 @@ function containerPayload(inspect, { env, labels, port, image = inspect.Config.I
       RestartPolicy: inspect.HostConfig?.RestartPolicy || { Name: "unless-stopped", MaximumRetryCount: 0 },
       StopTimeout: inspect.Config?.StopTimeout ?? inspect.HostConfig?.StopTimeout ?? 30,
       Mounts: normalizedMounts(inspect),
+      NanoCpus: cpuLimit == null ? inspect.HostConfig?.NanoCpus || 0 : Math.round(cpuLimit * 1_000_000_000),
+      Memory: memoryLimitMb == null ? inspect.HostConfig?.Memory || 0 : memoryLimitMb * 1024 * 1024,
     },
-    NetworkingConfig: networkConfig(inspect),
+    NetworkingConfig: networkConfig(inspect, network),
   };
 }
 
@@ -657,6 +667,10 @@ export async function getServerConfiguration(id) {
     killstreakEnabled: envValue(inspect, "KILLSTREAK_ENABLED", "1") === "1",
     killstreakSoundsEnabled: envValue(inspect, "KILLSTREAK_SOUNDS_ENABLED", "1") === "1",
     killstreakHudEnabled: envValue(inspect, "KILLSTREAK_HUD_ENABLED", "1") === "1",
+    cpuLimit: inspect.HostConfig?.NanoCpus ? inspect.HostConfig.NanoCpus / 1_000_000_000 : null,
+    memoryLimitMb: inspect.HostConfig?.Memory ? Math.round(inspect.HostConfig.Memory / 1024 / 1024) : null,
+    network: Object.keys(inspect.NetworkSettings?.Networks || {})[0] || config.network,
+    allowedNetworks: config.allowedNetworks,
   };
 }
 
@@ -664,6 +678,11 @@ export async function updateServer(id, input) {
   const inspect = await assertControlled(id);
   assertPanelManaged(inspect);
   const values = validateEditInput(input, config.portStart, config.portEnd);
+  if (values.cpuLimit != null && (!Number.isFinite(values.cpuLimit) || values.cpuLimit < 0.25 || values.cpuLimit > 8)) {
+    throw new Error("CPU limit must be between 0.25 and 8 cores");
+  }
+  const selectedNetwork = values.network || Object.keys(inspect.NetworkSettings?.Networks || {})[0] || config.network;
+  if (!config.allowedNetworks.includes(selectedNetwork)) throw new Error("Docker network is not allowlisted");
   const oldPort = publishedPort(inspect);
   const port = await selectPort(values.port ?? oldPort, inspect.Id);
   const wasRunning = Boolean(inspect.State?.Running);
@@ -700,7 +719,14 @@ export async function updateServer(id, input) {
   if (values.clearServerPassword) nextEnv.set("SERVER_PASSWORD", "");
   else if (values.serverPassword) nextEnv.set("SERVER_PASSWORD", values.serverPassword);
   const nextLabels = { ...originalLabels, "com.cs16.display-name": values.name };
-  const nextPayload = containerPayload(inspect, { env: nextEnv, labels: nextLabels, port });
+  const nextPayload = containerPayload(inspect, {
+    env: nextEnv,
+    labels: nextLabels,
+    port,
+    cpuLimit: values.cpuLimit,
+    memoryLimitMb: values.memoryLimitMb,
+    network: selectedNetwork,
+  });
   let replacement = null;
   let oldRemoved = false;
 

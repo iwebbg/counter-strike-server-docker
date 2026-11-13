@@ -30,6 +30,10 @@ type Configuration = {
   killstreakEnabled: boolean;
   killstreakSoundsEnabled: boolean;
   killstreakHudEnabled: boolean;
+  cpuLimit: number | null;
+  memoryLimitMb: number | null;
+  network: string;
+  allowedNetworks: string[];
 };
 type UpdateResult = { id: string; serverId: string };
 const modeMaps = {
@@ -111,6 +115,9 @@ export function ConfigurationPanel({
           killstreakEnabled: data.killstreakEnabled,
           killstreakSoundsEnabled: data.killstreakSoundsEnabled,
           killstreakHudEnabled: data.killstreakHudEnabled,
+          cpuLimit: data.cpuLimit,
+          memoryLimitMb: data.memoryLimitMb,
+          network: data.network,
         }),
       });
       toast.success(t("serverSaved"));
@@ -288,6 +295,41 @@ export function ConfigurationPanel({
             onChange={(event) => setData({ ...data, killstreakHudEnabled: event.target.checked })}
           />
           <span>{t("killstreakHud")}</span>
+        </label>
+        <h3 className="configuration-section-title full">{t("resourceLimits")}</h3>
+        <label>
+          <span>{t("cpuLimit")}</span>
+          <input
+            type="number"
+            min={0.25}
+            max={8}
+            step={0.25}
+            value={data.cpuLimit ?? ""}
+            placeholder={t("unlimited")}
+            onChange={(event) => setData({ ...data, cpuLimit: event.target.value ? Number(event.target.value) : null })}
+          />
+        </label>
+        <label>
+          <span>{t("memoryLimit")}</span>
+          <input
+            type="number"
+            min={128}
+            max={16384}
+            step={64}
+            value={data.memoryLimitMb ?? ""}
+            placeholder={t("unlimited")}
+            onChange={(event) =>
+              setData({ ...data, memoryLimitMb: event.target.value ? Number(event.target.value) : null })
+            }
+          />
+        </label>
+        <label className="full">
+          <span>{t("dockerNetwork")}</span>
+          <select value={data.network} onChange={(event) => setData({ ...data, network: event.target.value })}>
+            {data.allowedNetworks.map((network) => (
+              <option key={network}>{network}</option>
+            ))}
+          </select>
         </label>
         <h3 className="configuration-section-title full">{t("accessSettings")}</h3>
         <label className="full">

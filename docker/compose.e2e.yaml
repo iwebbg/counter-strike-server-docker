@@ -6,6 +6,7 @@ services:
     profiles: ["panel"]
     environment:
       PANEL_NETWORK: cs16-e2e_default
+      PANEL_ALLOWED_NETWORKS: cs16-e2e_default
       PORT_RANGE_START: 29015
       PORT_RANGE_END: 29025
       DB_ENABLED: "1"

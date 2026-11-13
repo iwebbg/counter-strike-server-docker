@@ -163,6 +163,13 @@ export function validateEditInput(input, portStart, portEnd) {
     portEnd,
   );
 
+  const cpuLimit = input.cpuLimit == null ? null : Number(input.cpuLimit);
+  if (cpuLimit != null && (!Number.isFinite(cpuLimit) || cpuLimit < 0.25 || cpuLimit > 8)) {
+    throw new Error("CPU limit must be between 0.25 and 8 cores");
+  }
+  const network = String(input.network || process.env.PANEL_NETWORK || "cs16_default").trim();
+  if (!/^[a-zA-Z0-9_.-]{1,64}$/.test(network)) throw new Error("Invalid Docker network");
+
   return {
     name: values.name,
     mode: values.mode,
@@ -186,6 +193,9 @@ export function validateEditInput(input, portStart, portEnd) {
     killstreakEnabled: input.killstreakEnabled === true,
     killstreakSoundsEnabled: input.killstreakSoundsEnabled === true,
     killstreakHudEnabled: input.killstreakHudEnabled === true,
+    cpuLimit,
+    memoryLimitMb: input.memoryLimitMb == null ? null : parseInteger(input.memoryLimitMb, "Memory limit", 128, 16384),
+    network,
   };
 }
 

@@ -28,6 +28,9 @@ export const editableConfigurationProperties = {
   killstreakEnabled: { type: "boolean" },
   killstreakSoundsEnabled: { type: "boolean" },
   killstreakHudEnabled: { type: "boolean" },
+  cpuLimit: { anyOf: [{ type: "number", minimum: 0.25, maximum: 8 }, { type: "null" }] },
+  memoryLimitMb: { anyOf: [{ type: "integer", minimum: 128, maximum: 16384 }, { type: "null" }] },
+  network: { type: "string", pattern: "^[a-zA-Z0-9_.-]{1,64}$" },
 };
 
 export const editableConfigurationRequired = [
