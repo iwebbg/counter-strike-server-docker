@@ -79,21 +79,21 @@ function containerAddress(inspect) {
   );
 }
 
-async function assertControlled(id) {
+export async function resolveControlledServer(dockerClient, id) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$/.test(id)) throw badRequest("INVALID_SERVER_ID");
   let inspect = null;
   if (/^[a-f0-9]{12,64}$/.test(id)) {
     try {
-      inspect = await docker.request("GET", `/containers/${id}/json`);
+      inspect = await dockerClient.request("GET", `/containers/${id}/json`);
     } catch (error) {
       if (!(error instanceof DockerError) || error.statusCode !== 404) throw error;
     }
   }
   if (!inspect) {
     const filters = encodeURIComponent(JSON.stringify({ label: [managedLabel] }));
-    const containers = await docker.request("GET", `/containers/json?all=1&filters=${filters}`);
+    const containers = await dockerClient.request("GET", `/containers/json?all=1&filters=${filters}`);
     const inspections = await Promise.all(
-      containers.map((container) => docker.request("GET", `/containers/${container.Id}/json`)),
+      containers.map((container) => dockerClient.request("GET", `/containers/${container.Id}/json`)),
     );
     const matches = inspections.filter((candidate) => serverKey(candidate) === id);
     if (matches.length > 1) throw conflict("DUPLICATE_SERVER_ID");
@@ -103,6 +103,10 @@ async function assertControlled(id) {
   if (inspect.Config?.Labels?.["com.cs16.controlled"] !== "true")
     throw new Error("Container is not managed by CS Control");
   return inspect;
+}
+
+async function assertControlled(id) {
+  return resolveControlledServer(docker, id);
 }
 
 function assertPanelManaged(inspect) {
