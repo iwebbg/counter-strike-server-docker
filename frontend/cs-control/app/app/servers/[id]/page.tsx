@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useSession } from "@/components/session-provider";
 import { useI18n } from "@/components/i18n-provider";
@@ -23,17 +23,30 @@ export default function ServerManagementPage() {
   const { t } = useI18n();
   const [tab, setTab] = useState<Tab>("configuration");
   const server = data?.servers.find((item) => item.id === id);
-  if (!server) return <p className="empty-copy">Loading server…</p>;
   const permissions = user?.permissions || [];
+  const availableTabs = tabs
+    .filter(
+      (item) => item !== "configuration" || (server?.managedBy === "panel" && permissions.includes("servers.manage")),
+    )
+    .filter((item) => item !== "admins" || permissions.includes("admins.manage"))
+    .filter((item) => item !== "packages" || permissions.includes("servers.manage"))
+    .filter((item) => item !== "backups" || (server?.managedBy === "panel" && permissions.includes("backups.manage")));
+  const availableTabsKey = availableTabs.join(",");
+  useEffect(() => {
+    if (!server) return;
+    const requested = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+    setTab(requested && availableTabs.includes(requested) ? requested : availableTabs[0] || "players");
+  }, [availableTabsKey, server?.id]);
+  if (!server) return <p className="empty-copy">Loading server…</p>;
   return (
     <div className="page-stack">
       <Link className="back-link" href="/app/servers">
         <ArrowLeft size={16} />
-        Server fleet
+        {t("backToServers")}
       </Link>
       <section className="page-heading server-detail-heading">
         <div>
-          <p className="eyebrow">MANAGE INSTANCE</p>
+          <p className="eyebrow">{t("manageInstance")}</p>
           <h1>{server.name}</h1>
           <p>
             {server.containerName} · {server.mode} · :{server.port}
@@ -45,14 +58,11 @@ export default function ServerManagementPage() {
         </div>
       </section>
       <nav className="detail-tabs">
-        {tabs
-          .filter((item) => item !== "admins" || permissions.includes("admins.manage"))
-          .filter((item) => item !== "backups" || permissions.includes("backups.manage"))
-          .map((item) => (
-            <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
-              {t(item)}
-            </button>
-          ))}
+        {availableTabs.map((item) => (
+          <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>
+            {t(item)}
+          </button>
+        ))}
       </nav>
       {tab === "configuration" && <ConfigurationPanel serverId={id} onUpdated={reload} />}{" "}
       {tab === "players" && <PlayersPanel serverId={id} canModerate={permissions.includes("players.moderate")} />}{" "}

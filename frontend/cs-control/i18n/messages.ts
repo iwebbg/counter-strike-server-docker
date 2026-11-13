@@ -33,6 +33,7 @@ const messages = {
     stop: "Стоп",
     restart: "Рестарт",
     logs: "Логове",
+    edit: "Редакция",
     manage: "Управление",
     update: "Обнови",
     remove: "Премахни",
@@ -106,6 +107,10 @@ const messages = {
     startImmediately: "Стартирай веднага",
     createServer: "Създай сървър",
     cancel: "Отказ",
+    serverMustBeRunning: "Сървърът трябва да е стартиран.",
+    updateBeforeUpload: "Обновете server image-а преди качване на карти.",
+    backToServers: "Обратно към сървърите",
+    manageInstance: "УПРАВЛЕНИЕ НА ИНСТАНЦИЯ",
   },
   en: {
     dashboard: "Dashboard",
@@ -139,6 +144,7 @@ const messages = {
     stop: "Stop",
     restart: "Restart",
     logs: "Logs",
+    edit: "Edit",
     manage: "Manage",
     update: "Update",
     remove: "Remove",
@@ -212,6 +218,10 @@ const messages = {
     startImmediately: "Start immediately",
     createServer: "Create server",
     cancel: "Cancel",
+    serverMustBeRunning: "The server must be running.",
+    updateBeforeUpload: "Update the server image before uploading maps.",
+    backToServers: "Back to servers",
+    manageInstance: "MANAGE INSTANCE",
   },
 } as const;
 

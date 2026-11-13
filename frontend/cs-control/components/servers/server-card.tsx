@@ -1,7 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Play, RefreshCw, Settings2, Square, Trash2, Upload } from "lucide-react";
+import {
+  Archive,
+  FileText,
+  Map,
+  PackageOpen,
+  Pencil,
+  Play,
+  RefreshCw,
+  ShieldCheck,
+  Square,
+  Trash2,
+  Upload,
+  Users,
+} from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
 import type { Server } from "@/lib/types";
 
@@ -26,6 +39,9 @@ export function ServerCard({
   const running = server.state === "running";
   const operate = permissions.includes("servers.operate");
   const manage = permissions.includes("servers.manage");
+  const manageAdmins = permissions.includes("admins.manage");
+  const manageBackups = permissions.includes("backups.manage");
+  const detailUrl = (tab: string) => `/app/servers/${server.id}?tab=${tab}`;
   return (
     <article className={`server-card ${running ? "online" : ""}`}>
       <header>
@@ -91,9 +107,61 @@ export function ServerCard({
           {t("logs")}
         </button>
         {manage && server.managedBy === "panel" && (
-          <Link className="card-link" href={`/app/servers/${server.id}`}>
-            <Settings2 size={14} />
-            {t("manage")}
+          <Link className="card-link" href={detailUrl("configuration")}>
+            <Pencil size={14} />
+            {t("edit")}
+          </Link>
+        )}
+        {running ? (
+          <Link className="card-link" href={detailUrl("players")}>
+            <Users size={14} />
+            {t("players")}
+          </Link>
+        ) : (
+          <button disabled title={t("serverMustBeRunning")}>
+            <Users size={14} />
+            {t("players")}
+          </button>
+        )}
+        {running ? (
+          <Link className="card-link" href={detailUrl("maps")}>
+            <Map size={14} />
+            {t("maps")}
+          </Link>
+        ) : (
+          <button disabled title={t("serverMustBeRunning")}>
+            <Map size={14} />
+            {t("maps")}
+          </button>
+        )}
+        {manage &&
+          (server.updateAvailable ? (
+            <button disabled title={t("updateBeforeUpload")}>
+              <PackageOpen size={14} />
+              {t("packages")}
+            </button>
+          ) : (
+            <Link className="card-link" href={detailUrl("packages")}>
+              <PackageOpen size={14} />
+              {t("packages")}
+            </Link>
+          ))}
+        {manageAdmins &&
+          (running ? (
+            <Link className="card-link" href={detailUrl("admins")}>
+              <ShieldCheck size={14} />
+              {t("admins")}
+            </Link>
+          ) : (
+            <button disabled title={t("serverMustBeRunning")}>
+              <ShieldCheck size={14} />
+              {t("admins")}
+            </button>
+          ))}
+        {manageBackups && server.managedBy === "panel" && (
+          <Link className="card-link" href={detailUrl("backups")}>
+            <Archive size={14} />
+            {t("backups")}
           </Link>
         )}
         {manage && server.updateAvailable && (
