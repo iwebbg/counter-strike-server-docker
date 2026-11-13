@@ -168,19 +168,25 @@ export function BackupsPanel({ containerId, serverKey }: { containerId: string; 
         </div>
       </header>
       <div className="backup-create">
-        <label>
-          <input type="checkbox" checked={logs} onChange={(event) => setLogs(event.target.checked)} />{" "}
-          {t("includeLogs")}
-        </label>
-        <label>
-          <input type="checkbox" checked={database} onChange={(event) => setDatabase(event.target.checked)} />{" "}
-          {t("includeDatabase")}
-        </label>
-        <button className="button primary" onClick={create}>
+        <div className="backup-create-copy">
+          <strong>{t("createBackup")}</strong>
+          <span>{t("backupCreateHint")}</span>
+        </div>
+        <div className="backup-quick-options">
+          <label className="backup-check">
+            <input type="checkbox" checked={logs} onChange={(event) => setLogs(event.target.checked)} />
+            <span>{t("includeLogs")}</span>
+          </label>
+          <label className="backup-check">
+            <input type="checkbox" checked={database} onChange={(event) => setDatabase(event.target.checked)} />
+            <span>{t("includeDatabase")}</span>
+          </label>
+        </div>
+        <button className="button primary backup-create-button" onClick={create}>
           {t("createBackup")}
         </button>
       </div>
-      <div className="panel diagnostics-card">
+      <div className="backup-policy-card">
         <header>
           <div>
             <p className="eyebrow">{t("backupAutomation")}</p>
@@ -188,7 +194,7 @@ export function BackupsPanel({ containerId, serverKey }: { containerId: string; 
           </div>
           <CloudUpload size={20} />
         </header>
-        <div className="form-grid">
+        <div className="backup-policy-numbers">
           <label>
             <span>{t("backupIntervalHours")}</span>
             <input
@@ -209,38 +215,40 @@ export function BackupsPanel({ containerId, serverKey }: { containerId: string; 
               onChange={(event) => setPolicy({ ...policy, retentionCount: Number(event.target.value) })}
             />
           </label>
-          <label className="scope-field">
+        </div>
+        <div className="backup-policy-options">
+          <label className="backup-check">
             <input
               type="checkbox"
               checked={policy.enabled}
               onChange={(event) => setPolicy({ ...policy, enabled: event.target.checked })}
             />
-            {t("enableScheduledBackups")}
+            <span>{t("enableScheduledBackups")}</span>
           </label>
-          <label className="scope-field">
+          <label className="backup-check">
             <input
               type="checkbox"
               checked={policy.includeLogs}
               onChange={(event) => setPolicy({ ...policy, includeLogs: event.target.checked })}
             />
-            {t("includeLogs")}
+            <span>{t("includeLogs")}</span>
           </label>
-          <label className="scope-field">
+          <label className="backup-check">
             <input
               type="checkbox"
               checked={policy.includeDatabase}
               onChange={(event) => setPolicy({ ...policy, includeDatabase: event.target.checked })}
             />
-            {t("includeDatabase")}
+            <span>{t("includeDatabase")}</span>
           </label>
-          <label className="scope-field">
+          <label className="backup-check">
             <input
               type="checkbox"
               checked={policy.remoteEnabled}
               disabled={!policy.remoteConfigured}
               onChange={(event) => setPolicy({ ...policy, remoteEnabled: event.target.checked })}
             />
-            {t("offHostBackup")}
+            <span>{t("offHostBackup")}</span>
           </label>
         </div>
         {!policy.remoteConfigured && <p className="donation-note">{t("offHostBackupNotConfigured")}</p>}
