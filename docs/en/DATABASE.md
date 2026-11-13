@@ -60,6 +60,7 @@ the internal Docker network.
 | `users` / `oauth_*`            | Panel identities and access/refresh sessions                       |
 | `users.custom_permissions`     | Optional JSON permission override for custom operators             |
 | `panel_operator_server_scopes` | Restricts an operator to selected server IDs                       |
+| `panel_community_events`       | Weekly event schedule, runtime status, and last execution          |
 
 RCON, panel, and database passwords are not stored in player-statistics tables.
 

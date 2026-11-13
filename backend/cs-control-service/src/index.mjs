@@ -4,6 +4,7 @@ import Redis from "./utils/Redis.mjs";
 import Server from "./utils/Server.mjs";
 import BackupScheduler from "./infrastructure/BackupScheduler.mjs";
 import EvidenceRetentionScheduler from "./infrastructure/EvidenceRetentionScheduler.mjs";
+import CommunityEventScheduler from "./infrastructure/CommunityEventScheduler.mjs";
 
 const lifecycle = [];
 
@@ -22,6 +23,9 @@ async function start() {
     const evidenceRetentionScheduler = new EvidenceRetentionScheduler();
     evidenceRetentionScheduler.start();
     lifecycle.unshift(() => evidenceRetentionScheduler.stop());
+    const communityEventScheduler = new CommunityEventScheduler();
+    communityEventScheduler.start();
+    lifecycle.unshift(() => communityEventScheduler.stop());
     return;
   }
   throw new Error(`Unsupported PROCESS_ROLE: ${globalConfig.processRole}`);

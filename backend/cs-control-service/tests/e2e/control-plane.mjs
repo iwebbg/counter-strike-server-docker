@@ -185,6 +185,29 @@ try {
   await scopedClient.request("PUT", `/servers/${instanceId}/maps`, { maps: ["de_dust2"] }, 403);
   await scopedClient.request("GET", "/servers/not-in-scope/players", undefined, 403);
 
+  await byRole.moderator.request("GET", "/community-events", undefined, 403);
+  const communityEvent = await byRole.admin.request(
+    "POST",
+    "/community-events",
+    {
+      name: `E2E Friday Night ${suffix}`,
+      serverId: instanceId,
+      dayOfWeek: 5,
+      startTime: "20:00",
+      timezone: "Europe/Sofia",
+      durationMinutes: 15,
+      startMap: "de_dust2",
+      enabled: true,
+    },
+    201,
+  );
+  const communityEvents = await byRole.admin.request("GET", "/community-events");
+  assert.ok(communityEvents.data.events.some((event) => event.id === communityEvent.data.id));
+  await byRole.admin.request("PUT", `/community-events/${communityEvent.data.id}`, { name: "E2E Game Night" });
+  const eventRun = await byRole.admin.request("POST", `/community-events/${communityEvent.data.id}/run`, {});
+  assert.equal(eventRun.data.status, "running");
+  await byRole.admin.request("DELETE", `/community-events/${communityEvent.data.id}`);
+
   await byRole.viewer.request("GET", `/servers/${instanceId}/players`);
   await byRole.viewer.request("GET", `/servers/${instanceId}/logs`);
   await byRole.viewer.request("POST", `/servers/${instanceId}/stop`, {}, 403);

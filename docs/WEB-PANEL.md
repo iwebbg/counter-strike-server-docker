@@ -347,6 +347,16 @@ GunGame wins, popular maps, sessions, achievements и moderation audit. Click
 върху ranking ред отваря player profile. **+ Season** приключва текущия активен
 сезон и стартира нов, без да изтрива all-time statistics.
 
+## Community събития
+
+Страницата **Събития** позволява на Admin/Owner да създава седмичен график за
+game nights. Всяко събитие избира server, локален ден и час, IANA timezone,
+продължителност и optional начална карта. Scheduler-ът стартира инстанцията,
+сменя картата след готовност и я спира в края на прозореца. **Стартирай сега**
+използва същия workflow, а create/edit/delete/run действията се записват в audit
+log. Автоматизацията може да бъде спряна чрез
+`COMMUNITY_EVENT_SCHEDULER_ENABLED=0`.
+
 ## Security boundary
 
 Control panel container-ът има write достъп до Docker socket, което по същество
@@ -388,6 +398,8 @@ Control panel container-ът има write достъп до Docker socket, ко�
 - `GET /api/bans` и `POST /api/bans/:id/revoke`;
 - `GET /api/moderation/history`;
 - `POST /api/seasons`;
+- `GET|POST /api/community-events`;
+- `PUT|DELETE /api/community-events/:id` и `POST /api/community-events/:id/run`;
 - `DELETE /api/servers/:id` само за panel-managed stopped containers.
 
 Health endpoint-ът `GET /api/health` е единственият route без token.

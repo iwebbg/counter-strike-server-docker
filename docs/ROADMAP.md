@@ -67,7 +67,7 @@
 - [x] revenge/nemesis система;
 - [x] optional kill-streak announcements с малък оригинален sound pack;
 - [x] web ranking и per-server history;
-- [ ] scheduled events, например Friday Night GunGame;
+- [x] scheduled weekly events с timezone, duration, optional start map и manual run;
 - [x] non-blocking Discord webhook за важни lifecycle, moderation, backup и
       evidence събития;
 - [x] `/rules`, разширено `/help` и community links.

@@ -1279,6 +1279,12 @@ button:disabled {
   gap: 16px;
   align-items: center;
 }
+.event-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) minmax(150px, 1fr) minmax(170px, 1fr) 130px 120px;
+  gap: 16px;
+  align-items: center;
+}
 .admin-grid {
   display: grid;
   grid-template-columns: minmax(220px, 1.3fr) 170px minmax(180px, 1fr) 110px;

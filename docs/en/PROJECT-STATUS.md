@@ -173,10 +173,9 @@ not be exposed directly to the Internet.
 
 ## Next logical tasks
 
-1. Scheduled community events such as Friday Night GunGame.
-2. An experimental ReHLDS/ReGameDLL image and compatibility matrix.
-3. FragZone telemetry integration as a separate future track.
-4. Steam ID discovery help and AMXX flag descriptions in the UI.
+1. An experimental ReHLDS/ReGameDLL image and compatibility matrix.
+2. FragZone telemetry integration as a separate future track.
+3. Steam ID discovery help and AMXX flag descriptions in the UI.
 
 ## Continue in another session
 

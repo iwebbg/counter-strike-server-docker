@@ -64,7 +64,7 @@ Statuses guide future sessions and are not delivery-date promises.
 - [x] revenge/nemesis system;
 - [x] optional original kill-streak sound pack;
 - [x] web ranking and per-server history;
-- [ ] scheduled events such as Friday Night GunGame;
+- [x] scheduled weekly events with timezone, duration, optional start map, and manual run;
 - [x] non-blocking Discord webhooks for important lifecycle, moderation, backup,
       and evidence events;
 - [x] `/rules`, expanded `/help`, and community links.

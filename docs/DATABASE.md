@@ -64,6 +64,7 @@ MariaDB няма публикуван host port. Game containers и панелъ
 | `panel_audit_logs`             | Login, permissions и действия на операторите в контролния панел         |
 | `users.custom_permissions`     | Optional JSON permission override за custom оператори                   |
 | `panel_operator_server_scopes` | Ограничение на оператор до избрани server IDs                           |
+| `panel_community_events`       | Седмичен график, runtime статус и последно изпълнение на събития        |
 | `cs_schema_migrations`         | Версия на приложената схема                                             |
 
 RCON, panel и database паролите не се записват в статистическите таблици.

@@ -338,6 +338,15 @@ headshots, playtime, GunGame wins, popular maps, sessions, achievements, and
 moderation audit. Selecting a ranking row opens the player profile. **+ Season**
 closes the current season and starts another without deleting all-time data.
 
+## Community events
+
+The **Events** page lets Admins and Owners create a weekly game-night schedule.
+Each event selects a server, local weekday and time, IANA timezone, duration,
+and optional start map. The scheduler starts the instance, changes the map once
+it is ready, and stops it at the end of the window. **Run now** uses the same
+workflow, and create/edit/delete/run actions enter the audit log. Set
+`COMMUNITY_EVENT_SCHEDULER_ENABLED=0` to disable the automation.
+
 ## Security boundary
 
 The panel container has write access to the Docker socket, which is effectively
@@ -379,6 +388,8 @@ socket, not a generic Docker proxy. Important routes include:
 - `GET /api/bans` and `POST /api/bans/:id/revoke`;
 - `GET /api/moderation/history`;
 - `POST /api/seasons`;
+- `GET|POST /api/community-events`;
+- `PUT|DELETE /api/community-events/:id` and `POST /api/community-events/:id/run`;
 - `DELETE /api/servers/:id` for stopped panel-managed containers only.
 
 `GET /api/health` is the only route that requires no authenticated session.

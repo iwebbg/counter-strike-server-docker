@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { CircleHelp, Gauge, Menu, RefreshCw, ScrollText, Server, Users, X, LogOut } from "lucide-react";
+import { CalendarDays, CircleHelp, Gauge, Menu, RefreshCw, ScrollText, Server, Users, X, LogOut } from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
 import { SessionProvider, useSession } from "@/components/session-provider";
 import { useToast } from "@/components/ui/toast";
@@ -12,6 +12,7 @@ import { api } from "@/lib/api";
 const items = [
   { href: "/app", key: "dashboard" as const, icon: Gauge },
   { href: "/app/servers", key: "servers" as const, icon: Server },
+  { href: "/app/events", key: "communityEvents" as const, icon: CalendarDays, permission: "servers.manage" },
   { href: "/app/operators", key: "operators" as const, icon: Users, permission: "operators.manage" },
   { href: "/app/audit", key: "audit" as const, icon: ScrollText, permission: "audit.read" },
   { href: "/app/support", key: "helpSupport" as const, icon: CircleHelp },
