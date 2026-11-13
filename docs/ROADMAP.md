@@ -38,7 +38,8 @@
 - [ ] ZIP upload и управление/премахване на качени map packages;
 - [x] versioned backup/download/restore на AMXX data, logs и MariaDB със safety backup;
 - [ ] scheduled retention и off-host backup destinations;
-- [ ] audit log екран и отделни panel operator роли.
+- [x] audit log екран, API permission matrix и Owner/Admin/Moderator/Viewer роли;
+- [ ] optional external identity provider и по-фини custom permissions.
 
 ## Community и progression
 

@@ -155,6 +155,11 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
   без host port и без директно излагане на `panel:8080`;
 - Control Panel има dependency-free EN/BG i18n dropdown с persistent browser
   избор и преработена responsive analytics grid подредба;
+- Owner/Admin/Moderator/Viewer permission matrix се прилага на API и UI ниво;
+- operator management и audit log екрани с филтри по actor, server, action,
+  result и период; role/password промени прекратяват активните сесии;
+- panel audit записва login/logout, denied requests и всички mutation actions с
+  request ID, IP, target и snapshot на оператора;
 - panel auth е проверен с валиден и невалиден token;
 - динамично създадена тестова инстанция е проверена и премахната след smoke test.
 
@@ -168,21 +173,17 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 - вече съществуващ container трябва еднократно да бъде recreate-нат с новия
   server image, за да използва persistent admin override още от entrypoint;
 - Remove запазва volumes по дизайн; автоматичен lifecycle/cleanup UI още няма;
-- MariaDB статистиката има dashboard в панела; остават допълнителни audit и
-  operator-management екрани;
-- няма ZIP uploader, scheduled off-host backups или audit log;
+- няма ZIP uploader или scheduled off-host backups;
 - hardcoded default network `cs16_default` трябва да се конфигурира при различно
   Compose project name.
 
 ## Следващи логични задачи
 
-1. Разширен operator/audit dashboard върху MariaDB.
-2. ZIP upload и управление/премахване на качени map packages.
-3. Scheduled retention и off-host backup destinations.
-4. Audit log за panel действия и отделни panel operator роли.
-5. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
-6. Integration tests/CI за build, container boot, A2S, RCON и admin persistence.
-7. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
+1. ZIP upload и управление/премахване на качени map packages.
+2. Scheduled retention и off-host backup destinations.
+3. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
+4. Integration tests/CI за build, container boot, A2S, RCON и admin persistence.
+5. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
 
 ## Продължаване в следваща сесия
 

@@ -60,6 +60,7 @@ production deployment NGINX се активира изрично с `./docker/co
 - leaderboard, player profiles, name history, map activity и achievements;
 - active fleet/server bans, revoke и moderation audit;
 - fleet-wide admin list и създаване на нов active season.
+- panel operator роли, API permissions и неизменяем audit log на действията.
 
 Primary Compose сървърът се вижда в панела, но не може да бъде изтрит от него.
 Само containers, създадени от панела, могат да бъдат премахнати. Remove запазва
@@ -123,6 +124,34 @@ Backup на host ниво:
 docker run --rm -v cs16_panel_backups:/source -v "$PWD":/backup \
   alpine tar -czf /backup/cs16-panel-backups.tar.gz -C /source .
 ```
+
+## Operator роли и permissions
+
+Панелът прилага permissions на API ниво и адаптира интерфейса към текущата
+роля. Скриването на бутон в браузъра не е защитният механизъм — всяка защитена
+заявка се проверява от backend-а.
+
+| Роля        | Достъп                                                                   |
+| ----------- | ------------------------------------------------------------------------ |
+| `viewer`    | Сървъри, логове, играчи и статистика само за преглед                     |
+| `moderator` | Viewer плюс kick/ban, revoke и управление/смяна на карти                 |
+| `admin`     | Moderator плюс lifecycle, configuration, AMXX admins, backup и audit log |
+| `owner`     | Admin плюс създаване, промяна, password reset и изтриване на оператори   |
+
+Първият bootstrap акаунт е `owner`. Migration-ът повишава старите `admin` и
+`operator` акаунти до `owner`, за да не бъде загубен достъпът. Само Owner вижда
+**Operators**. Не може да премахне или ограничи собствения си акаунт, нито да
+изтрие/понижи последния активен Owner. Промяна на role/status или password
+прекратява съществуващите сесии на засегнатия оператор.
+
+## Audit log
+
+**Audit log** е достъпен за Admin и Owner и има филтри по operator, server,
+action, result и период. MariaDB пази login/logout, permission denial и всички
+mutation действия върху сървъри, карти, играчи, AMXX admins, backup-и, сезони и
+operator акаунти. Всеки запис съдържа actor snapshot, request ID, IP, target,
+status и timestamp. При изтриване на оператор audit историята остава чрез
+snapshot полетата.
 
 ## Управление на администратори
 

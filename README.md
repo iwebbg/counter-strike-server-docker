@@ -233,6 +233,10 @@ Panel-managed сървърите имат versioned Backup/Restore за AMXX dat
 `panel_backups` volume и могат да се изтеглят от панела. Архивите съдържат
 пароли и трябва да се третират като секрети.
 
+Контролният панел включва Owner/Admin/Moderator/Viewer роли с API-enforced
+permissions, управление на operator акаунти и MariaDB audit log за login,
+отказан достъп и всички промени по fleet-а.
+
 ## CS Control Panel (опционално)
 
 Интерактивният уеб контролен панел може да създава и управлява много CS 1.6
