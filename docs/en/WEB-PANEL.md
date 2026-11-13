@@ -171,6 +171,24 @@ enforces the server scope and filters the server list; attempts to reach another
 instance return `SERVER_SCOPE_DENIED`. Owner permissions cannot be reduced this
 way.
 
+## Resources and lifecycle recovery
+
+The **Resources** menu is available to Owner/Admin and correlates Docker
+containers, `panel_server_definitions`, `cs_servers`, and exact
+`cs16_<server-id>_data|logs` volumes. It distinguishes:
+
+- managed server — both the container and definition exist;
+- recoverable server — the definition exists but its container is missing;
+- legacy resource — registry metadata and persistent volumes exist without a definition;
+- orphaned volumes or a stale registry row.
+
+**Restore definition** runs idempotent reconciliation and restores the previous
+desired state (`running`, `paused`, or `stopped`). **Adopt volumes** creates a new
+panel-managed definition with the same `SERVER_ID`, keeping AMXX data and custom
+maps in place. Cleanup never uses wildcards: the backend rejects it while a
+container/definition exists and deletes only the exact displayed volume names
+after explicit confirmation.
+
 ## Audit log
 
 **Audit log** is available to Admin and Owner, with operator, server, action,

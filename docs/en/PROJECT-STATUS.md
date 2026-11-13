@@ -109,6 +109,10 @@ and automatic port allocation.
   allowlist, and optional trusted forward-auth SSO;
 - Owner/Admin/Moderator/Viewer roles and operator management;
 - allowlisted Docker Engine API client without arbitrary exec or generic proxy.
+- persistent server definitions with desired state that restore missing panel
+  containers after Docker/VPS restarts;
+- a bilingual Resources screen for lifecycle diagnostics, legacy volume
+  adoption, and safe deletion of explicitly selected retained resources only.
 
 ## Architecture summary
 
@@ -166,7 +170,8 @@ not be exposed directly to the Internet.
 - the admin editor needs a running server for live RCON reload;
 - an existing container needs one recreate with the current image to adopt
   newer entrypoint behavior;
-- Remove preserves volumes by design; there is no automatic volume cleanup UI;
+- Remove preserves volumes by design; the Resources screen lists them separately
+  and requires a second explicit confirmation before cleanup;
 - the default `cs16_default` network must be configured for another Compose
   project name;
 - HLTV cannot create demo frames on an empty server without real gameplay;

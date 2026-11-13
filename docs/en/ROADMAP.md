@@ -53,6 +53,9 @@ Statuses guide future sessions and are not delivery-date promises.
 - [x] read-only Compose configuration assistant and `.env` change preview;
 - [x] allowlisted network, CPU, and memory limits for panel-managed instances;
 - [x] integration tests for stable ID, recreate, update, restore, and volume persistence.
+- [x] persistent desired state and automatic restoration after a panel/VPS restart;
+- [x] lifecycle/resource manager for definitions, retained volumes, legacy adoption,
+      and explicit cleanup confirmation.
 
 ## Community and progression
 

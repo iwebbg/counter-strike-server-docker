@@ -181,6 +181,24 @@ off-host destination приема проверен `PUT` upload и SHA-256 heade
 инстанция връща `SERVER_SCOPE_DENIED`. Owner permissions не могат да бъдат
 ограничавани по този начин.
 
+## Resources и lifecycle recovery
+
+Меню **Resources** е достъпно за Owner/Admin и събира на едно място Docker
+containers, `panel_server_definitions`, `cs_servers` и точните
+`cs16_<server-id>_data|logs` volumes. То различава:
+
+- управляван сървър — container и definition са налични;
+- възстановим сървър — definition съществува, но container липсва;
+- legacy ресурс — има registry metadata и persistent volumes, но няма definition;
+- orphaned volumes или остарял registry запис.
+
+**Restore definition** изпълнява idempotent reconcile и връща предишния desired
+state (`running`, `paused` или `stopped`). **Adopt volumes** създава нова
+panel-managed definition със същия `SERVER_ID`, така че AMXX data и custom maps
+остават на място. Cleanup никога не използва wildcard: backend-ът отказва
+операцията при активен container/definition и трие само показаните точни volume
+имена след изрично потвърждение.
+
 ## Audit log
 
 **Audit log** е достъпен за Admin и Owner и има филтри по operator, server,

@@ -56,6 +56,9 @@
 - [x] read-only Compose configuration assistant и `.env` change preview;
 - [x] allowlisted network, CPU и memory limits за panel-managed instances;
 - [x] integration tests за stable ID, recreate, update, restore и volume persistence.
+- [x] persistent desired state и автоматично възстановяване след panel/VPS restart;
+- [x] lifecycle/resource manager за definitions, retained volumes, legacy adoption
+      и изрично cleanup потвърждение.
 
 ## Community и progression
 

@@ -122,6 +122,10 @@ Docker Compose, така и с опционален интерактивен CS 
 - Discord operational notifications, login/moderation rate limits, IP/VPN
   allowlist и optional trusted forward-auth SSO;
 - backend-managed idempotent Knex migrations и legacy stats import.
+- persistent server definitions с desired state, които възстановяват липсващи
+  panel containers след Docker/VPS restart;
+- двуезичен Resources екран за lifecycle диагностика, legacy volume adoption и
+  безопасно изтриване само на изрично избрани retained resources.
 
 ## Архитектура накратко
 
@@ -194,7 +198,8 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
   RCON reload;
 - вече съществуващ container трябва еднократно да бъде recreate-нат с новия
   server image, за да използва persistent admin override още от entrypoint;
-- Remove запазва volumes по дизайн; автоматичен lifecycle/cleanup UI още няма;
+- Remove запазва volumes по дизайн; Resources екранът ги показва отделно и
+  изисква второ изрично потвърждение преди cleanup;
 - hardcoded default network `cs16_default` трябва да се конфигурира при различно
   Compose project name;
 - HLTV не създава demo frames на празен server без реална gameplay активност;
