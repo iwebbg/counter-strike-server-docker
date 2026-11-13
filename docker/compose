@@ -141,6 +141,21 @@ configure_external() {
   printf 'No panel host port will be published; route the upstream proxy to http://%s:80.\n' "$alias"
 }
 
+configure_engine() {
+  [[ -f "$environment_file" ]] || die 'Run ./docker/compose setup first.'
+  local engine="${1:-}"
+  case "$engine" in
+    valve|rehlds) ;;
+    *) die 'Engine must be valve or rehlds.' ;;
+  esac
+  set_env_value SERVER_ENGINE "$engine"
+  if [[ "$engine" == rehlds ]]; then
+    printf 'Experimental ReHLDS/ReGameDLL profile selected. Recreate the stack with ./docker/compose up -d.\n'
+  else
+    printf 'Stable Valve HLDS profile selected. Recreate the stack with ./docker/compose up -d.\n'
+  fi
+}
+
 show_help() {
   cat <<'EOF'
 CS 1.6 Docker Compose selector
@@ -150,6 +165,7 @@ Usage:
   ./docker/compose setup [server|panel|database|full]
   ./docker/compose publish <domain> [https-port] [email]
   ./docker/compose external <docker-network> [network-alias]
+  ./docker/compose engine <valve|rehlds>
   ./docker/compose unpublish
   ./docker/compose show
   ./docker/compose doctor
@@ -233,6 +249,11 @@ case "${1:-}" in
     configure_external "${1:-}" "${2:-cs16-panel}"
     exit 0
     ;;
+  engine)
+    shift
+    configure_engine "${1:-}"
+    exit 0
+    ;;
   unpublish)
     configure_unpublish
     exit 0
@@ -262,12 +283,22 @@ case "$deployment" in
   local|production|external) ;;
   *) die 'CS16_DEPLOYMENT in .env must be local, production or external.' ;;
 esac
+engine="$(env_value SERVER_ENGINE)"
+engine="${engine:-valve}"
+case "$engine" in
+  valve|rehlds) ;;
+  *) die 'SERVER_ENGINE in .env must be valve or rehlds.' ;;
+esac
 
 compose_arguments=(
   --project-directory "$project_directory"
   --env-file "$environment_file"
   --file "$docker_directory/compose.yaml"
 )
+
+if [[ "$engine" == rehlds ]]; then
+  compose_arguments+=(--file "$docker_directory/compose.rehlds.yaml")
+fi
 
 if [[ "${1:-}" == down ]]; then
   # A project-wide down must see services from the previously selected stack,
@@ -298,6 +329,7 @@ if [[ "${1:-}" == show ]]; then
   printf 'Environment: %s\n' "$environment_file"
   printf 'Compose files: %s\n' "$compose_files"
   printf 'Deployment: %s\n' "$deployment"
+  printf 'Game engine: %s\n' "$engine"
   if [[ "$deployment" == production && ( "$stack" == panel || "$stack" == full ) ]]; then
     printf 'Public panel: https://%s%s\n' "$(env_value PANEL_DOMAIN)" "$([[ "$(env_value PANEL_HTTPS_PORT)" == 443 ]] || printf ':%s' "$(env_value PANEL_HTTPS_PORT)")"
   elif [[ "$deployment" == external && ( "$stack" == panel || "$stack" == full ) ]]; then

@@ -99,14 +99,17 @@ current runtime scope.
 
 This is a separate experimental image, not an immediate stable-image replacement:
 
-- [ ] ReHLDS engine;
-- [ ] ReGameDLL_CS;
-- [ ] Metamod-R;
-- [ ] ReAPI;
+- [x] opt-in ReHLDS engine with one-command rollback to Valve HLDS;
+- [x] ReGameDLL_CS;
+- [x] Metamod-R;
+- [x] ReAPI;
+- [x] pinned compatibility matrix, build smoke test, and runtime module test;
 - [ ] ReSemiclip instead of the Pawn fallback;
-- [ ] security/performance comparison and rollback test;
-- [ ] compatibility matrix for every custom plugin;
-- [ ] staged migration of Classic, followed by GunGame.
+- [ ] security/performance benchmark under real player load;
+- [ ] compatibility matrix for external signature/Orpheu plugins;
+- [ ] staged production migration of Classic, followed by GunGame.
+
+Instructions: [`REHLDS.md`](REHLDS.md).
 
 ## Product principles
 

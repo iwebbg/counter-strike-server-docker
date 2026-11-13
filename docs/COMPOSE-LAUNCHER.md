@@ -100,6 +100,22 @@ CS16_ENV_FILE=/run/secrets/cs16.env ./docker/compose config
 открива и сваля целия `cs16` project, независимо кой stack е избран в момента.
 Named volumes не се изтриват без изрично `-v`.
 
+## Избор на game engine
+
+Valve HLDS е стабилният engine по подразбиране. Експерименталният
+ReHLDS/ReGameDLL профил се включва и връща без ръчно редактиране на Compose:
+
+```bash
+./docker/compose engine rehlds
+./docker/compose up -d
+
+./docker/compose engine valve
+./docker/compose up -d
+```
+
+Изборът се записва като `SERVER_ENGINE` в `.env`. Подробности и compatibility
+matrix: [`REHLDS.md`](REHLDS.md).
+
 ## Standard Compose fallback
 
 Wrapper-ът не скрива Docker Compose. Напредналите потребители могат да използват

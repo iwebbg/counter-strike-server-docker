@@ -91,6 +91,22 @@ Run setup again, then reconcile the deployment:
 
 Existing `.env` settings are preserved.
 
+## Selecting the game engine
+
+Valve HLDS is the stable default. Enable or roll back the experimental
+ReHLDS/ReGameDLL profile without manually editing Compose files:
+
+```bash
+./docker/compose engine rehlds
+./docker/compose up -d
+
+./docker/compose engine valve
+./docker/compose up -d
+```
+
+The selection is stored as `SERVER_ENGINE` in `.env`. See the
+[ReHLDS compatibility matrix](REHLDS.md) for details.
+
 ## Standard Compose fallback
 
 Advanced users may invoke Compose directly:

@@ -376,6 +376,7 @@ plugin-а в `configs/plugins/classic.ini`, `configs/plugins/gungame.ini` или
 - [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) — hardware, VPS sizing и bandwidth оценки.
 - [`docs/DATABASE.md`](docs/DATABASE.md) — MariaDB схема, dashboard, backup и restore.
 - [`docs/COMPOSE-LAUNCHER.md`](docs/COMPOSE-LAUNCHER.md) — интерактивен stack selector и единни команди.
+- [`docs/REHLDS.md`](docs/REHLDS.md) — opt-in ReHLDS/ReGameDLL профил, rollback и compatibility matrix.
 - [`docs/FRAGZONE-INTEGRATION.md`](docs/FRAGZONE-INTEGRATION.md) — бъдеща read-only интеграция с FragZone Web.
 - [`docs/HTTPS-PROXY.md`](docs/HTTPS-PROXY.md) — NGINX, автоматичен TLS и нестандартни HTTPS ports.
 - [`docs/KILLSTREAKS.md`](docs/KILLSTREAKS.md) — multi-kill/streak прагове, настройки и звуков пакет.

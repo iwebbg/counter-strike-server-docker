@@ -1,0 +1,10 @@
+services:
+  server:
+    build:
+      context: .
+      target: rehlds
+    image: cs16-server-rehlds:local
+
+  panel:
+    environment:
+      SERVER_IMAGE: cs16-server-rehlds:local

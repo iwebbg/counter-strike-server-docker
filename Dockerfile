@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim AS stable
 
 ARG STEAMCMD_URL=https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
 ARG METAMOD_VERSION=1.21.1-am
@@ -7,7 +7,8 @@ ARG AMXX_VERSION=1.9.0-git5303
 ARG AMXX_RELEASE=1.9.0.5303
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    HLDS_DIR=/opt/hlds
+    HLDS_DIR=/opt/hlds \
+    CS16_ENGINE=valve
 
 RUN dpkg --add-architecture i386 \
  && apt-get update \
@@ -96,4 +97,67 @@ USER hlds
 WORKDIR /opt/hlds
 EXPOSE 27015/udp 27015/tcp
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/cs16-entrypoint"]
+
+FROM stable AS rehlds
+
+ARG REHLDS_VERSION=3.15.0.896
+ARG REGAMEDLL_VERSION=5.30.0.814
+ARG METAMOD_R_VERSION=1.3.0.149
+ARG REAPI_VERSION=5.29.0.358
+
+USER root
+COPY docker/rehlds-smoke.sh /usr/local/bin/rehlds-smoke
+RUN chmod 0755 /usr/local/bin/rehlds-smoke \
+ && curl -fsSL --retry 5 \
+      "https://github.com/rehlds/ReHLDS/releases/download/${REHLDS_VERSION}/rehlds-bin-${REHLDS_VERSION}.zip" \
+      -o /tmp/rehlds.zip \
+ && unzip -q /tmp/rehlds.zip -d /tmp/rehlds \
+ && cp /tmp/rehlds/bin/linux32/engine_i486.so \
+       /tmp/rehlds/bin/linux32/hlds_linux \
+       /tmp/rehlds/bin/linux32/core.so \
+       /tmp/rehlds/bin/linux32/filesystem_stdio.so \
+       /tmp/rehlds/bin/linux32/demoplayer.so \
+       "${HLDS_DIR}/" \
+ && cp /tmp/rehlds/bin/linux32/hltv /tmp/rehlds/bin/linux32/proxy.so "${HLDS_DIR}/" \
+ && cp /tmp/rehlds/bin/linux32/valve/dlls/director.so "${HLDS_DIR}/valve/dlls/director.so" \
+ && curl -fsSL --retry 5 \
+      "https://github.com/rehlds/ReGameDLL_CS/releases/download/${REGAMEDLL_VERSION}/regamedll-bin-${REGAMEDLL_VERSION}.zip" \
+      -o /tmp/regamedll.zip \
+ && unzip -q /tmp/regamedll.zip -d /tmp/regamedll \
+ && cp /tmp/regamedll/bin/linux32/cstrike/dlls/cs.so "${HLDS_DIR}/cstrike/dlls/cs.so" \
+ && cp /tmp/regamedll/bin/linux32/cstrike/game.cfg \
+       /tmp/regamedll/bin/linux32/cstrike/game_init.cfg \
+       /tmp/regamedll/bin/linux32/cstrike/delta.lst \
+       "${HLDS_DIR}/cstrike/" \
+ && curl -fsSL --retry 5 \
+      "https://github.com/rehlds/Metamod-R/releases/download/${METAMOD_R_VERSION}/metamod-bin-${METAMOD_R_VERSION}.zip" \
+      -o /tmp/metamod-r.zip \
+ && unzip -q /tmp/metamod-r.zip -d /tmp/metamod-r \
+ && cp /tmp/metamod-r/addons/metamod/metamod_i386.so "${HLDS_DIR}/cstrike/addons/metamod/dlls/metamod_i386.so" \
+ && curl -fsSL --retry 5 \
+      "https://github.com/rehlds/ReAPI/releases/download/${REAPI_VERSION}/reapi-bin-${REAPI_VERSION}.zip" \
+      -o /tmp/reapi.zip \
+ && unzip -q /tmp/reapi.zip -d /tmp/reapi \
+ && cp -a /tmp/reapi/addons/. "${HLDS_DIR}/cstrike/addons/" \
+ && { grep -qxF reapi "${HLDS_DIR}/cstrike/addons/amxmodx/configs/modules.ini" \
+      || printf '%s\n' reapi >> "${HLDS_DIR}/cstrike/addons/amxmodx/configs/modules.ini"; } \
+ && printf 'ReHLDS=%s\nReGameDLL_CS=%s\nMetamod-R=%s\nReAPI=%s\n' \
+      "${REHLDS_VERSION}" "${REGAMEDLL_VERSION}" "${METAMOD_R_VERSION}" "${REAPI_VERSION}" \
+      > "${HLDS_DIR}/rehlds-versions.txt" \
+ && chmod 0755 "${HLDS_DIR}/hlds_linux" "${HLDS_DIR}/hltv" \
+ && /usr/local/bin/rehlds-smoke "${HLDS_DIR}" \
+ && chown -R hlds:hlds "${HLDS_DIR}" \
+ && rm -rf /tmp/rehlds /tmp/regamedll /tmp/metamod-r /tmp/reapi \
+      /tmp/rehlds.zip /tmp/regamedll.zip /tmp/metamod-r.zip /tmp/reapi.zip
+
+ENV CS16_ENGINE=rehlds
+LABEL com.cs16.engine="rehlds" \
+      com.cs16.rehlds.version="${REHLDS_VERSION}" \
+      com.cs16.regamedll.version="${REGAMEDLL_VERSION}" \
+      com.cs16.metamod-r.version="${METAMOD_R_VERSION}" \
+      com.cs16.reapi.version="${REAPI_VERSION}"
+
+USER hlds
+
+FROM stable AS default
 

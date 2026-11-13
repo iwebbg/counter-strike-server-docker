@@ -102,14 +102,17 @@
 
 Това е отделен experimental image, не директна подмяна на стабилния HLDS image:
 
-- [ ] ReHLDS engine;
-- [ ] ReGameDLL_CS;
-- [ ] Metamod-R;
-- [ ] ReAPI;
+- [x] opt-in ReHLDS engine с еднокоманден rollback към Valve HLDS;
+- [x] ReGameDLL_CS;
+- [x] Metamod-R;
+- [x] ReAPI;
+- [x] pin-ната compatibility matrix, build smoke и runtime module test;
 - [ ] ReSemiclip вместо Pawn fallback-а;
-- [ ] security/performance comparison и rollback тест;
-- [ ] compatibility matrix за всички custom plugins;
-- [ ] staged migration на Classic, след това GunGame.
+- [ ] security/performance benchmark под реален player load;
+- [ ] compatibility matrix за външни signature/Orpheu plugins;
+- [ ] staged production migration на Classic, след това GunGame.
+
+Инструкции: [`REHLDS.md`](REHLDS.md).
 
 ## Product принципи
 
