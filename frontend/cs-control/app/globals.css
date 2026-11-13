@@ -761,6 +761,19 @@ button:disabled {
   overflow-wrap: anywhere;
   color: var(--muted);
 }
+.one-time-secret {
+  display: grid;
+  gap: 16px;
+}
+.one-time-secret code {
+  padding: 16px;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: rgba(186, 255, 53, 0.08);
+  color: var(--accent);
+  font-size: 16px;
+}
 .management-list {
   overflow-x: auto;
 }

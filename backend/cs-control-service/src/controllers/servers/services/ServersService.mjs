@@ -79,6 +79,32 @@ function containerAddress(inspect) {
   );
 }
 
+async function waitForGameReady(containerId, timeoutMs = Number(process.env.SERVER_READY_TIMEOUT_MS || 90000)) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError = "Game server did not answer A2S";
+  while (Date.now() < deadline) {
+    const inspect = await docker.request("GET", `/containers/${containerId}/json`);
+    if (!inspect.State?.Running)
+      throw new Error(`Replacement container stopped: ${inspect.State?.Status || "unknown"}`);
+    if (inspect.State?.Health?.Status === "unhealthy") throw new Error("Replacement container became unhealthy");
+    const address = containerAddress(inspect);
+    if (address) {
+      try {
+        const game = await queryA2S(address, 27015);
+        return {
+          state: inspect.State?.Status || "running",
+          health: inspect.State?.Health?.Status || "running",
+          map: game.map,
+        };
+      } catch (error) {
+        lastError = error.message;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(`Replacement server readiness timeout: ${lastError}`);
+}
+
 export async function resolveControlledServer(dockerClient, id) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$/.test(id)) throw badRequest("INVALID_SERVER_ID");
   let inspect = null;
@@ -689,7 +715,11 @@ export async function updateServer(id, input) {
     await docker.request("DELETE", `/containers/${inspect.Id}?v=0`);
     oldRemoved = true;
     await docker.request("POST", `/containers/${replacement.Id}/rename?name=${encodeURIComponent(originalName)}`);
-    if (wasRunning) await docker.request("POST", `/containers/${replacement.Id}/start`);
+    let readiness = { state: "stopped", health: "stopped", map: null };
+    if (wasRunning) {
+      await docker.request("POST", `/containers/${replacement.Id}/start`);
+      readiness = await waitForGameReady(replacement.Id);
+    }
     return {
       id: replacement.Id,
       serverId: serverKey({
@@ -699,6 +729,8 @@ export async function updateServer(id, input) {
       port,
       restarted: wasRunning,
       volumesPreserved: true,
+      readiness,
+      rollback: { attempted: false, restored: false },
     };
   } catch (error) {
     if (replacement?.Id) {
@@ -718,7 +750,10 @@ export async function updateServer(id, input) {
         `/containers/create?name=${encodeURIComponent(originalName)}`,
         originalPayload,
       );
-      if (wasRunning) await docker.request("POST", `/containers/${restored.Id}/start`);
+      if (wasRunning) {
+        await docker.request("POST", `/containers/${restored.Id}/start`);
+        await waitForGameReady(restored.Id);
+      }
       rollbackMessage = " The original server configuration was restored.";
     } catch (rollbackError) {
       rollbackMessage = ` Automatic rollback failed: ${rollbackError.message}.`;
@@ -756,7 +791,11 @@ export async function migrateServerImage(id) {
     await docker.request("DELETE", `/containers/${inspect.Id}?v=0`);
     oldRemoved = true;
     await docker.request("POST", `/containers/${replacement.Id}/rename?name=${encodeURIComponent(originalName)}`);
-    if (wasRunning) await docker.request("POST", `/containers/${replacement.Id}/start`);
+    let readiness = { state: "stopped", health: "stopped", map: null };
+    if (wasRunning) {
+      await docker.request("POST", `/containers/${replacement.Id}/start`);
+      readiness = await waitForGameReady(replacement.Id);
+    }
     return {
       id: replacement.Id,
       status: "updated",
@@ -764,6 +803,8 @@ export async function migrateServerImage(id) {
       imageId: targetImage.Id,
       restarted: wasRunning,
       volumesPreserved: true,
+      readiness,
+      rollback: { attempted: false, restored: false },
     };
   } catch (error) {
     if (replacement?.Id) {
@@ -781,7 +822,10 @@ export async function migrateServerImage(id) {
         `/containers/create?name=${encodeURIComponent(originalName)}`,
         originalPayload,
       );
-      if (wasRunning) await docker.request("POST", `/containers/${restored.Id}/start`);
+      if (wasRunning) {
+        await docker.request("POST", `/containers/${restored.Id}/start`);
+        await waitForGameReady(restored.Id);
+      }
       rollbackMessage = " The previous image and server configuration were restored.";
     } catch (rollbackError) {
       rollbackMessage = ` Automatic rollback failed: ${rollbackError.message}.`;

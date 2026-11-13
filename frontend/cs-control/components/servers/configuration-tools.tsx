@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Copy, Download, FileClock, FileUp, Layers3, RotateCcw, Save, Trash2 } from "lucide-react";
+import { Copy, Download, FileClock, FileUp, KeyRound, Layers3, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
@@ -48,6 +48,7 @@ export function ConfigurationTools({
   const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
   const [document, setDocument] = useState<ConfigurationDocument | null>(null);
   const [pending, setPending] = useState(false);
+  const [rotatedRcon, setRotatedRcon] = useState<{ password: string; serverId: string } | null>(null);
 
   const loadTemplates = useCallback(async () => {
     const result = await api<{ templates: Template[] }>("/configuration-templates");
@@ -173,6 +174,21 @@ export function ConfigurationTools({
     }
   }
 
+  async function rotateRcon() {
+    setPending(true);
+    try {
+      const result = await api<{ serverId: string; rconPassword: string }>(`/servers/${serverId}/rcon/rotate`, {
+        method: "POST",
+        body: "{}",
+      });
+      setRotatedRcon({ password: result.rconPassword, serverId: result.serverId });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "REQUEST_FAILED");
+    } finally {
+      setPending(false);
+    }
+  }
+
   const latest = revisions[0]?.configuration;
   const differences = selectedRevision
     ? Object.keys({ ...latest, ...selectedRevision.configuration })
@@ -201,7 +217,33 @@ export function ConfigurationTools({
         <button className="button ghost" type="button" onClick={() => setView("clone")}>
           <Copy size={15} /> {t("cloneServer")}
         </button>
+        <button className="button ghost" type="button" disabled={pending} onClick={rotateRcon}>
+          <KeyRound size={15} /> {t("rotateRcon")}
+        </button>
       </div>
+
+      <Modal
+        open={Boolean(rotatedRcon)}
+        onOpenChange={(open) => {
+          if (open || !rotatedRcon) return;
+          const nextServerId = rotatedRcon.serverId;
+          setRotatedRcon(null);
+          onChanged(nextServerId);
+        }}
+        title={t("newRconPassword")}
+        eyebrow="SHOW ONCE"
+      >
+        <div className="one-time-secret">
+          <p>{t("copyRconNow")}</p>
+          <code>{rotatedRcon?.password}</code>
+          <button
+            className="button primary"
+            onClick={() => rotatedRcon && navigator.clipboard.writeText(rotatedRcon.password)}
+          >
+            {t("copyPassword")}
+          </button>
+        </div>
+      </Modal>
 
       <Modal
         open={view === "templates"}

@@ -184,6 +184,10 @@ try {
   await waitForServer(owner, instanceId);
   const rolledBack = await byRole.admin.request("GET", `/servers/${instanceId}/configuration`);
   assert.notEqual(rolledBack.data.welcomeMessage, "E2E control-plane test server");
+  const rotatedRcon = await byRole.admin.request("POST", `/servers/${instanceId}/rcon/rotate`, {});
+  assert.equal(rotatedRcon.data.shownOnce, true);
+  assert.ok(rotatedRcon.data.rconPassword.length >= 32);
+  await waitForServer(owner, instanceId);
   await byRole.admin.request("GET", "/audit-logs?limit=20");
 
   await byRole.admin.request("POST", `/servers/${instanceId}/stop`, {});
