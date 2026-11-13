@@ -4,6 +4,19 @@ import Db from "../../../utils/Db.mjs";
 const controlledLabel = "com.cs16.controlled=true";
 const panelManagedLabel = "panel";
 
+async function requestStateChange(docker, path, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await docker.request("POST", path);
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, attempt * 300));
+    }
+  }
+  throw lastError;
+}
+
 function envValue(inspect, name) {
   const prefix = `${name}=`;
   return (inspect.Config?.Env || []).find((entry) => entry.startsWith(prefix))?.slice(prefix.length) || "";
@@ -130,14 +143,14 @@ export async function reconcileServerDefinitions({
       const existing = existingByServerId.get(definition.server_id);
       if (existing) {
         if (definition.desired_state === "stopped" && existing.State?.Running) {
-          await docker.request("POST", `/containers/${existing.Id}/stop?t=30`);
+          await requestStateChange(docker, `/containers/${existing.Id}/stop?t=30`);
         } else if (["running", "paused"].includes(definition.desired_state) && !existing.State?.Running) {
-          await docker.request("POST", `/containers/${existing.Id}/start`);
+          await requestStateChange(docker, `/containers/${existing.Id}/start`);
         }
         if (definition.desired_state === "running" && existing.State?.Paused)
-          await docker.request("POST", `/containers/${existing.Id}/unpause`);
+          await requestStateChange(docker, `/containers/${existing.Id}/unpause`);
         if (definition.desired_state === "paused" && !existing.State?.Paused)
-          await docker.request("POST", `/containers/${existing.Id}/pause`);
+          await requestStateChange(docker, `/containers/${existing.Id}/pause`);
         await db("panel_server_definitions").where({ server_id: definition.server_id }).update({
           container_id: existing.Id,
           last_reconciled_at: new Date(),
@@ -163,8 +176,8 @@ export async function reconcileServerDefinitions({
         payload,
       );
       if (["running", "paused"].includes(definition.desired_state))
-        await docker.request("POST", `/containers/${created.Id}/start`);
-      if (definition.desired_state === "paused") await docker.request("POST", `/containers/${created.Id}/pause`);
+        await requestStateChange(docker, `/containers/${created.Id}/start`);
+      if (definition.desired_state === "paused") await requestStateChange(docker, `/containers/${created.Id}/pause`);
       await db("panel_server_definitions").where({ server_id: definition.server_id }).update({
         container_id: created.Id,
         last_reconciled_at: new Date(),

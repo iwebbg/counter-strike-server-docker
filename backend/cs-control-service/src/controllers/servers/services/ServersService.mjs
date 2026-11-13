@@ -999,6 +999,8 @@ export { createServer, listServers };
 
 export async function serverAction(id, action) {
   const inspect = await assertControlled(id);
+  const desiredState = action === "stop" ? "stopped" : action === "pause" ? "paused" : "running";
+  await saveServerDefinition(inspect, desiredState, database);
   const suffix =
     action === "stop"
       ? "/stop?t=30"
@@ -1011,8 +1013,6 @@ export async function serverAction(id, action) {
             : "/start";
   await docker.request("POST", `/containers/${inspect.Id}${suffix}`);
   if (action === "start") await applyInheritedAdmins(inspect.Id);
-  const desiredState = action === "stop" ? "stopped" : action === "pause" ? "paused" : "running";
-  await saveServerDefinition(await docker.request("GET", `/containers/${inspect.Id}/json`), desiredState, database);
   return { status: action };
 }
 

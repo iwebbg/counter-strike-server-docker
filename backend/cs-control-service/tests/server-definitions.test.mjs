@@ -114,13 +114,18 @@ test("recreates a missing running server from its persisted definition", async (
     },
   ]);
   const calls = [];
+  let startAttempts = 0;
   const docker = {
     request: async (method, path, body) => {
       calls.push({ method, path, body });
       if (method === "GET" && path.startsWith("/containers/json")) return [];
       if (method === "POST" && path === "/volumes/create") return { Name: body.Name };
       if (method === "POST" && path.startsWith("/containers/create")) return { Id: "restored-container" };
-      if (method === "POST" && path === "/containers/restored-container/start") return {};
+      if (method === "POST" && path === "/containers/restored-container/start") {
+        startAttempts += 1;
+        if (startAttempts === 1) throw new Error("Temporary Docker start failure");
+        return {};
+      }
       throw new Error(`Unexpected Docker request: ${method} ${path}`);
     },
   };
@@ -137,6 +142,7 @@ test("recreates a missing running server from its persisted definition", async (
   assert.equal(create.body.Image, "cs16-server:local");
   assert.equal(create.body.HostConfig.RestartPolicy.Name, "unless-stopped");
   assert.ok(calls.some((call) => call.path === "/containers/restored-container/start"));
+  assert.equal(startAttempts, 2);
   assert.equal(database.rows[0].container_id, "restored-container");
 });
 
