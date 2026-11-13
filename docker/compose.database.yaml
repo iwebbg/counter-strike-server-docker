@@ -20,6 +20,7 @@ services:
         condition: service_healthy
 
   mariadb:
+    container_name: mariadb-server
     image: mariadb:11.8
     restart: unless-stopped
     environment:
@@ -38,6 +39,7 @@ services:
       start_period: 30s
 
   redis:
+    container_name: redis
     profiles: ["panel"]
     image: redis:8.4-alpine
     restart: unless-stopped
