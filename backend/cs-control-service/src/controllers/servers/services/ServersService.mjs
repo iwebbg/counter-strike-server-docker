@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
 import { queryA2S } from "../../../infrastructure/A2S.mjs";
-import { DockerClient, demuxDockerStream } from "../../../infrastructure/Docker.mjs";
+import { DockerClient, DockerError, demuxDockerStream } from "../../../infrastructure/Docker.mjs";
 import { parseStatusPlayers, rconCommand } from "../../../infrastructure/Rcon.mjs";
 import Db from "../../../utils/Db.mjs";
-import { conflict } from "../../../utils/HttpError.mjs";
+import { badRequest, conflict, notFound } from "../../../utils/HttpError.mjs";
 import {
   globalAdmins,
   recordModeration,
@@ -80,8 +80,14 @@ function containerAddress(inspect) {
 }
 
 async function assertControlled(id) {
-  if (!/^[a-f0-9]{12,64}$/.test(id)) throw new Error("Invalid server id");
-  const inspect = await docker.request("GET", `/containers/${id}/json`);
+  if (!/^[a-f0-9]{12,64}$/.test(id)) throw badRequest("INVALID_SERVER_ID");
+  let inspect;
+  try {
+    inspect = await docker.request("GET", `/containers/${id}/json`);
+  } catch (error) {
+    if (error instanceof DockerError && error.statusCode === 404) throw notFound("SERVER_NOT_FOUND");
+    throw error;
+  }
   if (inspect.Config?.Labels?.["com.cs16.controlled"] !== "true")
     throw new Error("Container is not managed by CS Control");
   return inspect;

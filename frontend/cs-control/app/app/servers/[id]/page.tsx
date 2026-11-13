@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft, FileText, Pause, Play, RefreshCw, Square, Upload } from "lucide-react";
 import { useSession } from "@/components/session-provider";
@@ -21,6 +21,7 @@ const tabs = ["configuration", "players", "maps", "admins", "packages", "backups
 type Tab = (typeof tabs)[number];
 export default function ServerManagementPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { data, reload } = useServers();
   const { user } = useSession();
   const { t } = useI18n();
@@ -82,6 +83,10 @@ export default function ServerManagementPage() {
   function selectTab(next: Tab) {
     setTab(next);
     window.history.replaceState(null, "", `${window.location.pathname}?tab=${next}`);
+  }
+  async function configurationUpdated(nextServerId: string) {
+    router.replace(`/app/servers/${nextServerId}?tab=configuration`);
+    await reload();
   }
   return (
     <div className="page-stack">
@@ -157,7 +162,7 @@ export default function ServerManagementPage() {
           </button>
         ))}
       </nav>
-      {tab === "configuration" && <ConfigurationPanel serverId={id} onUpdated={reload} />}{" "}
+      {tab === "configuration" && <ConfigurationPanel serverId={id} onUpdated={configurationUpdated} />}{" "}
       {tab === "players" && <PlayersPanel serverId={id} canModerate={permissions.includes("players.moderate")} />}{" "}
       {tab === "maps" && <MapsPanel serverId={id} canManage={permissions.includes("maps.manage")} />}{" "}
       {tab === "admins" && <AdminsPanel serverId={id} />} {tab === "packages" && <PackagesPanel serverId={id} />}{" "}

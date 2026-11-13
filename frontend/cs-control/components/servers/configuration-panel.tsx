@@ -17,6 +17,7 @@ type Configuration = {
   running: boolean;
   volumes: string[];
 };
+type UpdateResult = { id: string };
 const modeMaps = {
   classic: [
     "de_dust2",
@@ -44,7 +45,13 @@ const modeMaps = {
     "gg_os_arena",
   ],
 };
-export function ConfigurationPanel({ serverId, onUpdated }: { serverId: string; onUpdated: () => void }) {
+export function ConfigurationPanel({
+  serverId,
+  onUpdated,
+}: {
+  serverId: string;
+  onUpdated: (nextServerId: string) => Promise<void> | void;
+}) {
   const toast = useToast();
   const { t } = useI18n();
   const [data, setData] = useState<Configuration | null>(null);
@@ -65,7 +72,7 @@ export function ConfigurationPanel({ serverId, onUpdated }: { serverId: string; 
     const form = new FormData(event.currentTarget);
     setPending(true);
     try {
-      await api(`/servers/${serverId}`, {
+      const updated = await api<UpdateResult>(`/servers/${serverId}`, {
         method: "PUT",
         body: JSON.stringify({
           name: form.get("name"),
@@ -80,8 +87,7 @@ export function ConfigurationPanel({ serverId, onUpdated }: { serverId: string; 
         }),
       });
       toast.success(t("serverSaved"));
-      await load();
-      onUpdated();
+      await onUpdated(updated.id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "REQUEST_FAILED");
     } finally {
