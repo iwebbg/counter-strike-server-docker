@@ -316,6 +316,13 @@ MariaDB it falls back to `banned.cfg`. Actions are also appended to
 Duration `0` means permanent. The collector checks active bans during Steam
 authorization and applies expiration/revocation without restart.
 
+The game image includes SafeNameAndChat protection. It normalizes control/color
+characters in nicknames, reserves names such as `console`, `server`, and `admin`
+for actual administrators, and blocks chat floods, identical repeats, and
+configurable phrases. Settings are `SAFE_NAME_ENABLED`, `SAFE_CHAT_ENABLED`,
+`CHAT_SPAM_LIMIT`, `CHAT_SPAM_WINDOW`, `CHAT_BLOCK_SECONDS`, `FORBIDDEN_NAMES`,
+and `FORBIDDEN_CHAT`.
+
 ## Statistics dashboard
 
 With `docker/compose.database.yaml`, the panel displays database state,

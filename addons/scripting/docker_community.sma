@@ -4,7 +4,7 @@
 #include <fakemeta>
 
 #define PLUGIN "Docker Community Tools"
-#define VERSION "1.0.0"
+#define VERSION "1.1.0"
 #define AUTHOR "counter-strike-server-docker"
 #define TASK_BALANCE 7710
 
@@ -16,6 +16,13 @@ new g_radio_limit;
 new g_radio_window;
 new g_rules;
 new g_community_url;
+new g_safe_name_enabled;
+new g_safe_chat_enabled;
+new g_chat_limit;
+new g_chat_window;
+new g_chat_block_seconds;
+new g_forbidden_names;
+new g_forbidden_chat;
 new g_kills[33];
 new g_deaths[33];
 new Float:g_gag_until[33];
@@ -23,6 +30,10 @@ new Float:g_mute_until[33];
 new Float:g_radio_window_started[33];
 new Float:g_radio_blocked_until[33];
 new g_radio_count[33];
+new Float:g_chat_window_started[33];
+new Float:g_chat_blocked_until[33];
+new g_chat_count[33];
+new g_last_message[33][192];
 new g_winning_team;
 new g_win_streak;
 new bool:g_scramble_pending;
@@ -39,6 +50,13 @@ public plugin_init()
     g_radio_window = register_cvar("docker_radio_window", "5.0");
     g_rules = register_cvar("docker_server_rules", "Respect players; no cheating; no abuse; follow admin instructions.");
     g_community_url = register_cvar("docker_community_url", "https://interweb.bg");
+    g_safe_name_enabled = register_cvar("docker_safe_name_enabled", "1");
+    g_safe_chat_enabled = register_cvar("docker_safe_chat_enabled", "1");
+    g_chat_limit = register_cvar("docker_chat_limit", "5");
+    g_chat_window = register_cvar("docker_chat_window", "6.0");
+    g_chat_block_seconds = register_cvar("docker_chat_block_seconds", "15");
+    g_forbidden_names = register_cvar("docker_forbidden_names", "console,server,admin");
+    g_forbidden_chat = register_cvar("docker_forbidden_chat", "");
 
     register_event("DeathMsg", "on_death", "a");
     register_event("HLTV", "on_new_round", "a", "1=0", "2=0");
@@ -68,6 +86,7 @@ public plugin_init()
 public client_putinserver(id)
 {
     reset_player(id);
+    set_task(1.0, "validate_player_name", id);
     if (get_pcvar_num(g_balance_enabled)) set_task(5.0, "balance_teams", TASK_BALANCE);
 }
 
@@ -86,6 +105,31 @@ reset_player(id)
     g_radio_window_started[id] = 0.0;
     g_radio_blocked_until[id] = 0.0;
     g_radio_count[id] = 0;
+    g_chat_window_started[id] = 0.0;
+    g_chat_blocked_until[id] = 0.0;
+    g_chat_count[id] = 0;
+    g_last_message[id][0] = 0;
+}
+
+public client_infochanged(id)
+{
+    if (is_user_connected(id) && get_pcvar_num(g_safe_name_enabled)) validate_player_name(id);
+}
+
+public validate_player_name(id)
+{
+    if (!is_user_connected(id) || !get_pcvar_num(g_safe_name_enabled)) return;
+    new current[32], cleaned[32];
+    get_user_info(id, "name", current, charsmax(current));
+    sanitize_text(current, cleaned, charsmax(cleaned));
+    trim(cleaned);
+    if (strlen(cleaned) < 2 || (!(get_user_flags(id) & ADMIN_KICK) && contains_configured(cleaned, g_forbidden_names))) {
+        formatex(cleaned, charsmax(cleaned), "Player-%d", get_user_userid(id));
+    }
+    if (!equal(current, cleaned)) {
+        set_user_info(id, "name", cleaned);
+        client_print(id, print_chat, "[Protection] Your nickname was normalized for server safety.");
+    }
 }
 
 public on_death()
@@ -188,7 +232,75 @@ public handle_say(id)
         client_print(id, print_chat, "[Moderation] You are gagged for another %d second(s).", remaining(g_gag_until[id]));
         return PLUGIN_HANDLED;
     }
+    if (get_pcvar_num(g_safe_chat_enabled) && !chat_allowed(id, message)) return PLUGIN_HANDLED;
     return PLUGIN_CONTINUE;
+}
+
+bool:chat_allowed(id, const message[])
+{
+    new cleaned[192];
+    sanitize_text(message, cleaned, charsmax(cleaned));
+    trim(cleaned);
+    if (!cleaned[0] || !equal(message, cleaned)) {
+        client_print(id, print_chat, "[Protection] Control/color characters are not allowed in chat.");
+        return false;
+    }
+    if (contains_configured(cleaned, g_forbidden_chat)) {
+        client_print(id, print_chat, "[Protection] This message is blocked by the server rules.");
+        return false;
+    }
+    new Float:now = get_gametime();
+    if (g_chat_blocked_until[id] > now) {
+        client_print(id, print_chat, "[Protection] Chat flood protection is active for %d more second(s).", remaining(g_chat_blocked_until[id]));
+        return false;
+    }
+    if (now - g_chat_window_started[id] > get_pcvar_float(g_chat_window)) {
+        g_chat_window_started[id] = now;
+        g_chat_count[id] = 0;
+    }
+    g_chat_count[id]++;
+    if (g_chat_count[id] > get_pcvar_num(g_chat_limit) || (g_last_message[id][0] && equali(g_last_message[id], cleaned))) {
+        g_chat_blocked_until[id] = now + float(get_pcvar_num(g_chat_block_seconds));
+        client_print(id, print_chat, "[Protection] Repeated/flood chat was blocked.");
+        return false;
+    }
+    copy(g_last_message[id], charsmax(g_last_message[]), cleaned);
+    return true;
+}
+
+sanitize_text(const input[], output[], output_length)
+{
+    new write_index, bool:last_space;
+    for (new read_index = 0; input[read_index] && write_index < output_length; read_index++) {
+        new character = input[read_index];
+        if (character > 0 && character < 32) continue;
+        if (character == 94 && input[read_index + 1] >= '0' && input[read_index + 1] <= '9') {
+            read_index++;
+            continue;
+        }
+        if (character == ' ') {
+            if (last_space) continue;
+            last_space = true;
+        } else last_space = false;
+        output[write_index++] = character;
+    }
+    output[write_index] = 0;
+}
+
+bool:contains_configured(const text[], cvar)
+{
+    new configured[256], token[64], remainder[256];
+    get_pcvar_string(cvar, configured, charsmax(configured));
+    replace_all(configured, charsmax(configured), ",", " ");
+    trim(configured);
+    while (configured[0]) {
+        strtok(configured, token, charsmax(token), remainder, charsmax(remainder), ' ', 1);
+        trim(token);
+        if (token[0] && containi(text, token) != -1) return true;
+        copy(configured, charsmax(configured), remainder);
+        trim(configured);
+    }
+    return false;
 }
 
 public handle_radio(id)

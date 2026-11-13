@@ -55,7 +55,9 @@ team_balance_enabled=${TEAM_BALANCE_ENABLED:-1}
 team_scramble_enabled=${TEAM_SCRAMBLE_ENABLED:-1}
 [[ ${mode} == gungame ]] && team_scramble_enabled=${TEAM_SCRAMBLE_ENABLED:-0}
 radio_protection_enabled=${RADIO_PROTECTION_ENABLED:-1}
-for toggle in warmup_enabled semiclip_enabled afk_enabled rtv_enabled killstreak_enabled killstreak_sounds killstreak_hud killstreak_global team_balance_enabled team_scramble_enabled radio_protection_enabled; do
+safe_name_enabled=${SAFE_NAME_ENABLED:-1}
+safe_chat_enabled=${SAFE_CHAT_ENABLED:-1}
+for toggle in warmup_enabled semiclip_enabled afk_enabled rtv_enabled killstreak_enabled killstreak_sounds killstreak_hud killstreak_global team_balance_enabled team_scramble_enabled radio_protection_enabled safe_name_enabled safe_chat_enabled; do
   [[ ${!toggle} == 0 || ${!toggle} == 1 ]] || die "${toggle} must be 0 or 1"
 done
 
@@ -91,6 +93,11 @@ radio_limit=${RADIO_SPAM_LIMIT:-4}
 radio_window=${RADIO_SPAM_WINDOW:-5.0}
 server_rules=${SERVER_RULES:-Respect players; no cheating; no abuse; follow admin instructions.}
 community_url=${COMMUNITY_URL:-https://interweb.bg}
+chat_limit=${CHAT_SPAM_LIMIT:-5}
+chat_window=${CHAT_SPAM_WINDOW:-6.0}
+chat_block_seconds=${CHAT_BLOCK_SECONDS:-15}
+forbidden_names=${FORBIDDEN_NAMES:-console,server,admin}
+forbidden_chat=${FORBIDDEN_CHAT:-}
 [[ ${spawn_seconds} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "SPAWN_PROTECTION_SECONDS must be positive"
 [[ ${rtv_ratio} =~ ^(0([.][0-9]+)?|1([.]0+)?)$ ]] || die "RTV_RATIO must be between 0 and 1"
 [[ ${killstreak_window} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "KILLSTREAK_MULTI_WINDOW must be positive"
@@ -102,6 +109,11 @@ is_uint "${team_scramble_streak}" || die "TEAM_SCRAMBLE_STREAK must be a non-neg
 is_uint "${radio_limit}" || die "RADIO_SPAM_LIMIT must be a non-negative integer"
 (( radio_limit >= 1 && radio_limit <= 20 )) || die "RADIO_SPAM_LIMIT must be between 1 and 20"
 [[ ${radio_window} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "RADIO_SPAM_WINDOW must be positive"
+is_uint "${chat_limit}" || die "CHAT_SPAM_LIMIT must be a non-negative integer"
+(( chat_limit >= 2 && chat_limit <= 20 )) || die "CHAT_SPAM_LIMIT must be between 2 and 20"
+[[ ${chat_window} =~ ^[0-9]+([.][0-9]+)?$ ]] || die "CHAT_SPAM_WINDOW must be positive"
+is_uint "${chat_block_seconds}" || die "CHAT_BLOCK_SECONDS must be a non-negative integer"
+(( chat_block_seconds >= 1 && chat_block_seconds <= 300 )) || die "CHAT_BLOCK_SECONDS must be between 1 and 300"
 
 cp "${HLDS_DIR}/presets/plugins/${mode}.ini" \
    "${CSTRIKE_DIR}/addons/amxmodx/configs/plugins.ini"
@@ -129,6 +141,13 @@ sed -i \
   printf 'docker_radio_window %s\n' "${radio_window}"
   printf 'docker_server_rules "%s"\n' "$(cfg_escape "${server_rules}")"
   printf 'docker_community_url "%s"\n' "$(cfg_escape "${community_url}")"
+  printf 'docker_safe_name_enabled %s\n' "${safe_name_enabled}"
+  printf 'docker_safe_chat_enabled %s\n' "${safe_chat_enabled}"
+  printf 'docker_chat_limit %s\n' "${chat_limit}"
+  printf 'docker_chat_window %s\n' "${chat_window}"
+  printf 'docker_chat_block_seconds %s\n' "${chat_block_seconds}"
+  printf 'docker_forbidden_names "%s"\n' "$(cfg_escape "${forbidden_names}")"
+  printf 'docker_forbidden_chat "%s"\n' "$(cfg_escape "${forbidden_chat}")"
 } >> "${amxx_config}"
 echo "[entrypoint] Applied CS 1.6 Server CP branding messages"
 

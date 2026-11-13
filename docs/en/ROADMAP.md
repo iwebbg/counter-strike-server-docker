@@ -74,7 +74,8 @@ Statuses guide future sessions and are not delivery-date promises.
 - [x] HLTV demo lifecycle with persistent evidence storage, download, and audit;
 - [x] admin evidence markers for suspicious players;
 - [x] automatic demo and log retention;
-- [ ] SafeNameAndChat or equivalent validation;
+- [x] SafeNameAndChat validation for nicknames, reserved names, chat flood,
+      repeats, and configurable blocked phrases;
 - [x] rate limits for moderation endpoints and login attempts;
 - [x] NGINX reverse proxy with automatic Let's Encrypt TLS and custom HTTPS port;
 - [x] optional IP/VPN allowlist and trusted forward-auth SSO.

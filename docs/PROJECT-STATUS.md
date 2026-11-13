@@ -60,7 +60,8 @@ Docker Compose, така и с опционален интерактивен CS 
   announcements с отделни runtime switches;
 - `docker_mapvote.sma` — RTV, nominations, map listing и recent-map protection;
 - `docker_community.sma` — K:D-aware team balance, one-sided round scramble,
-  gag/mute, radio flood protection, `/rules` и разширено `/help`;
+  gag/mute, radio/chat flood protection, SafeName validation, `/rules` и
+  разширено `/help`;
 - `docker_sql_stats.sma` — допълнително daily/weekly missions, map MVP и
   revenge/nemesis progression;
 - deterministic StatsX defaults за `/stats`, `/statsme`, `/rankstats`, `/rank`
@@ -200,7 +201,7 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 
 ## Следващи логични задачи
 
-1. SafeNameAndChat validation и по-фини custom operator permissions.
+1. По-фини custom operator permissions.
 2. Scheduled community events, например Friday Night GunGame.
 3. ReHLDS/ReGameDLL experimental image и compatibility matrix.
 4. FragZone telemetry integration като отделен бъдещ track.

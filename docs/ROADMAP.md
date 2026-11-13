@@ -77,7 +77,8 @@
 - [x] HLTV demo lifecycle с persistent evidence volume, download и audit;
 - [x] admin evidence markers за подозрителен играч;
 - [x] автоматична retention политика за demos и logs;
-- [ ] SafeNameAndChat или еквивалентна validation защита;
+- [x] SafeNameAndChat validation за nicknames, reserved names, chat flood,
+      повторения и configurable забранени фрази;
 - [x] rate limits за moderation endpoints и login attempts;
 - [x] NGINX reverse proxy с автоматичен self-signed/Let's Encrypt TLS и
       конфигурируем външен HTTPS порт;

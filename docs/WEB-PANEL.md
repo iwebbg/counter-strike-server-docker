@@ -325,6 +325,13 @@ MariaDB ban-ът се записва като fleet-wide или server-scoped ce
 Duration `0` означава permanent ban. Database collector-ът проверява активните
 банове при Steam authorization и отчита expiry/revoke без рестарт.
 
+Game image-ът включва SafeNameAndChat защита. Тя нормализира control/color
+символи в nickname, пази reserved имена като `console`, `server` и `admin` за
+реални администратори и блокира chat flood, еднакви повторения и configurable
+фрази. Настройките са `SAFE_NAME_ENABLED`, `SAFE_CHAT_ENABLED`,
+`CHAT_SPAM_LIMIT`, `CHAT_SPAM_WINDOW`, `CHAT_BLOCK_SECONDS`, `FORBIDDEN_NAMES` и
+`FORBIDDEN_CHAT`.
+
 ## Statistics dashboard
 
 С `docker/compose.database.yaml` панелът показва database status, all-time или seasonal

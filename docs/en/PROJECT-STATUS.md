@@ -58,7 +58,8 @@ and automatic port allocation.
 - `docker_killstreak.sma`: First Blood, multi-kill, and streak HUD/sounds;
 - `docker_mapvote.sma`: RTV, nominations, map list, and recent-map protection;
 - `docker_community.sma`: K:D-aware team balance, one-sided round scramble,
-  gag/mute, radio flood protection, `/rules`, and expanded `/help`;
+  gag/mute, radio/chat flood protection, SafeName validation, `/rules`, and
+  expanded `/help`;
 - `docker_sql_stats.sma`: additionally tracks daily/weekly missions, map MVP,
   and revenge/nemesis progression;
 - automatic build compilation for `addons/scripting/docker_*.sma`;
@@ -172,7 +173,7 @@ not be exposed directly to the Internet.
 
 ## Next logical tasks
 
-1. SafeNameAndChat validation and finer custom operator permissions.
+1. Finer custom operator permissions.
 2. Scheduled community events such as Friday Night GunGame.
 3. An experimental ReHLDS/ReGameDLL image and compatibility matrix.
 4. FragZone telemetry integration as a separate future track.
