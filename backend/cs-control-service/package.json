@@ -6,7 +6,7 @@
   "description": "CS 1.6 fleet control API",
   "main": "src/index.mjs",
   "engines": {
-    "node": ">=24.12.1 <25"
+    "node": ">=24.22.1 <25"
   },
   "scripts": {
     "start": "node src/index.mjs",
