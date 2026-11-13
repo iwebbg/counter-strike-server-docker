@@ -3,6 +3,7 @@ import Db from "./utils/Db.mjs";
 import Redis from "./utils/Redis.mjs";
 import Server from "./utils/Server.mjs";
 import BackupScheduler from "./infrastructure/BackupScheduler.mjs";
+import EvidenceRetentionScheduler from "./infrastructure/EvidenceRetentionScheduler.mjs";
 
 const lifecycle = [];
 
@@ -18,6 +19,9 @@ async function start() {
     const backupScheduler = new BackupScheduler();
     backupScheduler.start();
     lifecycle.unshift(() => backupScheduler.stop());
+    const evidenceRetentionScheduler = new EvidenceRetentionScheduler();
+    evidenceRetentionScheduler.start();
+    lifecycle.unshift(() => evidenceRetentionScheduler.stop());
     return;
   }
   throw new Error(`Unsupported PROCESS_ROLE: ${globalConfig.processRole}`);

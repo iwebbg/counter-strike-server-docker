@@ -166,6 +166,14 @@ try {
   assert.match(evidenceStarted.data.filename, /^evidence-/);
   const activeEvidence = await byRole.moderator.request("GET", `/servers/${instanceId}/evidence`);
   assert.equal(activeEvidence.data.recording, true);
+  await byRole.viewer.request("GET", `/servers/${instanceId}/evidence/markers`, undefined, 403);
+  const activeMarker = await byRole.moderator.request(
+    "POST",
+    `/servers/${instanceId}/evidence/markers`,
+    { steamId: "STEAM_0:1:555001", playerName: "E2E suspect", reason: "Active recording marker" },
+    201,
+  );
+  assert.ok(Number.isInteger(activeMarker.data.offsetSeconds));
   await new Promise((resolve) => setTimeout(resolve, 1000));
   const evidenceStopped = await byRole.moderator.request("POST", `/servers/${instanceId}/evidence/stop`, {});
   assert.equal(evidenceStopped.data.recording, false);
@@ -178,8 +186,23 @@ try {
   ]);
   const storedEvidence = await byRole.moderator.request("GET", `/servers/${instanceId}/evidence`);
   assert.ok(storedEvidence.data.recordings.some((entry) => entry.filename === "e2e-evidence.dem"));
+  const storedMarker = await byRole.moderator.request(
+    "POST",
+    `/servers/${instanceId}/evidence/markers`,
+    {
+      steamId: "STEAM_0:1:555002",
+      playerName: "Stored suspect",
+      reason: "Stored demo marker",
+      filename: "e2e-evidence.dem",
+    },
+    201,
+  );
+  const markers = await byRole.moderator.request("GET", `/servers/${instanceId}/evidence/markers`);
+  assert.ok(markers.data.markers.some((entry) => entry.id === storedMarker.data.id));
   const demo = await byRole.moderator.download(`/servers/${instanceId}/evidence/e2e-evidence.dem`);
   assert.ok(demo.length > 0);
+  await byRole.moderator.request("DELETE", `/servers/${instanceId}/evidence/markers/${storedMarker.data.id}`);
+  await byRole.moderator.request("DELETE", `/servers/${instanceId}/evidence/markers/${activeMarker.data.id}`);
 
   await byRole.admin.request("GET", `/servers/${instanceId}/admins`);
   await byRole.admin.request("PUT", `/servers/${instanceId}/admins`, {

@@ -102,7 +102,8 @@ and automatic port allocation.
 - MariaDB dashboard with rankings, profiles, activity, achievements, seasons,
   bans, and history;
 - fleet-wide admin inheritance;
-- HLTV evidence sidecars with persistent demo history, download, and audit;
+- HLTV evidence sidecars with persistent demo history, download,
+  suspicious-player markers, and automatic retention that protects marked demos;
 - Discord operational notifications, login/moderation rate limits, an IP/VPN
   allowlist, and optional trusted forward-auth SSO;
 - Owner/Admin/Moderator/Viewer roles and operator management;
@@ -168,17 +169,14 @@ not be exposed directly to the Internet.
 - the default `cs16_default` network must be configured for another Compose
   project name;
 - HLTV cannot create demo frames on an empty server without real gameplay;
-- automatic evidence-demo retention and suspicious-player evidence markers are
-  not implemented yet.
 
 ## Next logical tasks
 
-1. Admin evidence markers and automatic demo/log retention.
-2. SafeNameAndChat validation and finer custom operator permissions.
-3. Scheduled community events such as Friday Night GunGame.
-4. An experimental ReHLDS/ReGameDLL image and compatibility matrix.
-5. FragZone telemetry integration as a separate future track.
-6. Steam ID discovery help and AMXX flag descriptions in the UI.
+1. SafeNameAndChat validation and finer custom operator permissions.
+2. Scheduled community events such as Friday Night GunGame.
+3. An experimental ReHLDS/ReGameDLL image and compatibility matrix.
+4. FragZone telemetry integration as a separate future track.
+5. Steam ID discovery help and AMXX flag descriptions in the UI.
 
 ## Continue in another session
 

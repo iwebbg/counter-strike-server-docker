@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { DockerClient, demuxDockerStream } from "../../../infrastructure/Docker.mjs";
 import { parseTar } from "../../../infrastructure/Tar.mjs";
+import Db from "../../../utils/Db.mjs";
 import { conflict, notFound } from "../../../utils/HttpError.mjs";
 import { controlledServerInspect } from "../../servers/services/ServersService.mjs";
 
@@ -8,6 +9,19 @@ const docker = new DockerClient();
 const logsTarget = "/opt/hlds/cstrike/logs";
 const evidenceTarget = `${logsTarget}/evidence`;
 const evidenceLabel = "com.cs16.evidence=true";
+
+function boundedInteger(value, fallback, minimum, maximum) {
+  const parsed = Number.parseInt(String(value ?? fallback), 10);
+  return Number.isInteger(parsed) ? Math.min(maximum, Math.max(minimum, parsed)) : fallback;
+}
+
+export function evidenceRetentionSettings(environment = process.env) {
+  return {
+    evidenceDays: boundedInteger(environment.EVIDENCE_RETENTION_DAYS, 30, 1, 3650),
+    evidenceCount: boundedInteger(environment.EVIDENCE_RETENTION_COUNT, 50, 1, 10000),
+    logDays: boundedInteger(environment.SERVER_LOG_RETENTION_DAYS, 30, 1, 3650),
+  };
+}
 
 export function safeEvidenceFilename(value) {
   const filename = String(value || "");
@@ -144,7 +158,45 @@ export async function evidenceStatus(id) {
   return {
     recording: Boolean(active),
     filename: active?.Labels?.["com.cs16.evidence-file"] || null,
+    startedAt: active?.Labels?.["com.cs16.evidence-started-at"] || null,
     recordings,
+  };
+}
+
+export async function runEvidenceRetention(id, settings = evidenceRetentionSettings()) {
+  const inspect = await controlledServerInspect(id);
+  let protectedFiles = [];
+  if (Db.enabled) {
+    protectedFiles = await (
+      await new Db().db()
+    )("panel_evidence_markers")
+      .where({ server_id: serverKey(inspect) })
+      .distinct("recording_filename")
+      .then((rows) => rows.map((row) => safeEvidenceFilename(row.recording_filename)).filter(Boolean));
+  }
+  const protectedExpression = protectedFiles.map((filename) => `! -name '${filename}'`).join(" ");
+  const removableEvidence = `find '${evidenceTarget}' -maxdepth 1 -type f -name '*.dem' ${protectedExpression}`;
+  const keepFrom = settings.evidenceCount + 1;
+  const output = await runStorageCommand(
+    inspect,
+    [
+      `mkdir -p '${evidenceTarget}'`,
+      `before_evidence=$(find '${evidenceTarget}' -maxdepth 1 -type f -name '*.dem' | wc -l)`,
+      `${removableEvidence} -mtime +${settings.evidenceDays} -delete`,
+      `${removableEvidence} -printf '%T@ %p\\0' | sort -zrn | tail -z -n +${keepFrom} | cut -z -d' ' -f2- | xargs -0 -r rm -f --`,
+      `after_evidence=$(find '${evidenceTarget}' -maxdepth 1 -type f -name '*.dem' | wc -l)`,
+      `before_logs=$(find '${logsTarget}' -maxdepth 1 -type f -name '*.log' | wc -l)`,
+      `find '${logsTarget}' -maxdepth 1 -type f -name '*.log' -mtime +${settings.logDays} -delete`,
+      `after_logs=$(find '${logsTarget}' -maxdepth 1 -type f -name '*.log' | wc -l)`,
+      `printf '%s|%s|%s|%s\\n' "$before_evidence" "$after_evidence" "$before_logs" "$after_logs"`,
+    ].join("; "),
+  );
+  const values = output.trim().split("|").map(Number);
+  return {
+    evidenceDeleted: Math.max(0, values[0] - values[1]),
+    evidenceRemaining: values[1] || 0,
+    logsDeleted: Math.max(0, values[2] - values[3]),
+    logsRemaining: values[3] || 0,
   };
 }
 
@@ -180,6 +232,7 @@ export async function startEvidence(id) {
         "com.cs16.evidence": "true",
         "com.cs16.evidence-server": key,
         "com.cs16.evidence-file": base,
+        "com.cs16.evidence-started-at": new Date().toISOString(),
       },
       HostConfig: { Mounts: [storageMount(inspect)], RestartPolicy: { Name: "no" } },
       NetworkingConfig: { EndpointsConfig: { [network]: {} } },
@@ -214,6 +267,13 @@ export async function stopEvidence(id) {
   ]);
   await docker.request("POST", `/containers/${active.Id}/stop?t=3`);
   await docker.request("DELETE", `/containers/${active.Id}?v=0`);
+  if (filename && Db.enabled) {
+    await (
+      await new Db().db()
+    )("panel_evidence_markers")
+      .where({ server_id: serverKey(inspect), recording_filename: `${recordingName}.dem` })
+      .update({ recording_filename: filename });
+  }
   return { recording: false, filename: filename || null };
 }
 

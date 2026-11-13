@@ -9,7 +9,8 @@ export default {
   audit: (req) => ({
     action: "evidence.download",
     category: "moderation",
-    targetType: "server",
+    targetType: "evidence",
+    targetId: req.validated.path.filename,
     serverId: req.validated.path.id,
   }),
   validation: {
@@ -30,7 +31,7 @@ export default {
   entryPoint: async (req, res) => {
     const file = await evidenceFile(req.validated.path.id, req.validated.path.filename);
     res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader("Content-Disposition", `attachment; filename=\"${file.filename}\"`);
-    return res.send(file.content);
+    res.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
+    return res.status(200).send(file.content);
   },
 };

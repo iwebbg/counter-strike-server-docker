@@ -31,7 +31,8 @@ The test uses the `cs16-e2e` Compose project, web port `18080`, and game ports
 `moderator`, and `viewer` roles, plus real server lifecycle, player, log, map,
 admin, template/import/export/clone, configuration history and rollback,
 resource/network limit, image update/rollback, map-package, backup/restore and
-policy, season, moderation, audit-log, and HLTV-evidence operations.
+policy, season, moderation, audit-log, HLTV-evidence, and suspicious-player
+marker lifecycle operations.
 
 On completion, it automatically removes the temporary containers, network, database/backup volumes, and test CS server volumes. The main `cs16` Compose project and its data remain unchanged.
 

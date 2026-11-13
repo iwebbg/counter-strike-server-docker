@@ -72,8 +72,8 @@ Statuses guide future sessions and are not delivery-date promises.
 ## Evidence and anti-abuse
 
 - [x] HLTV demo lifecycle with persistent evidence storage, download, and audit;
-- [ ] admin evidence markers for suspicious players;
-- [ ] automatic demo and log retention;
+- [x] admin evidence markers for suspicious players;
+- [x] automatic demo and log retention;
 - [ ] SafeNameAndChat or equivalent validation;
 - [x] rate limits for moderation endpoints and login attempts;
 - [x] NGINX reverse proxy with automatic Let's Encrypt TLS and custom HTTPS port;

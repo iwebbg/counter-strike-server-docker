@@ -193,6 +193,11 @@ evidence действия изпращат кратко non-blocking Discord и�
 permission-checked API. Start/stop действията влизат в audit log и по желание в
 Discord.
 
+**Add marker** свързва подозрителен Steam ID, player name и причина с текущия
+запис или със съществуващ demo файл. При активен запис панелът пази и точната
+секунда. Marker-ът съдържа operator snapshot, влиза в audit log и защитава demo
+файла от автоматично изтриване.
+
 Празен сървър може да не произведе `.dem`, докато няма реални gameplay frames.
 Readiness timeout-ът се настройва с `EVIDENCE_READY_TIMEOUT_MS`, а максималният
 размер за download — с `EVIDENCE_MAX_BYTES` (по подразбиране 512 MiB). Evidence
@@ -290,6 +295,11 @@ SSO_SHARED_SECRET=
 SSO_EMAIL_HEADER=x-auth-request-email
 EVIDENCE_READY_TIMEOUT_MS=20000
 EVIDENCE_MAX_BYTES=536870912
+EVIDENCE_RETENTION_ENABLED=1
+EVIDENCE_RETENTION_INTERVAL_MS=21600000
+EVIDENCE_RETENTION_DAYS=30
+EVIDENCE_RETENTION_COUNT=50
+SERVER_LOG_RETENTION_DAYS=30
 ```
 
 Setup командата генерира липсващите admin и Redis пароли. Login системата
@@ -357,6 +367,8 @@ Control panel container-ът има write достъп до Docker socket, ко�
 - `GET /api/servers/:id/evidence`;
 - `POST /api/servers/:id/evidence/start|stop`;
 - `GET /api/servers/:id/evidence/:filename`;
+- `GET|POST /api/servers/:id/evidence/markers`;
+- `DELETE /api/servers/:id/evidence/markers/:markerId`;
 - `GET /api/database/status`;
 - `GET /api/stats/overview` и `GET /api/stats/players/:steamId`;
 - `GET /api/bans` и `POST /api/bans/:id/revoke`;

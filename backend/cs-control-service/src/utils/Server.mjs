@@ -117,7 +117,7 @@ class Server {
       }),
     );
     this.app.use(
-      [/\/api\/servers\/[^/]+\/players\//, /\/api\/bans\/[^/]+\/revoke/],
+      [/\/api\/servers\/[^/]+\/players\//, /\/api\/servers\/[^/]+\/evidence\/markers/, /\/api\/bans\/[^/]+\/revoke/],
       rateLimit({
         windowMs: Number(process.env.MODERATION_RATE_LIMIT_WINDOW_MS ?? 60000),
         limit: Number(process.env.MODERATION_RATE_LIMIT_MAX ?? 30),

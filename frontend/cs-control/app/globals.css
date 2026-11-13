@@ -1136,6 +1136,7 @@ button:disabled {
 }
 .form-grid input,
 .form-grid select,
+.form-grid textarea,
 .table-row input,
 .table-row select,
 .audit-filters select {
@@ -1146,6 +1147,11 @@ button:disabled {
   border-radius: 9px;
   background: #06110e;
   color: white;
+}
+.form-grid textarea {
+  min-height: 110px;
+  padding: 12px 13px;
+  resize: vertical;
 }
 .mode-select,
 .map-picker {
@@ -1296,8 +1302,22 @@ button:disabled {
   color: var(--muted);
 }
 
+.evidence-row,
+.evidence-marker-row {
+  display: grid;
+  align-items: center;
+  gap: 16px;
+}
 .evidence-row {
   grid-template-columns: minmax(260px, 2fr) 110px minmax(180px, 1fr) 140px;
+}
+.subsection-header {
+  margin-top: 30px;
+  padding-top: 24px !important;
+  border-top: 1px solid var(--line);
+}
+.evidence-marker-row {
+  grid-template-columns: minmax(190px, 1.2fr) minmax(220px, 1.5fr) minmax(230px, 1.4fr) minmax(180px, 1fr) 42px;
 }
 .switch-label {
   display: flex;

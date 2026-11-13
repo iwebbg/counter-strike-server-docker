@@ -116,7 +116,8 @@ Docker Compose, така и с опционален интерактивен CS 
 - MariaDB dashboard с leaderboard, player profiles, map/session activity,
   achievements, seasonal filters, active bans/revoke и moderation history;
 - fleet-wide admin lists и автоматично inheritance за нови/стартирани servers;
-- HLTV evidence sidecars с persistent demo history, download и audit;
+- HLTV evidence sidecars с persistent demo history, download, suspicious-player
+  markers и automatic retention, която защитава маркираните demos;
 - Discord operational notifications, login/moderation rate limits, IP/VPN
   allowlist и optional trusted forward-auth SSO;
 - backend-managed idempotent Knex migrations и legacy stats import.
@@ -196,17 +197,14 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 - hardcoded default network `cs16_default` трябва да се конфигурира при различно
   Compose project name;
 - HLTV не създава demo frames на празен server без реална gameplay активност;
-- няма автоматична retention policy за evidence demos и няма admin evidence
-  markers за подозрителни играчи.
 
 ## Следващи логични задачи
 
-1. Admin evidence markers и автоматична retention policy за demos/logs.
-2. SafeNameAndChat validation и по-фини custom operator permissions.
-3. Scheduled community events, например Friday Night GunGame.
-4. ReHLDS/ReGameDLL experimental image и compatibility matrix.
-5. FragZone telemetry integration като отделен бъдещ track.
-6. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
+1. SafeNameAndChat validation и по-фини custom operator permissions.
+2. Scheduled community events, например Friday Night GunGame.
+3. ReHLDS/ReGameDLL experimental image и compatibility matrix.
+4. FragZone telemetry integration като отделен бъдещ track.
+5. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
 
 ## Продължаване в следваща сесия
 

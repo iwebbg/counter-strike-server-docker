@@ -75,8 +75,8 @@
 ## Evidence и anti-abuse
 
 - [x] HLTV demo lifecycle с persistent evidence volume, download и audit;
-- [ ] admin evidence markers за подозрителен играч;
-- [ ] автоматична retention политика за demos и logs;
+- [x] admin evidence markers за подозрителен играч;
+- [x] автоматична retention политика за demos и logs;
 - [ ] SafeNameAndChat или еквивалентна validation защита;
 - [x] rate limits за moderation endpoints и login attempts;
 - [x] NGINX reverse proxy с автоматичен self-signed/Let's Encrypt TLS и

@@ -183,6 +183,11 @@ to the persistent logs volume, appears in history, and can be downloaded through
 a permission-checked API. Start/stop actions enter the audit log and optionally
 Discord.
 
+**Add marker** associates a suspicious Steam ID, player name, and reason with
+the active recording or an existing demo. For an active recording, the panel
+also stores the exact offset. A marker includes an operator snapshot, enters the
+audit log, and protects its demo from automatic deletion.
+
 An empty server may produce no `.dem` until real gameplay frames exist. Configure
 the readiness timeout with `EVIDENCE_READY_TIMEOUT_MS` and the maximum download
 size with `EVIDENCE_MAX_BYTES` (512 MiB by default). Evidence survives
@@ -281,6 +286,11 @@ SSO_SHARED_SECRET=
 SSO_EMAIL_HEADER=x-auth-request-email
 EVIDENCE_READY_TIMEOUT_MS=20000
 EVIDENCE_MAX_BYTES=536870912
+EVIDENCE_RETENTION_ENABLED=1
+EVIDENCE_RETENTION_INTERVAL_MS=21600000
+EVIDENCE_RETENTION_DAYS=30
+EVIDENCE_RETENTION_COUNT=50
+SERVER_LOG_RETENTION_DAYS=30
 ```
 
 The setup command generates missing admin and Redis passwords. Login uses
@@ -348,6 +358,8 @@ socket, not a generic Docker proxy. Important routes include:
 - `GET /api/servers/:id/evidence`;
 - `POST /api/servers/:id/evidence/start|stop`;
 - `GET /api/servers/:id/evidence/:filename`;
+- `GET|POST /api/servers/:id/evidence/markers`;
+- `DELETE /api/servers/:id/evidence/markers/:markerId`;
 - `GET /api/database/status`;
 - `GET /api/stats/overview` and `GET /api/stats/players/:steamId`;
 - `GET /api/bans` and `POST /api/bans/:id/revoke`;
