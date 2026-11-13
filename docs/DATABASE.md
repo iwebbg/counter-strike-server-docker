@@ -65,9 +65,18 @@ MariaDB няма публикуван host port. Game containers и панелъ
 | `users.custom_permissions`     | Optional JSON permission override за custom оператори                   |
 | `panel_operator_server_scopes` | Ограничение на оператор до избрани server IDs                           |
 | `panel_community_events`       | Седмичен график, runtime статус и последно изпълнение на събития        |
+| `panel_server_definitions`     | Desired Docker state за възстановяване на panel-managed сървъри         |
 | `cs_schema_migrations`         | Версия на приложената схема                                             |
 
 RCON, panel и database паролите не се записват в статистическите таблици.
+`panel_server_definitions` пази пълния environment на управляваната инстанция,
+включително нужните runtime secrets, защото без тях container-ът не може да бъде
+възстановен. MariaDB volume-ът и backup-ите му трябва да се пазят като secrets.
+
+При създаване, редакция, update, restore, start, stop или pause панелът обновява
+desired state декларацията. При API startup липсващ container се пресъздава със същия
+server ID, име, порт, network, resource limits и named data/log volumes. Сървър,
+който е бил в desired state `running` или `paused`, се връща в същото състояние.
 
 ## Collector поведение
 

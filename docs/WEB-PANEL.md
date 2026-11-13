@@ -77,6 +77,8 @@ static assets.
 - checklist за map rotation при създаване и live map manager за работещ сървър;
 - Live Players с score/ping/time, kick и Steam-ID ban;
 - отделни named volumes за logs и AMXX data;
+- persistent desired-state декларации и автоматично възстановяване на липсващи
+  panel-managed containers след host/stack restart;
 - responsive интерфейс за desktop и телефон.
 - MariaDB analytics dashboard с all-time/season/server filters;
 - leaderboard, player profiles, name history, map activity и achievements;

@@ -84,6 +84,14 @@ available:
 previously selected stack. Named volumes are retained unless `-v` is explicitly
 provided.
 
+Panel-managed game containers are not treated as Compose orphans and a regular
+`down` does not delete them. Their complete desired state is also persisted in
+MariaDB. On the next `up`, the panel recreates missing containers and mounts the
+same AMXX/log volumes. `down -v` is intentionally destructive and removes both
+the MariaDB definitions and game data.
+In the interactive menu these are the safe option 5 and destructive option 6,
+which requires typing `DELETE`.
+
 ## Changing the stack
 
 Run setup again, then reconcile the deployment:

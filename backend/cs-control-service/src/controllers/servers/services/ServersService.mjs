@@ -20,6 +20,7 @@ import {
   validateEditInput,
   validateModerationInput,
 } from "./schemas.mjs";
+import { deleteServerDefinition, saveServerDefinition } from "./ServerDefinitionService.mjs";
 const config = {
   image: process.env.SERVER_IMAGE || "cs16-server:local",
   network: process.env.PANEL_NETWORK || "cs16_default",
@@ -632,6 +633,8 @@ async function createServer(input) {
     NetworkingConfig: { EndpointsConfig: { [config.network]: {} } },
   });
 
+  const createdInspect = await docker.request("GET", `/containers/${container.Id}/json`);
+  await saveServerDefinition(createdInspect, values.startImmediately ? "running" : "stopped", database);
   if (values.startImmediately) await docker.request("POST", `/containers/${container.Id}/start`);
   return { id: container.Id, instanceId, port, rconPassword, started: values.startImmediately };
 }
@@ -760,6 +763,11 @@ export async function updateServer(id, input) {
       await docker.request("POST", `/containers/${replacement.Id}/start`);
       readiness = await waitForGameReady(replacement.Id);
     }
+    await saveServerDefinition(
+      await docker.request("GET", `/containers/${replacement.Id}/json`),
+      wasRunning ? "running" : "stopped",
+      database,
+    );
     return {
       id: replacement.Id,
       serverId: serverKey({
@@ -838,6 +846,11 @@ export async function migrateServerImage(id) {
       await docker.request("POST", `/containers/${replacement.Id}/start`);
       readiness = await waitForGameReady(replacement.Id);
     }
+    await saveServerDefinition(
+      await docker.request("GET", `/containers/${replacement.Id}/json`),
+      wasRunning ? "running" : "stopped",
+      database,
+    );
     return {
       id: replacement.Id,
       status: "updated",
@@ -951,6 +964,11 @@ export async function restoreServerConfiguration(id, storedEnvironment, startAft
     oldRemoved = true;
     await docker.request("POST", `/containers/${replacement.Id}/rename?name=${encodeURIComponent(originalName)}`);
     if (startAfterRestore) await docker.request("POST", `/containers/${replacement.Id}/start`);
+    await saveServerDefinition(
+      await docker.request("GET", `/containers/${replacement.Id}/json`),
+      startAfterRestore ? "running" : "stopped",
+      database,
+    );
     return { id: replacement.Id, name: restoredName, started: startAfterRestore };
   } catch (error) {
     if (replacement?.Id) {
@@ -993,6 +1011,8 @@ export async function serverAction(id, action) {
             : "/start";
   await docker.request("POST", `/containers/${inspect.Id}${suffix}`);
   if (action === "start") await applyInheritedAdmins(inspect.Id);
+  const desiredState = action === "stop" ? "stopped" : action === "pause" ? "paused" : "running";
+  await saveServerDefinition(await docker.request("GET", `/containers/${inspect.Id}/json`), desiredState, database);
   return { status: action };
 }
 
@@ -1064,5 +1084,6 @@ export async function removeServer(id) {
       .delete();
   }
   await docker.request("DELETE", `/containers/${inspect.Id}?v=0`);
+  await deleteServerDefinition(serverKey(inspect), database);
   return { status: "removed", volumesPreserved: true };
 }

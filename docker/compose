@@ -203,8 +203,8 @@ interactive_menu() {
     printf '  2) Show service status\n'
     printf '  3) Follow logs\n'
     printf '  4) Restart services\n'
-    printf '  5) Stop and remove the complete stack\n'
-    printf '  6) Stop and remove the stack plus all data volumes\n'
+    printf '  5) Stop platform services (panel-created game servers are preserved)\n'
+    printf '  6) Delete the complete stack, panel servers and all data volumes\n'
     printf '  7) Change stack configuration\n'
     printf '  8) Run diagnostics\n'
     printf '  9) Exit\n\n'
@@ -217,7 +217,7 @@ interactive_menu() {
       4) "$0" restart ;;
       5) "$0" down ;;
       6)
-        printf 'This permanently removes MariaDB, Redis, AMXX and log volumes.\n'
+        printf 'This permanently removes panel-created servers, MariaDB, Redis, AMXX and log volumes.\n'
         read -r -p 'Type DELETE to continue: ' confirmation
         if [[ "$confirmation" == DELETE ]]; then
           "$0" down -v
@@ -364,12 +364,47 @@ fi
 [[ $# -gt 0 ]] || { show_help; exit 0; }
 
 if [[ "$1" == down ]]; then
+  purge_volumes=0
+  for argument in "${@:2}"; do
+    if [[ "$argument" == -v || "$argument" == --volumes ]]; then
+      purge_volumes=1
+    fi
+  done
   mapfile -t project_containers < <(docker ps -aq --filter 'label=com.docker.compose.project=cs16')
-  if (( ${#project_containers[@]} > 0 )); then
-    printf 'Removing %d container(s) belonging to the cs16 project.\n' "${#project_containers[@]}"
-    docker rm -f "${project_containers[@]}" >/dev/null
+  mapfile -t panel_containers < <(docker ps -aq --filter 'label=com.cs16.managed-by=panel')
+  declare -A seen_containers=()
+  candidate_containers=()
+  for container_id in "${project_containers[@]}" "${panel_containers[@]}"; do
+    if [[ -n "$container_id" && -z "${seen_containers[$container_id]:-}" ]]; then
+      candidate_containers+=("$container_id")
+      seen_containers["$container_id"]=1
+    fi
+  done
+  removable_containers=()
+  panel_volumes=()
+  for container_id in "${candidate_containers[@]}"; do
+    managed_by="$(docker inspect --format '{{index .Config.Labels "com.cs16.managed-by"}}' "$container_id" 2>/dev/null || true)"
+    if [[ "$managed_by" == panel && "$purge_volumes" == 0 ]]; then
+      printf 'Preserving panel-managed server container %s.\n' "$container_id"
+    else
+      removable_containers+=("$container_id")
+      if [[ "$managed_by" == panel && "$purge_volumes" == 1 ]]; then
+        while IFS= read -r volume_name; do
+          [[ -n "$volume_name" ]] && panel_volumes+=("$volume_name")
+        done < <(docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name}}{{end}}{{end}}' "$container_id")
+      fi
+    fi
+  done
+  if (( ${#removable_containers[@]} > 0 )); then
+    printf 'Removing %d Compose container(s) belonging to the cs16 project.\n' "${#removable_containers[@]}"
+    docker rm -f "${removable_containers[@]}" >/dev/null
   fi
-  exec docker compose "${compose_arguments[@]}" down --remove-orphans "${@:2}"
+  docker compose "${compose_arguments[@]}" down "${@:2}"
+  if (( purge_volumes == 1 && ${#panel_volumes[@]} > 0 )); then
+    printf 'Removing %d panel-managed game data volume(s).\n' "${#panel_volumes[@]}"
+    docker volume rm "${panel_volumes[@]}" >/dev/null
+  fi
+  exit 0
 fi
 
 # Local images are part of this repository. Rebuild them on `up` so a stale

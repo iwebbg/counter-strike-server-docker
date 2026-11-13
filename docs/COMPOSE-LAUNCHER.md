@@ -104,6 +104,14 @@ reload; промяна на dependencies или Dockerfile все още изи�
 открива и сваля целия `cs16` project, независимо кой stack е избран в момента.
 Named volumes не се изтриват без изрично `-v`.
 
+Panel-managed game containers не се третират като Compose orphans и не се
+изтриват от обикновен `down`. Освен Docker restart policy, пълната им desired
+state декларация се пази в MariaDB. При следващо `up` панелът автоматично
+пресъздава липсващите containers и монтира същите AMXX/log volumes. `down -v` е
+умишлено destructive и премахва както MariaDB декларациите, така и game data.
+В интерактивното меню това са съответно безопасната опция 5 и destructive
+опция 6, която изисква изписване на `DELETE`.
+
 ## Избор на game engine
 
 Valve HLDS е стабилният engine по подразбиране. Експерименталният

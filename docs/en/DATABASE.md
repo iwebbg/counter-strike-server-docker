@@ -61,8 +61,17 @@ the internal Docker network.
 | `users.custom_permissions`     | Optional JSON permission override for custom operators             |
 | `panel_operator_server_scopes` | Restricts an operator to selected server IDs                       |
 | `panel_community_events`       | Weekly event schedule, runtime status, and last execution          |
+| `panel_server_definitions`     | Desired Docker state used to recover panel-managed servers         |
 
 RCON, panel, and database passwords are not stored in player-statistics tables.
+`panel_server_definitions` stores the full managed-instance environment,
+including required runtime secrets, because a container cannot be reconstructed
+without them. Treat the MariaDB volume and its backups as secrets.
+
+Create, edit, update, restore, start, stop, and pause operations update the desired
+state definition. On API startup a missing container is recreated with the same
+server ID, name, port, network, resource limits, and named data/log volumes. A
+server whose desired state was `running` or `paused` returns to the same state.
 
 ## Collector behavior
 

@@ -5,6 +5,7 @@ import Server from "./utils/Server.mjs";
 import BackupScheduler from "./infrastructure/BackupScheduler.mjs";
 import EvidenceRetentionScheduler from "./infrastructure/EvidenceRetentionScheduler.mjs";
 import CommunityEventScheduler from "./infrastructure/CommunityEventScheduler.mjs";
+import { reconcileServerDefinitions } from "./controllers/servers/services/ServerDefinitionService.mjs";
 
 const lifecycle = [];
 
@@ -14,6 +15,13 @@ async function start() {
   await Redis.init();
   lifecycle.unshift(() => Redis.stop());
   if (globalConfig.processRole === "api") {
+    try {
+      const reconciliation = await reconcileServerDefinitions();
+      if (reconciliation.restored.length || reconciliation.failed.length)
+        console.log("[panel] server definition reconciliation", reconciliation);
+    } catch (error) {
+      console.error("[panel] server definition reconciliation failed; continuing API startup", error);
+    }
     const server = new Server();
     await server.init();
     lifecycle.unshift(() => server.stop());

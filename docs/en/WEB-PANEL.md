@@ -74,6 +74,8 @@ panel starts.
 - managed ZIP map package upload, replacement, and guarded deletion;
 - Live Players with score, ping, connection time, kick, and Steam-ID ban;
 - separate named data and log volumes;
+- persistent desired-state definitions and automatic recovery of missing
+  panel-managed containers after a host or stack restart;
 - MariaDB analytics, leaderboards, profiles, maps, sessions, and achievements;
 - active fleet/server bans, revoke, and moderation history;
 - fleet-wide admin inheritance and season management;
