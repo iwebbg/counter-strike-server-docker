@@ -163,7 +163,7 @@ export async function createServerBackup(id, options = {}) {
   await ensureBackupDirectory();
   const includeLogs = options.includeLogs === true;
   const includeDatabase = options.includeDatabase === true;
-  const kind = options.kind === "safety" ? "safety" : "manual";
+  const kind = options.kind === "safety" || options.kind === "scheduled" ? options.kind : "manual";
   const dataArchive = await archivePath(inspect.Id, dataTarget);
   const logsArchive = includeLogs ? await archivePath(inspect.Id, logsTarget) : null;
   const sql = includeDatabase ? await databaseDump() : null;

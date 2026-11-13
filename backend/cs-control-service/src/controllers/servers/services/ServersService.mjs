@@ -1040,6 +1040,13 @@ export async function removeServer(id) {
   if (inspect.Config?.Labels?.["com.cs16.managed-by"] !== "panel")
     throw new Error("Compose-managed servers cannot be removed from the panel");
   if (inspect.State?.Running) throw new Error("Stop the server before removing it");
+  if (database.enabled) {
+    await (
+      await database.db()
+    )("panel_backup_policies")
+      .where({ server_id: serverKey(inspect) })
+      .delete();
+  }
   await docker.request("DELETE", `/containers/${inspect.Id}?v=0`);
   return { status: "removed", volumesPreserved: true };
 }

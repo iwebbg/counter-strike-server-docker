@@ -184,6 +184,24 @@ try {
   );
   const backups = await byRole.admin.request("GET", `/backups?serverId=${instanceId}`);
   assert.ok(backups.data.backups.length >= 1);
+  const defaultPolicy = await byRole.admin.request("GET", `/servers/${instanceId}/backup-policy`);
+  assert.equal(defaultPolicy.data.enabled, false);
+  assert.equal(defaultPolicy.data.remoteConfigured, false);
+  const savedPolicy = await byRole.admin.request("PUT", `/servers/${instanceId}/backup-policy`, {
+    enabled: true,
+    intervalHours: 24,
+    retentionCount: 2,
+    includeLogs: false,
+    includeDatabase: false,
+    remoteEnabled: false,
+  });
+  assert.equal(savedPolicy.data.enabled, true);
+  await byRole.admin.request("POST", `/servers/${instanceId}/backup-policy/run`, {}, 201);
+  const scheduledBackups = await byRole.admin.request("GET", `/backups?serverId=${instanceId}`);
+  assert.ok(scheduledBackups.data.backups.some((backup) => backup.kind === "scheduled"));
+  const completedPolicy = await byRole.admin.request("GET", `/servers/${instanceId}/backup-policy`);
+  assert.equal(completedPolicy.data.lastStatus, "success");
+  assert.ok(completedPolicy.data.nextRunAt);
   const history = await byRole.admin.request("GET", `/servers/${instanceId}/configuration-history`);
   assert.equal(history.data.revisions.length, 2);
   assert.equal(history.data.revisions[1].reason, "baseline");
