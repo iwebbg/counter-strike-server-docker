@@ -802,7 +802,9 @@ export async function migrateServerImage(id) {
   const env = environmentMap(inspect);
   const labels = { ...(inspect.Config?.Labels || {}) };
   const port = publishedPort(inspect);
-  const originalPayload = containerPayload(inspect, { env, labels, port });
+  // Pin rollback to the immutable image ID. The configured tag may already point
+  // to the broken replacement image when a migration fails.
+  const originalPayload = containerPayload(inspect, { env, labels, port, image: inspect.Image });
   const targetPayload = containerPayload(inspect, { env, labels, port, image: config.image });
   let replacement = null;
   let oldRemoved = false;

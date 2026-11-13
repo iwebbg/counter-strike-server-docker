@@ -1,4 +1,52 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+
+function crc32(buffer) {
+  let crc = 0xffffffff;
+  for (const byte of buffer) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function storedZip(files) {
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+  for (const file of files) {
+    const name = Buffer.from(file.path);
+    const content = Buffer.from(file.content);
+    const crc = crc32(content);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(content.length, 18);
+    local.writeUInt32LE(content.length, 22);
+    local.writeUInt16LE(name.length, 26);
+    localParts.push(local, name, content);
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(content.length, 20);
+    central.writeUInt32LE(content.length, 24);
+    central.writeUInt16LE(name.length, 28);
+    central.writeUInt32LE(offset, 42);
+    centralParts.push(central, name);
+    offset += local.length + name.length + content.length;
+  }
+  const centralDirectory = Buffer.concat(centralParts);
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(files.length, 8);
+  eocd.writeUInt16LE(files.length, 10);
+  eocd.writeUInt32LE(centralDirectory.length, 12);
+  eocd.writeUInt32LE(offset, 16);
+  return Buffer.concat([...localParts, centralDirectory, eocd]);
+}
 
 const origin = process.env.E2E_ORIGIN ?? "http://127.0.0.1:18080";
 const api = `${origin}/api`;
@@ -173,7 +221,7 @@ try {
   instanceIds.delete(clone.data.serverId);
   await byRole.admin.request("DELETE", `/configuration-templates/${template.data.id}`);
 
-  await byRole.admin.request(
+  const manualBackup = await byRole.admin.request(
     "POST",
     `/servers/${instanceId}/backups`,
     {
@@ -184,6 +232,44 @@ try {
   );
   const backups = await byRole.admin.request("GET", `/backups?serverId=${instanceId}`);
   assert.ok(backups.data.backups.length >= 1);
+  await byRole.admin.request("PUT", `/servers/${instanceId}/admins`, {
+    scope: "server",
+    admins: [{ steamId: "STEAM_0:0:654321", flags: "bcdef" }],
+  });
+  await byRole.admin.request(
+    "POST",
+    `/servers/${instanceId}/backups/${encodeURIComponent(manualBackup.data.filename)}/restore`,
+    { restoreLogs: false, restoreDatabase: false },
+  );
+  await waitForServer(owner, instanceId);
+  const restoredAdmins = await byRole.admin.request("GET", `/servers/${instanceId}/admins`);
+  assert.ok(restoredAdmins.data.admins.some((admin) => admin.steamId === "STEAM_0:1:123456"));
+
+  const firstZip = storedZip([{ path: "maps/de_e2e_ci.bsp", content: "e2e-map-version-one" }]);
+  const uploadedPackage = await byRole.admin.request(
+    "POST",
+    `/servers/${instanceId}/map-packages/zip`,
+    { filename: "e2e-map.zip", name: "E2E map", mode: "classic", content: firstZip.toString("base64") },
+    201,
+  );
+  const packageId = uploadedPackage.data.package.id;
+  const secondZip = storedZip([{ path: "maps/de_e2e_ci.bsp", content: "e2e-map-version-two" }]);
+  const replacedPackage = await byRole.admin.request(
+    "POST",
+    `/servers/${instanceId}/map-packages/zip`,
+    {
+      filename: "e2e-map-v2.zip",
+      name: "E2E map v2",
+      mode: "classic",
+      content: secondZip.toString("base64"),
+      replacePackageId: packageId,
+    },
+    201,
+  );
+  assert.equal(replacedPackage.data.status, "replaced");
+  const packages = await byRole.admin.request("GET", `/servers/${instanceId}/map-packages`);
+  assert.ok(packages.data.packages.some((entry) => entry.id === packageId));
+  await byRole.admin.request("DELETE", `/servers/${instanceId}/map-packages/${packageId}`);
   const defaultPolicy = await byRole.admin.request("GET", `/servers/${instanceId}/backup-policy`);
   assert.equal(defaultPolicy.data.enabled, false);
   assert.equal(defaultPolicy.data.remoteConfigured, false);
@@ -202,6 +288,10 @@ try {
   const completedPolicy = await byRole.admin.request("GET", `/servers/${instanceId}/backup-policy`);
   assert.equal(completedPolicy.data.lastStatus, "success");
   assert.ok(completedPolicy.data.nextRunAt);
+  const season = await owner.request("POST", "/seasons", { name: `E2E Season ${suffix}` }, 201);
+  assert.equal(season.data.active, true);
+  await byRole.moderator.request("GET", "/bans");
+  await byRole.moderator.request("GET", "/moderation/history");
   const history = await byRole.admin.request("GET", `/servers/${instanceId}/configuration-history`);
   assert.equal(history.data.revisions.length, 2);
   assert.equal(history.data.revisions[1].reason, "baseline");
@@ -213,6 +303,15 @@ try {
   assert.equal(rotatedRcon.data.shownOnce, true);
   assert.ok(rotatedRcon.data.rconPassword.length >= 32);
   await waitForServer(owner, instanceId);
+
+  execFileSync("docker", ["image", "tag", "cs16-server:e2e-target", "cs16-server:e2e-good"]);
+  execFileSync("docker", ["image", "tag", "redis:8.4-alpine", "cs16-server:e2e-target"]);
+  try {
+    await byRole.admin.request("PUT", `/servers/${instanceId}/image`, {}, 500);
+    await waitForServer(owner, instanceId);
+  } finally {
+    execFileSync("docker", ["image", "tag", "cs16-server:e2e-good", "cs16-server:e2e-target"]);
+  }
   await byRole.admin.request("GET", "/audit-logs?limit=20");
 
   await byRole.admin.request("POST", `/servers/${instanceId}/stop`, {});

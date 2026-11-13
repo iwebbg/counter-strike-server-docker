@@ -28,6 +28,7 @@ cleanup() {
   done < <(docker container ls --all --quiet --filter network=cs16-e2e_default --filter label=com.cs16.managed-by=panel)
 
   "${compose[@]}" down --volumes --remove-orphans || true
+  docker image rm cs16-server:e2e-target cs16-server:e2e-good >/dev/null 2>&1 || true
   return "$exit_code"
 }
 
@@ -35,5 +36,6 @@ trap cleanup EXIT
 
 docker image inspect cs16-server:local >/dev/null
 cleanup
+docker image tag cs16-server:local cs16-server:e2e-target
 "${compose[@]}" up --detach --build --wait --wait-timeout 180 mariadb redis panel
 node "$project_directory/backend/cs-control-service/tests/e2e/control-plane.mjs"

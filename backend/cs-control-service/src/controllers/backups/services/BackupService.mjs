@@ -269,6 +269,7 @@ async function controlledContainers() {
 
 export async function restoreServerBackup(id, filename, options = {}) {
   let inspect = await controlledServerInspect(id);
+  const originalContainerId = inspect.Id;
   if (inspect.Config?.Labels?.["com.cs16.managed-by"] !== "panel") {
     throw new Error("Only panel-managed servers can be restored");
   }
@@ -313,8 +314,8 @@ export async function restoreServerBackup(id, filename, options = {}) {
     if (restoreDb) await restoreDatabase(entries.get("database.sql"));
 
     for (const previousId of running) {
-      const startId = previousId === id ? restored.id : previousId;
-      await docker.request("POST", `/containers/${startId}/start`).catch(() => {});
+      const startId = previousId === originalContainerId ? restored.id : previousId;
+      await docker.request("POST", `/containers/${startId}/start`);
     }
     return {
       status: "restored",
@@ -326,7 +327,7 @@ export async function restoreServerBackup(id, filename, options = {}) {
     };
   } catch (error) {
     for (const containerId of running) {
-      const startId = containerId === id && restoredContainerId ? restoredContainerId : containerId;
+      const startId = containerId === originalContainerId && restoredContainerId ? restoredContainerId : containerId;
       await docker.request("POST", `/containers/${startId}/start`).catch(() => {});
     }
     throw new Error(`${error.message}. Safety backup: ${safety.filename}`);
