@@ -1,0 +1,168 @@
+import assert from "node:assert/strict";
+
+const origin = process.env.E2E_ORIGIN ?? "http://127.0.0.1:18080";
+const api = `${origin}/api`;
+
+class Client {
+  cookie = "";
+
+  async request(method, path, body, expected = 200) {
+    const headers = { Accept: "application/json" };
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (this.cookie) headers.Cookie = this.cookie;
+    if (!["GET", "HEAD"].includes(method)) headers.Origin = origin;
+
+    const response = await fetch(`${api}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const setCookies = response.headers.getSetCookie?.() ?? [];
+    if (setCookies.length) this.cookie = setCookies.map((value) => value.split(";", 1)[0]).join("; ");
+    const payload = await response.json().catch(() => ({}));
+    assert.equal(
+      response.status,
+      expected,
+      `${method} ${path}: expected ${expected}, received ${response.status}: ${JSON.stringify(payload)}`,
+    );
+    return payload;
+  }
+
+  async login(email, password) {
+    const payload = await this.request("POST", "/v1/users/signin", { email, password });
+    assert.equal(payload.data.user.email, email);
+    return this;
+  }
+}
+
+async function waitForServer(client, instanceId) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const payload = await client.request("GET", "/servers");
+    const server = payload.data.servers.find((candidate) => candidate.serverId === instanceId);
+    if (server?.state === "running") return server;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(`Server ${instanceId} did not enter the running state.`);
+}
+
+const owner = await new Client().login("owner@e2e.test", "e2e-owner-password");
+const suffix = Date.now().toString(36);
+const operators = [];
+let instanceId;
+
+try {
+  for (const role of ["admin", "moderator", "viewer"]) {
+    const email = `${role}-${suffix}@e2e.test`;
+    const password = `e2e-${role}-password`;
+    const created = await owner.request(
+      "POST",
+      "/operators",
+      {
+        name: `E2E ${role}`,
+        email,
+        password,
+        role,
+        preferredLocale: "en",
+      },
+      201,
+    );
+    operators.push({ id: created.data.id, role, email, password, client: await new Client().login(email, password) });
+  }
+
+  const byRole = Object.fromEntries(operators.map((operator) => [operator.role, operator.client]));
+  await byRole.viewer.request("GET", "/servers");
+  await byRole.viewer.request("GET", "/stats/overview");
+  await byRole.admin.request("GET", "/operators", undefined, 403);
+
+  const created = await owner.request(
+    "POST",
+    "/servers",
+    {
+      name: `E2E Classic ${suffix}`,
+      mode: "classic",
+      maxPlayers: 8,
+      startMap: "de_dust2",
+      maps: ["de_dust2", "de_inferno"],
+      port: null,
+      rconPassword: "e2e-rcon-password",
+      serverPassword: "",
+      adminSteamIds: "",
+      startImmediately: true,
+    },
+    201,
+  );
+  instanceId = created.data.instanceId;
+  assert.match(instanceId, /^[a-z0-9-]+$/);
+  await waitForServer(owner, instanceId);
+
+  await byRole.viewer.request("GET", `/servers/${instanceId}/players`);
+  await byRole.viewer.request("GET", `/servers/${instanceId}/logs`);
+  await byRole.viewer.request("POST", `/servers/${instanceId}/stop`, {}, 403);
+
+  const maps = await byRole.moderator.request("GET", `/servers/${instanceId}/maps`);
+  assert.deepEqual(maps.data.selected, ["de_dust2", "de_inferno"]);
+  await byRole.moderator.request("PUT", `/servers/${instanceId}/maps`, { maps: ["de_dust2"] });
+  await byRole.moderator.request("GET", `/servers/${instanceId}/admins`, undefined, 403);
+  await byRole.moderator.request("POST", `/servers/${instanceId}/stop`, {}, 403);
+
+  await byRole.admin.request("GET", `/servers/${instanceId}/admins`);
+  await byRole.admin.request("PUT", `/servers/${instanceId}/admins`, {
+    scope: "server",
+    admins: [{ steamId: "STEAM_0:1:123456", flags: "abcdefghijklmnopqrstu" }],
+  });
+
+  const configuration = (await byRole.admin.request("GET", `/servers/${instanceId}/configuration`)).data;
+  const editableConfiguration = {
+    name: configuration.name,
+    mode: configuration.mode,
+    maxPlayers: configuration.maxPlayers,
+    startMap: configuration.startMap,
+    maps: configuration.maps,
+    port: configuration.port,
+    rconPassword: "",
+    serverPassword: "",
+    clearServerPassword: false,
+    welcomeMessage: "E2E control-plane test server",
+    warmupEnabled: configuration.warmupEnabled,
+    warmupSeconds: configuration.warmupSeconds,
+    spawnProtectionEnabled: configuration.spawnProtectionEnabled,
+    spawnProtectionSeconds: configuration.spawnProtectionSeconds,
+    semiclipEnabled: configuration.semiclipEnabled,
+    doubleJumpEnabled: configuration.doubleJumpEnabled,
+    doubleJumpVelocity: configuration.doubleJumpVelocity,
+    afkEnabled: configuration.afkEnabled,
+    rtvEnabled: configuration.rtvEnabled,
+    killstreakEnabled: configuration.killstreakEnabled,
+    killstreakSoundsEnabled: configuration.killstreakSoundsEnabled,
+    killstreakHudEnabled: configuration.killstreakHudEnabled,
+  };
+  await byRole.admin.request("PUT", `/servers/${instanceId}`, editableConfiguration);
+  await waitForServer(owner, instanceId);
+
+  await byRole.admin.request(
+    "POST",
+    `/servers/${instanceId}/backups`,
+    {
+      includeLogs: false,
+      includeDatabase: false,
+    },
+    201,
+  );
+  const backups = await byRole.admin.request("GET", `/backups?serverId=${instanceId}`);
+  assert.ok(backups.data.backups.length >= 1);
+  await byRole.admin.request("GET", "/audit-logs?limit=20");
+
+  await byRole.admin.request("POST", `/servers/${instanceId}/stop`, {});
+  await byRole.admin.request("DELETE", `/servers/${instanceId}`);
+  instanceId = undefined;
+
+  console.log("E2E control-plane checks passed for owner, admin, moderator and viewer.");
+} finally {
+  if (instanceId) {
+    await owner.request("POST", `/servers/${instanceId}/stop`, {}).catch(() => {});
+    await owner.request("DELETE", `/servers/${instanceId}`).catch(() => {});
+  }
+  for (const operator of operators.reverse()) {
+    await owner.request("DELETE", `/operators/${operator.id}`).catch(() => {});
+  }
+}

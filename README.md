@@ -379,6 +379,7 @@ plugin-а в `configs/plugins/classic.ini`, `configs/plugins/gungame.ini` или
 - [`docs/FRAGZONE-INTEGRATION.md`](docs/FRAGZONE-INTEGRATION.md) — бъдеща read-only интеграция с FragZone Web.
 - [`docs/HTTPS-PROXY.md`](docs/HTTPS-PROXY.md) — NGINX, автоматичен TLS и нестандартни HTTPS ports.
 - [`docs/KILLSTREAKS.md`](docs/KILLSTREAKS.md) — multi-kill/streak прагове, настройки и звуков пакет.
+- [`docs/TESTING.md`](docs/TESTING.md) — бързи backend тестове и изолиран Docker E2E stack.
 
 ## Проверка и диагностика
 
@@ -387,6 +388,8 @@ plugin-а в `configs/plugins/classic.ini`, `configs/plugins/gungame.ini` или
 ./docker/compose ps
 ./docker/compose logs --tail=200 server
 ./docker/compose exec server sh -lc 'grep -E "gamedll_linux" cstrike/liblist.gam'
+npm --prefix backend/cs-control-service test
+npm --prefix backend/cs-control-service run test:e2e
 ```
 
 При успешен старт `meta list` трябва да показва AMX Mod X, а `amxx plugins`

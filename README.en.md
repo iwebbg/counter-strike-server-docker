@@ -221,6 +221,7 @@ runtime state under the mounted AMXX data directory.
 - [`docs/en/ARCHITECTURE.md`](docs/en/ARCHITECTURE.md) — component boundaries;
 - [`docs/en/ROADMAP.md`](docs/en/ROADMAP.md) — implemented and planned work;
 - [`docs/en/PROJECT-STATUS.md`](docs/en/PROJECT-STATUS.md) — current handoff.
+- [`docs/en/TESTING.md`](docs/en/TESTING.md) — fast backend tests and the isolated Docker E2E stack.
 
 ## Verification and diagnostics
 
@@ -230,6 +231,7 @@ runtime state under the mounted AMXX data directory.
 ./docker/compose ps
 ./docker/compose logs --tail=200 server panel mariadb redis panel-proxy
 npm --prefix backend/cs-control-service test
+npm --prefix backend/cs-control-service run test:e2e
 npm run format:check
 ```
 

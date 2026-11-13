@@ -1,0 +1,56 @@
+services:
+  server:
+    profiles: ["e2e-primary-disabled"]
+
+  panel:
+    profiles: ["panel"]
+    environment:
+      PANEL_NETWORK: cs16-e2e_default
+      PORT_RANGE_START: 29015
+      PORT_RANGE_END: 29025
+      DB_ENABLED: "1"
+      DB_HOST: mariadb
+      DB_NAME: cs16_e2e
+      DB_USER: cs16_e2e
+      DB_PASSWORD: e2e-database-password
+      BOOTSTRAP_ADMIN_NAME: E2E Owner
+      BOOTSTRAP_ADMIN_EMAIL: owner@e2e.test
+      BOOTSTRAP_ADMIN_PASSWORD: e2e-owner-password
+      REDIS_URL: redis://default:e2e-redis-password@redis:6379
+      AUTH_COOKIE_SECURE: "false"
+      CORS_ORIGIN: http://127.0.0.1:18080
+    ports:
+      - "127.0.0.1:18080:8080"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:11.8
+    environment:
+      MARIADB_DATABASE: cs16_e2e
+      MARIADB_USER: cs16_e2e
+      MARIADB_PASSWORD: e2e-database-password
+      MARIADB_ROOT_PASSWORD: e2e-root-password
+    volumes:
+      - e2e_mariadb_data:/var/lib/mysql
+      - ./backend/cs-control-service/src/database/baseline.sql:/docker-entrypoint-initdb.d/010-cs16-baseline.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:8.4-alpine
+    command: ["redis-server", "--requirepass", "e2e-redis-password"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "e2e-redis-password", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  e2e_mariadb_data:
