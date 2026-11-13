@@ -1,7 +1,18 @@
 services:
   panel:
+    build:
+      context: .
+      dockerfile: backend/cs-control-service/docker/develop/Dockerfile
+    image: cs16-control-panel:develop
     environment:
+      NODE_ENV: development
       AUTH_COOKIE_SECURE: "false"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - panel_backups:/backups
+      - ./backend/cs-control-service/src:/usr/app/src
+      - ./backend/cs-control-service/nodemon.json:/usr/app/nodemon.json:ro
+    read_only: false
 
   panel-web:
     build:

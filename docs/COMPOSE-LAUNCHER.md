@@ -40,6 +40,10 @@ CS16_ENV_FILE=/run/secrets/cs16.env ./docker/compose config
 Локално panel-ът остава на `http://127.0.0.1:8080`. Production публикуването
 под domain се включва отделно, за да не се генерира SSL при local development:
 
+Local overlay-ът стартира Next.js dev server и backend API с nodemon. Промените
+под `frontend/cs-control` и `backend/cs-control-service/src` се отразяват с hot
+reload; промяна на dependencies или Dockerfile все още изисква rebuild.
+
 ```bash
 ./docker/compose publish panel.example.com 8443 admin@example.com
 ./docker/compose up -d --build

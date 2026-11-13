@@ -10,5 +10,6 @@ COPY backend/cs-control-service/package*.json ./
 RUN npm ci
 
 COPY backend/cs-control-service/ ./
+COPY --chmod=755 backend/cs-control-service/docker/develop/entrypoint.sh /usr/local/bin/cs-control-develop-entrypoint
 
-CMD ["npm", "run", "start:dev"]
+ENTRYPOINT ["cs-control-develop-entrypoint"]

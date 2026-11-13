@@ -39,6 +39,10 @@ CS16_ENV_FILE=/run/secrets/cs16.env ./docker/compose config
 The local panel stays on `http://127.0.0.1:8080`. Production publishing is an
 explicit operation, so local development never creates certificates:
 
+The local overlay runs the Next.js development server and the backend API under
+nodemon. Changes in `frontend/cs-control` and `backend/cs-control-service/src`
+hot reload; dependency or Dockerfile changes still require a rebuild.
+
 ```bash
 ./docker/compose publish panel.example.com 8443 admin@example.com
 ./docker/compose up -d --build
