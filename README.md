@@ -108,6 +108,16 @@ SERVER_MODE=gungame
 Проектът сваля официалните Valve HLDS файлове чрез SteamCMD по време на build и
 не разпространява игровото съдържание в repository-то.
 
+## Лиценз и външно съдържание
+
+Авторският код и документацията на проекта са лицензирани под
+[MIT License](LICENSE), copyright © 2026 iwebbg / InterWeb Ltd.
+
+Картите в `classic_maps/` и `gungame_maps/` са свалени от
+[maps.cs-bg.info](https://maps.cs-bg.info/maps/cs/) и не са част от MIT лиценза.
+Правата върху тях и придружаващите ги ресурси остават на съответните автори и
+правоносители. Вижте [Third-party assets](THIRD_PARTY_ASSETS.md).
+
 ## Подкрепете проекта
 
 Ако CS 1.6 Server CP е полезен за вашия сървър или общност, можете да подкрепите
