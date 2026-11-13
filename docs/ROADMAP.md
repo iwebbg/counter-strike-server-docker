@@ -28,9 +28,9 @@
 
 ## Следващ пакет
 
-- [ ] по-интелигентен team balancer по размер и score/K:D;
-- [ ] configurable scramble след поредица едностранни Classic рундове;
-- [ ] gag/mute система за chat, voice и radio spam;
+- [x] по-интелигентен team balancer по размер и score/K:D;
+- [x] configurable scramble след поредица едностранни Classic рундове;
+- [x] gag/mute система за chat, voice и radio spam;
 - [x] ban history/unban UI с причина, срок и администратор;
 - [x] MariaDB-backed moderation history за fleet-wide bans;
 - [x] server edit workflow с controlled recreate и запазване на volumes;
@@ -39,47 +39,49 @@
 - [x] extracted map package uploader с validation и persistent per-server resources;
 - [x] ZIP upload, auto category, persistent manifests, replace и safe package delete;
 - [x] versioned backup/download/restore на AMXX data, logs и MariaDB със safety backup;
-- [ ] scheduled retention и off-host backup destinations;
+- [x] scheduled retention и off-host backup destinations;
 - [x] audit log екран, API permission matrix и Owner/Admin/Moderator/Viewer роли;
-- [ ] optional external identity provider и по-фини custom permissions.
+- [x] optional trusted forward-auth SSO за съществуващи operator акаунти;
+- [ ] по-фини custom permissions извън вградените роли.
 
 ## Server configuration track
 
 - [x] постоянен `SERVER_ID` в panel URL и API с backward compatibility за container ID;
 - [x] allowlisted per-server gameplay настройки за welcome, warmup, spawn
       protection, semiclip, double jump, AFK, RTV и killstreak известия;
-- [ ] reusable configuration templates, безопасен JSON import/export и Clone server;
-- [ ] versioned configuration history, visual diff и operator-attributed rollback;
-- [ ] health-aware recreate progress с player warning и видим rollback result;
-- [ ] RCON rotation с еднократно показване на новата стойност;
-- [ ] read-only Compose configuration assistant и `.env` change preview;
-- [ ] allowlisted network, CPU и memory limits за panel-managed instances;
-- [ ] integration tests за stable ID, recreate, update, restore и volume persistence.
+- [x] reusable configuration templates, безопасен JSON import/export и Clone server;
+- [x] versioned configuration history, visual diff и operator-attributed rollback;
+- [x] health-aware recreate progress с player warning и видим rollback result;
+- [x] RCON rotation с еднократно показване на новата стойност;
+- [x] read-only Compose configuration assistant и `.env` change preview;
+- [x] allowlisted network, CPU и memory limits за panel-managed instances;
+- [x] integration tests за stable ID, recreate, update, restore и volume persistence.
 
 ## Community и progression
 
 - [x] achievements и badges;
-- [ ] daily/weekly missions;
+- [x] daily/weekly missions;
 - [x] seasonal ranking;
-- [ ] MVP на карта;
+- [x] MVP на карта;
 - [x] player profile и name/session history;
-- [ ] revenge/nemesis система;
+- [x] revenge/nemesis система;
 - [x] optional kill-streak announcements с малък оригинален sound pack;
 - [x] web ranking и per-server history;
 - [ ] scheduled events, например Friday Night GunGame;
-- [ ] Discord webhook за server state, bans, crashes и events;
-- [ ] `/rules`, разширено `/help` и community links.
+- [x] non-blocking Discord webhook за важни lifecycle, moderation, backup и
+      evidence събития;
+- [x] `/rules`, разширено `/help` и community links.
 
 ## Evidence и anti-abuse
 
-- [ ] HLTV/server demo lifecycle;
+- [x] HLTV demo lifecycle с persistent evidence volume, download и audit;
 - [ ] admin evidence markers за подозрителен играч;
 - [ ] автоматична retention политика за demos и logs;
 - [ ] SafeNameAndChat или еквивалентна validation защита;
-- [ ] rate limits за moderation endpoints и login attempts;
+- [x] rate limits за moderation endpoints и login attempts;
 - [x] NGINX reverse proxy с автоматичен self-signed/Let's Encrypt TLS и
       конфигурируем външен HTTPS порт;
-- [ ] VPN/SSO, identity provider и trusted proxy hardening за remote администратори.
+- [x] optional IP/VPN allowlist и trusted forward-auth SSO за remote администратори.
 
 ## FragZone Server Link
 

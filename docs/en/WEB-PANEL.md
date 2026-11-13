@@ -139,6 +139,12 @@ docker run --rm -v cs16_panel_backups:/source -v "$PWD":/backup \
   alpine tar -czf /backup/cs16-panel-backups.tar.gz -C /source .
 ```
 
+Each instance can define an automatic policy with an interval, retained local
+scheduled archives, logs, and MariaDB options. Retention affects scheduled
+archives only and never deletes manual or safety backups. The optional off-host
+destination accepts a validated `PUT` upload with an SHA-256 header through
+`BACKUP_REMOTE_URL` and `BACKUP_REMOTE_TOKEN`.
+
 ## Operator roles and permissions
 
 Permissions are enforced by the API; hidden browser buttons are not the
@@ -163,6 +169,24 @@ result, and time filters. MariaDB stores login/logout, permission denial, and
 mutations involving servers, maps, players, AMXX admins, backups, seasons, and
 operators. Entries include actor snapshot, request ID, IP, target, status, and
 timestamp. Deleting an operator does not erase their historical actor snapshot.
+
+When `DISCORD_WEBHOOK_URL` is configured, important lifecycle, moderation,
+backup, and evidence actions send a short non-blocking Discord notification. A
+slow or failed webhook never interrupts the primary operation, and payloads do
+not allow mentions.
+
+## HLTV evidence
+
+The **Evidence** tab lets Moderators, Admins, and Owners start and stop a
+dedicated HLTV sidecar connected to the selected game server. The demo is moved
+to the persistent logs volume, appears in history, and can be downloaded through
+a permission-checked API. Start/stop actions enter the audit log and optionally
+Discord.
+
+An empty server may produce no `.dem` until real gameplay frames exist. Configure
+the readiness timeout with `EVIDENCE_READY_TIMEOUT_MS` and the maximum download
+size with `EVIDENCE_MAX_BYTES` (512 MiB by default). Evidence survives
+recreate/update because it uses the same logs volume.
 
 ## AMXX administrators
 
@@ -241,11 +265,34 @@ PANEL_HTTP_PORT=80
 PANEL_HTTPS_PORT=443
 PANEL_EXTERNAL_NETWORK=server1_net
 PANEL_EXTERNAL_ALIAS=cs16-panel
+BACKUP_SCHEDULER_ENABLED=1
+BACKUP_SCHEDULER_INTERVAL_MS=60000
+BACKUP_REMOTE_URL=
+BACKUP_REMOTE_TOKEN=
+DISCORD_WEBHOOK_URL=
+DISCORD_WEBHOOK_TIMEOUT_MS=3000
+LOGIN_RATE_LIMIT_WINDOW_MS=900000
+LOGIN_RATE_LIMIT_MAX=10
+MODERATION_RATE_LIMIT_WINDOW_MS=60000
+MODERATION_RATE_LIMIT_MAX=30
+PANEL_ALLOWED_IPS=
+SSO_ENABLED=0
+SSO_SHARED_SECRET=
+SSO_EMAIL_HEADER=x-auth-request-email
+EVIDENCE_READY_TIMEOUT_MS=20000
+EVIDENCE_MAX_BYTES=536870912
 ```
 
 The setup command generates missing admin and Redis passwords. Login uses
 MariaDB-backed access/refresh sessions, an HttpOnly SameSite cookie, and Redis
 session cache. Sign out revokes active tokens.
+
+`PANEL_ALLOWED_IPS` is a comma-separated allowlist of exact client IP addresses
+and is suitable for a VPN/reverse-proxy boundary. With `SSO_ENABLED=1`, a trusted
+proxy can call `POST /api/v1/users/sso`, supplying the email in the configured
+header and `X-CS-SSO-Secret`. The backend accepts existing active operators only
+and issues the normal HttpOnly session. The proxy must strip these headers from
+external client requests and inject them itself.
 
 ## Live Players and moderation
 
@@ -278,7 +325,10 @@ root access to the Docker host. Therefore:
 - the Compose primary server cannot be removed from the UI;
 - the UI cannot specify arbitrary images, mounts, or shell commands;
 - prefer SSH/VPN over `PANEL_BIND_IP=0.0.0.0`;
-- public access requires TLS and an additional identity/security layer.
+- public access requires TLS and an additional identity/security layer;
+- login and moderation requests have separate configurable rate limits;
+- remote deployments may additionally require an IP/VPN allowlist or trusted
+  forward-auth SSO.
 
 ## API
 
@@ -295,6 +345,9 @@ socket, not a generic Docker proxy. Important routes include:
 - `POST /api/servers/:id/map-packages/zip`;
 - `DELETE /api/servers/:id/map-packages/:packageId`;
 - `POST /api/servers/:id/players/:userid/kick|ban`;
+- `GET /api/servers/:id/evidence`;
+- `POST /api/servers/:id/evidence/start|stop`;
+- `GET /api/servers/:id/evidence/:filename`;
 - `GET /api/database/status`;
 - `GET /api/stats/overview` and `GET /api/stats/players/:steamId`;
 - `GET /api/bans` and `POST /api/bans/:id/revoke`;

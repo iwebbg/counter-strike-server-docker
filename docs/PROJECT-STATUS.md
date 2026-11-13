@@ -59,6 +59,10 @@ Docker Compose, така и с опционален интерактивен CS 
 - `docker_killstreak.sma` — First Blood, multi-kill и no-death streak HUD/sound
   announcements с отделни runtime switches;
 - `docker_mapvote.sma` — RTV, nominations, map listing и recent-map protection;
+- `docker_community.sma` — K:D-aware team balance, one-sided round scramble,
+  gag/mute, radio flood protection, `/rules` и разширено `/help`;
+- `docker_sql_stats.sma` — допълнително daily/weekly missions, map MVP и
+  revenge/nemesis progression;
 - deterministic StatsX defaults за `/stats`, `/statsme`, `/rankstats`, `/rank`
   и `/top15` в Classic и GunGame;
 
@@ -97,6 +101,10 @@ Docker Compose, така и с опционален интерактивен CS 
 - validated custom map folder upload с persistent resources и mode categories;
 - versioned Backup/Restore center за AMXX data, custom maps, optional logs и
   MariaDB dump, със SHA-256 validation и automatic safety backup;
+- reusable templates, safe JSON import/export, Clone server, configuration
+  history/diff/rollback и health-aware recreate с RCON rotation;
+- allowlisted network, CPU и memory limits и read-only Compose assistant;
+- automatic backup policies с retention и optional off-host `PUT` destination;
 - persistent mapcycle override и проверен `changelevel` чрез RCON;
 - синхронизиран AMXX `maps.ini` и custom `mapsmenu.amxx`, който презарежда
   списъка при всяко отваряне на admin/vote менюто;
@@ -108,7 +116,10 @@ Docker Compose, така и с опционален интерактивен CS 
 - MariaDB dashboard с leaderboard, player profiles, map/session activity,
   achievements, seasonal filters, active bans/revoke и moderation history;
 - fleet-wide admin lists и автоматично inheritance за нови/стартирани servers;
-- backend-managed idempotent Knex migrations, 15-table schema и legacy stats import.
+- HLTV evidence sidecars с persistent demo history, download и audit;
+- Discord operational notifications, login/moderation rate limits, IP/VPN
+  allowlist и optional trusted forward-auth SSO;
+- backend-managed idempotent Knex migrations и legacy stats import.
 
 ## Архитектура накратко
 
@@ -175,24 +186,26 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 ## Важни ограничения
 
 - Docker socket е силно привилегирован; вграденият NGINX добавя TLS, но за
-  публичен remote достъп все още се препоръчват силна администраторска парола,
-  rate limiting и VPN/identity защита;
+  публичен remote достъп все още се препоръчват силна администраторска парола и
+  включване на наличните rate limits, IP/VPN allowlist или trusted SSO;
 - admin editor работи само при стартиран server, защото трябва да изпълни live
   RCON reload;
 - вече съществуващ container трябва еднократно да бъде recreate-нат с новия
   server image, за да използва persistent admin override още от entrypoint;
 - Remove запазва volumes по дизайн; автоматичен lifecycle/cleanup UI още няма;
-- няма scheduled retention или off-host backup destinations;
 - hardcoded default network `cs16_default` трябва да се конфигурира при различно
-  Compose project name.
+  Compose project name;
+- HLTV не създава demo frames на празен server без реална gameplay активност;
+- няма автоматична retention policy за evidence demos и няма admin evidence
+  markers за подозрителни играчи.
 
 ## Следващи логични задачи
 
-1. Configuration templates/clone/import/export и versioned configuration history.
-2. Health-aware recreate progress, RCON rotation и resource/network limits.
-3. Scheduled retention и off-host backup destinations.
-4. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
-5. Integration tests/CI за build, container boot, A2S, RCON, recreate и persistence.
+1. Admin evidence markers и автоматична retention policy за demos/logs.
+2. SafeNameAndChat validation и по-фини custom operator permissions.
+3. Scheduled community events, например Friday Night GunGame.
+4. ReHLDS/ReGameDLL experimental image и compatibility matrix.
+5. FragZone telemetry integration като отделен бъдещ track.
 6. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
 
 ## Продължаване в следваща сесия

@@ -147,6 +147,12 @@ docker run --rm -v cs16_panel_backups:/source -v "$PWD":/backup \
   alpine tar -czf /backup/cs16-panel-backups.tar.gz -C /source .
 ```
 
+За всяка инстанция може да се зададе автоматична policy с интервал, брой
+локални scheduled архиви, logs и MariaDB. Scheduler-ът прилага retention само
+върху scheduled архивите и не изтрива manual/safety backup-и. Опционалният
+off-host destination приема проверен `PUT` upload и SHA-256 header чрез
+`BACKUP_REMOTE_URL` и `BACKUP_REMOTE_TOKEN`.
+
 ## Operator роли и permissions
 
 Панелът прилага permissions на API ниво и адаптира интерфейса към текущата
@@ -174,6 +180,23 @@ mutation действия върху сървъри, карти, играчи, A
 operator акаунти. Всеки запис съдържа actor snapshot, request ID, IP, target,
 status и timestamp. При изтриване на оператор audit историята остава чрез
 snapshot полетата.
+
+При зададен `DISCORD_WEBHOOK_URL` важните lifecycle, moderation, backup и
+evidence действия изпращат кратко non-blocking Discord известие. Неуспешен или
+бавен webhook не прекъсва основната операция и payload-ът не допуска mentions.
+
+## HLTV evidence
+
+Табът **Evidence** позволява на Moderator, Admin и Owner да стартират и спрат
+отделен HLTV sidecar, свързан към избрания game server. Demo файлът се премества
+в persistent logs volume, показва се в history и може да бъде изтеглен през
+permission-checked API. Start/stop действията влизат в audit log и по желание в
+Discord.
+
+Празен сървър може да не произведе `.dem`, докато няма реални gameplay frames.
+Readiness timeout-ът се настройва с `EVIDENCE_READY_TIMEOUT_MS`, а максималният
+размер за download — с `EVIDENCE_MAX_BYTES` (по подразбиране 512 MiB). Evidence
+файловете оцеляват след recreate/update, защото използват същия logs volume.
 
 ## Управление на администратори
 
@@ -251,11 +274,34 @@ PANEL_HTTP_PORT=80
 PANEL_HTTPS_PORT=443
 PANEL_EXTERNAL_NETWORK=server1_net
 PANEL_EXTERNAL_ALIAS=cs16-panel
+BACKUP_SCHEDULER_ENABLED=1
+BACKUP_SCHEDULER_INTERVAL_MS=60000
+BACKUP_REMOTE_URL=
+BACKUP_REMOTE_TOKEN=
+DISCORD_WEBHOOK_URL=
+DISCORD_WEBHOOK_TIMEOUT_MS=3000
+LOGIN_RATE_LIMIT_WINDOW_MS=900000
+LOGIN_RATE_LIMIT_MAX=10
+MODERATION_RATE_LIMIT_WINDOW_MS=60000
+MODERATION_RATE_LIMIT_MAX=30
+PANEL_ALLOWED_IPS=
+SSO_ENABLED=0
+SSO_SHARED_SECRET=
+SSO_EMAIL_HEADER=x-auth-request-email
+EVIDENCE_READY_TIMEOUT_MS=20000
+EVIDENCE_MAX_BYTES=536870912
 ```
 
 Setup командата генерира липсващите admin и Redis пароли. Login системата
 използва MariaDB-backed access/refresh sessions, HttpOnly SameSite cookie и
 Redis session cache; sign out revoke-ва активните token-и.
+
+`PANEL_ALLOWED_IPS` е comma-separated allowlist от точни client IP адреси и е
+подходящ за VPN/reverse-proxy boundary. При `SSO_ENABLED=1` trusted proxy може да
+извика `POST /api/v1/users/sso`, като подаде email в конфигурирания header и
+`X-CS-SSO-Secret`. Backend-ът допуска само вече съществуващ active operator и
+издава стандартната HttpOnly session. Proxy-то задължително трябва да премахва
+същите headers от външните client заявки и да ги добавя самостоятелно.
 
 ## Live Players и moderation
 
@@ -289,7 +335,10 @@ Control panel container-ът има write достъп до Docker socket, ко�
 - UI няма функция за произволни images, mounts или shell commands;
 - препоръчва се SSH/VPN, а не `PANEL_BIND_IP=0.0.0.0`;
 - публично публикуване изисква отделен reverse proxy с TLS и допълнителна identity
-  система.
+  система;
+- login и moderation заявките имат отделни configurable rate limits;
+- remote deployment може допълнително да изисква IP/VPN allowlist или trusted
+  forward-auth SSO.
 
 ## API
 
@@ -305,6 +354,9 @@ Control panel container-ът има write достъп до Docker socket, ко�
 - `POST /api/servers/:id/maps/change`;
 - `GET /api/servers/:id/players`;
 - `POST /api/servers/:id/players/:userid/kick|ban`;
+- `GET /api/servers/:id/evidence`;
+- `POST /api/servers/:id/evidence/start|stop`;
+- `GET /api/servers/:id/evidence/:filename`;
 - `GET /api/database/status`;
 - `GET /api/stats/overview` и `GET /api/stats/players/:steamId`;
 - `GET /api/bans` и `POST /api/bans/:id/revoke`;

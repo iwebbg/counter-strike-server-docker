@@ -57,6 +57,10 @@ and automatic port allocation.
 - `docker_gameplay.sma`: warmup, spawn protection, semiclip, and AFK manager;
 - `docker_killstreak.sma`: First Blood, multi-kill, and streak HUD/sounds;
 - `docker_mapvote.sma`: RTV, nominations, map list, and recent-map protection;
+- `docker_community.sma`: K:D-aware team balance, one-sided round scramble,
+  gag/mute, radio flood protection, `/rules`, and expanded `/help`;
+- `docker_sql_stats.sma`: additionally tracks daily/weekly missions, map MVP,
+  and revenge/nemesis progression;
 - automatic build compilation for `addons/scripting/docker_*.sma`;
 - deterministic `/rank`, `/stats`, `/statsme`, `/rankstats`, `/top15`, and
   `/level` command defaults.
@@ -89,10 +93,18 @@ and automatic port allocation.
 - mode-specific map rotation and live RCON map changes;
 - ZIP map package upload, listing, replacement, and guarded deletion;
 - versioned backup/restore for AMXX data, custom maps, optional logs, and MariaDB;
+- reusable templates, safe JSON import/export, Clone server, configuration
+  history/diff/rollback, and health-aware recreate with RCON rotation;
+- allowlisted network, CPU, and memory limits plus a read-only Compose assistant;
+- automatic backup policies with retention and an optional off-host `PUT`
+  destination;
 - Live Players, validated kick/ban, persistent bans, and moderation audit;
 - MariaDB dashboard with rankings, profiles, activity, achievements, seasons,
   bans, and history;
 - fleet-wide admin inheritance;
+- HLTV evidence sidecars with persistent demo history, download, and audit;
+- Discord operational notifications, login/moderation rate limits, an IP/VPN
+  allowlist, and optional trusted forward-auth SSO;
 - Owner/Admin/Moderator/Viewer roles and operator management;
 - allowlisted Docker Engine API client without arbitrary exec or generic proxy.
 
@@ -147,23 +159,25 @@ not be exposed directly to the Internet.
 
 ## Important limitations
 
-- the Docker socket is highly privileged; use a strong password, TLS, rate
-  limiting, and preferably VPN/identity protection for remote access;
+- the Docker socket is highly privileged; use a strong password and enable the
+  available rate limits, IP/VPN allowlist, or trusted SSO for remote access;
 - the admin editor needs a running server for live RCON reload;
 - an existing container needs one recreate with the current image to adopt
   newer entrypoint behavior;
 - Remove preserves volumes by design; there is no automatic volume cleanup UI;
-- scheduled retention and off-host backup destinations are not implemented;
 - the default `cs16_default` network must be configured for another Compose
-  project name.
+  project name;
+- HLTV cannot create demo frames on an empty server without real gameplay;
+- automatic evidence-demo retention and suspicious-player evidence markers are
+  not implemented yet.
 
 ## Next logical tasks
 
-1. Configuration templates/clone/import/export and versioned configuration history.
-2. Health-aware recreate progress, RCON rotation, and resource/network limits.
-3. Scheduled retention and off-host backup destinations.
-4. Identity provider/VPN hardening in front of the HTTPS reverse proxy.
-5. CI integration tests for build, boot, A2S, RCON, recreate, and persistence.
+1. Admin evidence markers and automatic demo/log retention.
+2. SafeNameAndChat validation and finer custom operator permissions.
+3. Scheduled community events such as Friday Night GunGame.
+4. An experimental ReHLDS/ReGameDLL image and compatibility matrix.
+5. FragZone telemetry integration as a separate future track.
 6. Steam ID discovery help and AMXX flag descriptions in the UI.
 
 ## Continue in another session

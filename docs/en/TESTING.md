@@ -26,7 +26,12 @@ Then run:
 npm --prefix backend/cs-control-service run test:e2e
 ```
 
-The test uses the `cs16-e2e` Compose project, web port `18080`, and game ports `29015–29025`. It verifies login and permissions for the `owner`, `admin`, `moderator`, and `viewer` roles, plus real server, player, log, map, admin, configuration, backup, and audit-log operations.
+The test uses the `cs16-e2e` Compose project, web port `18080`, and game ports
+`29015–29025`. It verifies login and permissions for the `owner`, `admin`,
+`moderator`, and `viewer` roles, plus real server lifecycle, player, log, map,
+admin, template/import/export/clone, configuration history and rollback,
+resource/network limit, image update/rollback, map-package, backup/restore and
+policy, season, moderation, audit-log, and HLTV-evidence operations.
 
 On completion, it automatically removes the temporary containers, network, database/backup volumes, and test CS server volumes. The main `cs16` Compose project and its data remain unchanged.
 
