@@ -1,5 +1,7 @@
 # Kill-streak announcements
 
+[Български](KILLSTREAKS.md) | [English](en/KILLSTREAKS.md)
+
 Classic и GunGame зареждат `docker_killstreak.amxx`. Плъгинът показва кратко
 HUD/chat съобщение и по избор пуска звуково известие. Не отчита самоубийства,
 team kills или убийства по време на warmup.

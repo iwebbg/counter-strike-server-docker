@@ -1,5 +1,7 @@
 # CS Control Panel
 
+[Български](WEB-PANEL.md) | [English](en/WEB-PANEL.md)
+
 CS Control е опционален уеб контролен панел за управление на много Counter-Strike 1.6
 containers. Той е в Compose profile `panel`; без този profile проектът продължава
 да работи като обикновена едносървърна Compose конфигурация.
@@ -190,20 +192,26 @@ persistent AMXX data volume, синхронизира `mapcycle.txt` и AMXX `ma
 официалния и custom Classic rotation от `configs/maps/classic.txt`. Backend-ът
 налага същото правило и не позволява карта от друга категория чрез API.
 
-### Качване на custom map package
+### Управление на custom map packages
 
-Бутонът **Upload map** приема папката на предварително разархивиран map package.
-Поддържат се `maps/*.bsp|res|txt|nav`, `models/*.mdl`, `sound/*.wav|mp3`,
-`sprites/*.spr|txt`, `gfx/*.tga|bmp` и root `.wad` файлове. Пакетът може да има
-външна директория и вложена `cstrike/` структура. Лимитът е 128 файла и 32 MiB
-raw съдържание.
+**Map packages** приема `.zip` архив с `maps/*.bsp|res|txt|nav`,
+`models/*.mdl`, `sound/*.wav|mp3`, `sprites/*.spr|txt`, `gfx/*.tga|bmp` и root
+`.wad` файлове. Поддържат се външна директория и вложена `cstrike/` структура.
+Категорията се разпознава автоматично или се задава ръчно. Лимитът е 128 файла
+и 32 MiB разархивирано съдържание.
 
-Backend-ът отхвърля path traversal, непознати файлове, дублирани built-in карти
-и конфликтни ресурси. Преди запис пакетът се инсталира пробно в чист временен
-container от текущия game image. Успешните ресурси и mode category list се пазят
-в AMXX data volume под `custom_maps/`, затова оцеляват след Edit, Update и
-recreate. При работещ сървър картата става налична веднага; при спрян — при
-следващия старт. Server image трябва първо да е обновен до текущата версия.
+ZIP parser-ът работи в паметта и проверява central directory, CRC, encryption,
+compression method, path traversal, symbolic links, duplicate paths,
+compression ratio и размери. След това пакетът се инсталира пробно в чист
+временен container от текущия game image. Успешните ресурси, category list и
+package manifest се пазят в AMXX data volume под `custom_maps/`, затова оцеляват
+след Edit, Update, Backup/Restore и recreate.
+
+Екранът показва всички управлявани пакети и предлага **Replace** и **Delete**.
+Replace запазва package ID и почиства отпадналите ресурси. Delete е забранен,
+ако карта от пакета е в активната rotation или се играе в момента. Legacy
+ресурси без manifest се показват като unmanaged и не се изтриват автоматично.
+Server image трябва първо да бъде обновен до текущата версия.
 
 ## Настройки
 

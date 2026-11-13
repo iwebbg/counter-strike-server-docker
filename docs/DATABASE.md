@@ -1,5 +1,7 @@
 # MariaDB fleet data
 
+[Български](DATABASE.md) | [English](en/DATABASE.md)
+
 MariaDB е опционалният централен data layer на проекта. Без нея game server-ът,
 локалните AMXX статистики и Control Panel продължават да работят. С нея всички
 инстанции в един Compose project споделят ranking, seasons, achievements,

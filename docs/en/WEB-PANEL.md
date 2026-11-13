@@ -1,0 +1,287 @@
+# CS Control Panel
+
+[Български](../WEB-PANEL.md) | [English](WEB-PANEL.md)
+
+CS Control is an optional web control panel for managing multiple
+Counter-Strike 1.6 containers. It belongs to the `panel` Compose profile. The
+project remains a regular single-server Compose setup when that profile is off.
+
+The interface supports English and Bulgarian from the top navigation dropdown
+and stores the selection in the browser. The analytics dashboard uses a
+responsive layout for desktop and mobile.
+
+## Start and stop
+
+Prepare the panel and start the stack:
+
+```bash
+./docker/compose setup panel
+./docker/compose up -d --build
+```
+
+The default local URL is `http://127.0.0.1:8080` without SSL. Production NGINX
+is enabled explicitly with `./docker/compose publish`; it obtains a Let's
+Encrypt certificate and proxies to internal `panel:8080`. See
+[`HTTPS-PROXY.md`](HTTPS-PROXY.md).
+
+To use an existing reverse proxy without host ports:
+
+```bash
+./docker/compose external server1_net cs16-panel
+./docker/compose up -d --build
+```
+
+Stop only the UI/control plane with:
+
+```bash
+./docker/compose stop panel panel-proxy
+```
+
+Created game containers keep running and become manageable again when the
+panel starts.
+
+## Features
+
+- live fleet overview with running, stopped, and health state;
+- A2S current map, players, and slot count;
+- Classic or GunGame instance creation;
+- 2–32 max players;
+- automatic free-port selection or validated manual port;
+- start, stop, restart, live logs, and safe removal;
+- Edit wizard for name, mode, slots, port, passwords, start map, and rotation;
+- generated RCON password displayed only once after creation;
+- optional full-admin Steam IDs during creation;
+- live AMXX admin editor with roles, custom flags, and no-restart reload;
+- mode-specific rotation checklist and live map manager;
+- managed ZIP map package upload, replacement, and guarded deletion;
+- Live Players with score, ping, connection time, kick, and Steam-ID ban;
+- separate named data and log volumes;
+- MariaDB analytics, leaderboards, profiles, maps, sessions, and achievements;
+- active fleet/server bans, revoke, and moderation history;
+- fleet-wide admin inheritance and season management;
+- operator roles, API permissions, and immutable action audit;
+- EN/BG responsive interface.
+
+The primary Compose server appears in the panel but cannot be deleted there.
+Only panel-created containers can be removed. Remove preserves their named
+volumes so data remains recoverable.
+
+## Edit a server
+
+**Edit** is available only for panel-created instances. The wizard changes the
+name, mode, max players, host port, start map, rotation, and passwords. An empty
+password input preserves the current value; server password removal uses a
+separate checkbox. Existing secrets are never returned to the browser.
+
+**Save & recreate** prepares a validated replacement, stops the running server,
+recreates it, and restores its previous running/stopped state. The same AMXX
+data and log volumes are mounted again, preserving admins, bans, statistics,
+mapcycle, and logs. A mode change writes a rotation containing only maps from
+the new category. Failures before replacement restart the original; failures
+after removal trigger automatic rollback from the saved configuration.
+
+The Compose-managed primary server intentionally has no Edit action. Compose
+and `.env` remain its source of truth.
+
+## Update the server image
+
+The panel compares each managed instance's immutable image ID with the current
+`SERVER_IMAGE` ID. After build/pull, the card shows **Update available** and an
+**Update** button. Update preserves environment, port, network, and named
+volumes and restores the prior state. A failed update rolls back to the old
+image. Cards show short current/target IDs and a permanent **Up to date** or
+**Update available** badge. Confirmation includes the actual connected-player
+count.
+
+When multiple instances are outdated, **Update all** processes them
+sequentially. Each server has an independent rollback and failures do not stop
+the remaining updates. The primary server is updated through Compose instead.
+
+## Backup and Restore
+
+**Backups** is available for managed instances. Each versioned
+`.cs16-backup.tar.gz` contains a manifest, image/configuration, AMXX data, and
+custom map resources. Logs and a full MariaDB dump are optional. Archives use
+mode `0600` in the persistent `panel_backups` volume and can be downloaded or
+deleted from history. They contain server/RCON secrets and must be treated as
+credentials.
+
+Restore accepts a backup for the same `SERVER_ID`, validates the version,
+allowlisted paths, nested Docker TAR paths, and SHA-256 checksums. It creates a
+safety backup first, stops the server, restores selected volumes, applies the
+saved environment to the current game image, and returns the previous state.
+Database restore is separately confirmed, temporarily stops controlled game
+servers, and can restore older operator accounts and passwords. A new login may
+be required afterward.
+
+Host-level backup example:
+
+```bash
+docker run --rm -v cs16_panel_backups:/source -v "$PWD":/backup \
+  alpine tar -czf /backup/cs16-panel-backups.tar.gz -C /source .
+```
+
+## Operator roles and permissions
+
+Permissions are enforced by the API; hidden browser buttons are not the
+security boundary.
+
+| Role        | Access                                                                  |
+| ----------- | ----------------------------------------------------------------------- |
+| `viewer`    | Read-only servers, logs, players, and statistics                        |
+| `moderator` | Viewer plus kick/ban, revoke, and map management/change                 |
+| `admin`     | Moderator plus lifecycle, configuration, AMXX admins, backup, and audit |
+| `owner`     | Admin plus create/edit/reset/delete operators                           |
+
+The first bootstrap account is an Owner. Only Owners see **Operators**. An
+Owner cannot restrict or remove their own account or demote/delete the final
+active Owner. Role, status, and password changes revoke the affected user's
+active sessions.
+
+## Audit log
+
+**Audit log** is available to Admin and Owner, with operator, server, action,
+result, and time filters. MariaDB stores login/logout, permission denial, and
+mutations involving servers, maps, players, AMXX admins, backups, seasons, and
+operators. Entries include actor snapshot, request ID, IP, target, status, and
+timestamp. Deleting an operator does not erase their historical actor snapshot.
+
+## AMXX administrators
+
+On a running server, select **Admins**. Add or remove Steam IDs and choose Full
+admin, Moderator, Maps & votes, or custom AMXX flags. **Save & reload** writes
+to the persistent data volume and invokes `amx_reloadadmins` over RCON, so the
+change is immediate and survives restart/recreate.
+
+**Reset to .env** removes the panel override and restores `AMXX_ADMINS` from
+the container configuration. The server must be running for live reload.
+
+**Use as fleet admin list** saves the list in MariaDB, applies it to all running
+instances, and inherits it when servers are created or started. It requires the
+database overlay.
+
+## Map management
+
+During server creation, **Map rotation** selects maps available to mapcycle and
+map vote. The start map must be among the selected maps.
+
+On a running server, **Maps** shows installed `.bsp` files for its mode.
+Checkboxes define the future rotation. **Save rotation** persists the selection
+and synchronizes `mapcycle.txt` and AMXX `maps.ini`; the custom `mapsmenu.amxx`
+reloads it whenever `amx_mapmenu` or `amx_votemapmenu` opens. `mapchooser.amxx`
+uses it on the next map. **Play now** sends a validated RCON `changelevel` after
+confirmation.
+
+The pool is constrained by `SERVER_MODE`: GunGame uses only
+`configs/maps/gungame.txt`, while Classic uses `configs/maps/classic.txt`.
+Backend validation enforces the same boundary.
+
+### Custom map packages
+
+**Map packages** accepts a `.zip` containing:
+
+- `maps/*.bsp|res|txt|nav`;
+- `models/*.mdl`;
+- `sound/*.wav|mp3`;
+- `sprites/*.spr|txt`;
+- `gfx/*.tga|bmp`;
+- root `.wad` files.
+
+Both an outer folder and nested `cstrike/` layout are supported. Mode is
+detected automatically or selected manually. A package is limited to 128 files
+and 32 MiB of uncompressed data.
+
+The in-memory parser validates the central directory, CRC, encryption,
+compression method, traversal paths, symbolic links, duplicate paths,
+compression ratio, and sizes. It then trial-installs resources in a clean
+temporary container based on the current game image. Successful resources,
+category file, and package manifest are stored under `custom_maps/` in the
+AMXX data volume and therefore survive Edit, Update, Backup/Restore, and
+recreate.
+
+The package list offers **Replace** and **Delete**. Replace keeps the package ID
+and removes stale resources. Delete is blocked when a package map is currently
+playing or belongs to the active rotation. Legacy resources without a manifest
+are listed as unmanaged and are never deleted automatically. Update the server
+to the current game image before using this workflow.
+
+## Settings
+
+```dotenv
+PANEL_ADMIN_NAME=Administrator
+PANEL_ADMIN_EMAIL=admin@example.com
+PANEL_ADMIN_PASSWORD=change-admin-password
+REDIS_PASSWORD=change-redis-password
+PANEL_BIND_IP=127.0.0.1
+PANEL_PORT=8080
+PORT_RANGE_START=27015
+PORT_RANGE_END=27115
+CS16_DEPLOYMENT=local
+PANEL_DOMAIN=panel.example.com
+PANEL_SSL_EMAIL=
+PANEL_HTTP_PORT=80
+PANEL_HTTPS_PORT=443
+PANEL_EXTERNAL_NETWORK=server1_net
+PANEL_EXTERNAL_ALIAS=cs16-panel
+```
+
+The setup command generates missing admin and Redis passwords. Login uses
+MariaDB-backed access/refresh sessions, an HttpOnly SameSite cookie, and Redis
+session cache. Sign out revokes active tokens.
+
+## Live Players and moderation
+
+**Players** obtains nickname, Steam ID, score, ping, and connection time from a
+validated GoldSource RCON `status` call. Kick uses numeric userid. Ban validates
+Steam ID, duration, scope, and a safe reason. With MariaDB, it creates a central
+fleet-wide or server-scoped ban that can be revoked from the dashboard. Without
+MariaDB it falls back to `banned.cfg`. Actions are also appended to
+`panel_moderation.log` as JSON lines.
+
+Duration `0` means permanent. The collector checks active bans during Steam
+authorization and applies expiration/revocation without restart.
+
+## Statistics dashboard
+
+With `docker/compose.database.yaml`, the panel displays database state,
+all-time or seasonal ranking, and a server filter. Views include K/D,
+headshots, playtime, GunGame wins, popular maps, sessions, achievements, and
+moderation audit. Selecting a ranking row opens the player profile. **+ Season**
+closes the current season and starts another without deleting all-time data.
+
+## Security boundary
+
+The panel container has write access to the Docker socket, which is effectively
+root access to the Docker host. Therefore:
+
+- default binding is loopback-only;
+- weak/default credentials are rejected;
+- the API manages only containers labeled `com.cs16.controlled=true`;
+- the Compose primary server cannot be removed from the UI;
+- the UI cannot specify arbitrary images, mounts, or shell commands;
+- prefer SSH/VPN over `PANEL_BIND_IP=0.0.0.0`;
+- public access requires TLS and an additional identity/security layer.
+
+## API
+
+The backend uses a small allowlisted Docker Engine API client over the Unix
+socket, not a generic Docker proxy. Important routes include:
+
+- `GET|POST /api/servers`;
+- `POST /api/servers/:id/start|stop|restart|update`;
+- `GET /api/servers/:id/logs|players`;
+- `GET|PUT|DELETE /api/servers/:id/admins`;
+- `GET|PUT /api/servers/:id/maps`;
+- `POST /api/servers/:id/maps/change`;
+- `GET /api/servers/:id/map-packages`;
+- `POST /api/servers/:id/map-packages/zip`;
+- `DELETE /api/servers/:id/map-packages/:packageId`;
+- `POST /api/servers/:id/players/:userid/kick|ban`;
+- `GET /api/database/status`;
+- `GET /api/stats/overview` and `GET /api/stats/players/:steamId`;
+- `GET /api/bans` and `POST /api/bans/:id/revoke`;
+- `GET /api/moderation/history`;
+- `POST /api/seasons`;
+- `DELETE /api/servers/:id` for stopped panel-managed containers only.
+
+`GET /api/health` is the only route that requires no authenticated session.

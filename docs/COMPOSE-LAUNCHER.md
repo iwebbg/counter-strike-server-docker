@@ -1,5 +1,7 @@
 # Compose selector
 
+[Български](COMPOSE-LAUNCHER.md) | [English](en/COMPOSE-LAUNCHER.md)
+
 [`docker/compose`](../docker/compose) е единната входна точка за deployment-а.
 Подобно на wrapper-а в `counter-strike-web-laravel`, той прочита избора от
 `.env` и сам добавя правилните Compose файлове и profiles.

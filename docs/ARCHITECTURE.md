@@ -1,5 +1,7 @@
 # Архитектура
 
+[Български](ARCHITECTURE.md) | [English](en/ARCHITECTURE.md)
+
 ```text
 Internet -> host UDP/TCP port -> CS 1.6 container (HLDS)
                                   |-- Metamod

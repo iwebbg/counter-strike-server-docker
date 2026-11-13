@@ -1,5 +1,7 @@
 # NGINX: local, external и production
 
+[Български](HTTPS-PROXY.md) | [English](en/HTTPS-PROXY.md)
+
 Control Panel винаги минава през NGINX и винаги използва един backend:
 `panel:8080`. Подобно на `counter-strike-web-laravel`, средата избира отделен
 Compose overlay и отделна NGINX конфигурация, без да променя приложението.

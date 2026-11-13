@@ -1,6 +1,8 @@
 # Project status и handoff
 
-Последна актуализация: 12 ноември 2026 г.
+[Български](PROJECT-STATUS.md) | [English](en/PROJECT-STATUS.md)
+
+Последна актуализация: 13 ноември 2026 г.
 
 Този документ описва реализираното до момента и служи като отправна точка за
 следваща работна сесия. Потребителският quick start остава в
@@ -37,6 +39,8 @@ Docker Compose, така и с опционален интерактивен CS 
 - интегрирани custom пакети от `classic_maps/` и `gungame_maps/`;
 - installer, който нормализира вложени `cstrike/` структури, копира resources и
   пропуска `.ztmp` cache файлове;
+- ZIP package lifecycle с in-memory parser, CRC/path/zip-bomb validation,
+  persistent manifests, replace и safe delete извън active rotation/current map;
 - отделни mapcycle списъци за Classic и GunGame;
 - автоматична build-time проверка, че всяка конфигурирана карта има `.bsp`;
 - активни стандартни AMXX admin/menu/map vote/statistics plugins и в двата режима.
@@ -173,17 +177,16 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 - вече съществуващ container трябва еднократно да бъде recreate-нат с новия
   server image, за да използва persistent admin override още от entrypoint;
 - Remove запазва volumes по дизайн; автоматичен lifecycle/cleanup UI още няма;
-- няма ZIP uploader или scheduled off-host backups;
+- няма scheduled retention или off-host backup destinations;
 - hardcoded default network `cs16_default` трябва да се конфигурира при различно
   Compose project name.
 
 ## Следващи логични задачи
 
-1. ZIP upload и управление/премахване на качени map packages.
-2. Scheduled retention и off-host backup destinations.
-3. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
-4. Integration tests/CI за build, container boot, A2S, RCON и admin persistence.
-5. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
+1. Scheduled retention и off-host backup destinations.
+2. Identity provider/VPN hardening пред вече наличния HTTPS reverse proxy.
+3. Integration tests/CI за build, container boot, A2S, RCON и admin persistence.
+4. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
 
 ## Продължаване в следваща сесия
 

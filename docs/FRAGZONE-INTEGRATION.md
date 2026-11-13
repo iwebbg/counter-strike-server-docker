@@ -1,5 +1,7 @@
 # Концепция: FragZone Server Link
 
+[Български](FRAGZONE-INTEGRATION.md) | [English](en/FRAGZONE-INTEGRATION.md)
+
 > Статус: бъдеща концепция. В текущата версия няма публичен Stats API, webhook
 > integration или runtime зависимост между двата проекта.
 
@@ -84,14 +86,7 @@ Capability discovery пример:
   "provider": "FragZone Docker Servers",
   "api_version": "1.0",
   "instance_id": "community-sofia-1",
-  "capabilities": [
-    "servers",
-    "leaderboard",
-    "player_profiles",
-    "maps",
-    "seasons",
-    "achievements"
-  ]
+  "capabilities": ["servers", "leaderboard", "player_profiles", "maps", "seasons", "achievements"]
 }
 ```
 

@@ -1,5 +1,7 @@
 # CS 1.6 Docker Server
 
+[Български](README.md) | [English](README.en.md)
+
 Готова Docker конфигурация за Counter-Strike 1.6 сървър с HLDS, Metamod,
 AMX Mod X, два режима и опционална MariaDB статистика.
 
@@ -260,6 +262,7 @@ permissions, управление на operator акаунти и MariaDB audit 
 - автоматично генерирана RCON парола;
 - live редактор за AMXX администратори без рестарт;
 - live map manager с rotation и безопасен `Play now` през RCON;
+- ZIP map package manager с validation, auto category detection, replace и safe delete;
 - отделни persistent volumes за всяка динамична инстанция.
 
 Изключване на панела, без спиране на game servers:

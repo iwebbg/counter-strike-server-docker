@@ -1,5 +1,7 @@
 # Product roadmap
 
+[Български](ROADMAP.md) | [English](en/ROADMAP.md)
+
 Този файл събира договорените идеи за развитие на CS 1.6 платформата. Статусите
 са ориентир за следващите сесии, а не обещание за конкретна дата.
 
@@ -35,7 +37,7 @@
 - [x] image update/migrate workflow със version detection, rollback и запазване на volumes;
 - [x] image build IDs, Up to date status, player-aware warning и fleet Update all;
 - [x] extracted map package uploader с validation и persistent per-server resources;
-- [ ] ZIP upload и управление/премахване на качени map packages;
+- [x] ZIP upload, auto category, persistent manifests, replace и safe package delete;
 - [x] versioned backup/download/restore на AMXX data, logs и MariaDB със safety backup;
 - [ ] scheduled retention и off-host backup destinations;
 - [x] audit log екран, API permission matrix и Owner/Admin/Moderator/Viewer роли;
