@@ -73,6 +73,14 @@ export class UserService {
     return { ...session, user: publicUser(user) };
   }
 
+  async signinTrusted(email) {
+    const user = await this.findByEmail(email);
+    if (!user?.active) return null;
+    const session = await this.createSession(user);
+    await this.setUserCache(session.accessToken, publicUser(user));
+    return { ...session, user: publicUser(user) };
+  }
+
   async refreshSession(refreshToken) {
     const db = await this.db.db();
     const result = await db.transaction(async (trx) => {

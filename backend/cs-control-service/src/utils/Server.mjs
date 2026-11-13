@@ -51,6 +51,16 @@ export function csrfRequestAllowed(req) {
   return true;
 }
 
+export function ipAllowed(ip, configured = process.env.PANEL_ALLOWED_IPS || "") {
+  const allowlist = configured
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (!allowlist.length) return true;
+  const normalized = String(ip || "").replace(/^::ffff:/, "");
+  return allowlist.includes(normalized);
+}
+
 class Server {
   app = null;
   server = null;
@@ -96,6 +106,29 @@ class Server {
         },
       }),
     );
+    this.app.use(
+      "/api/v1/users/signin",
+      rateLimit({
+        windowMs: Number(process.env.LOGIN_RATE_LIMIT_WINDOW_MS ?? 900000),
+        limit: Number(process.env.LOGIN_RATE_LIMIT_MAX ?? 10),
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        handler: (req, res) => res.jsonError(429, "LOGIN_RATE_LIMITED"),
+      }),
+    );
+    this.app.use(
+      [/\/api\/servers\/[^/]+\/players\//, /\/api\/bans\/[^/]+\/revoke/],
+      rateLimit({
+        windowMs: Number(process.env.MODERATION_RATE_LIMIT_WINDOW_MS ?? 60000),
+        limit: Number(process.env.MODERATION_RATE_LIMIT_MAX ?? 30),
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        handler: (req, res) => res.jsonError(429, "MODERATION_RATE_LIMITED"),
+      }),
+    );
+    this.app.use("/api", (req, res, next) => {
+      return ipAllowed(req.ip) ? next() : res.jsonError(403, "IP_NOT_ALLOWED");
+    });
     this.app.use(
       "/api",
       rateLimit({

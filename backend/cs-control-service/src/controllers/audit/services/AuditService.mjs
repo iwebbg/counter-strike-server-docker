@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import Db from "../../../utils/Db.mjs";
+import { notifyDiscord } from "../../../infrastructure/DiscordNotifier.mjs";
 
 const text = (value, max = 255) => (value == null || value === "" ? null : String(value).slice(0, max));
 
@@ -8,6 +9,9 @@ function clientIp(req) {
 }
 
 export async function writeAudit(req, event) {
+  void notifyDiscord(event, req.user?.name || req.user?.email).catch((error) =>
+    console.error("Discord audit notification failed", { action: event.action, message: error.message }),
+  );
   if (!Db.enabled) return;
   try {
     const db = await new Db().db();
