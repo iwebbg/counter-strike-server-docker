@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { queryA2S } from "../../../infrastructure/A2S.mjs";
 import { DockerClient, demuxDockerStream } from "../../../infrastructure/Docker.mjs";
+import { controlledServerInspect } from "../../servers/services/ServersService.mjs";
 import { createTar } from "../../../infrastructure/Tar.mjs";
 import { parseZip } from "../../../infrastructure/Zip.mjs";
 import { modeMaps, validateMapFiles, validateMapUpload } from "../../servers/services/schemas.mjs";
@@ -24,10 +25,7 @@ function address(inspect) {
 }
 
 async function inspectServer(id) {
-  if (!/^[a-f0-9]{12,64}$/.test(id)) throw new Error("Invalid server id");
-  const inspect = await docker.request("GET", `/containers/${id}/json`);
-  if (inspect.Config?.Labels?.["com.cs16.controlled"] !== "true")
-    throw new Error("Container is not managed by CS Control");
+  const inspect = await controlledServerInspect(id);
   const mount = (inspect.Mounts || []).find((entry) => entry.Type === "volume" && entry.Destination === dataTarget);
   if (!mount?.Name) throw new Error("The server AMXX data volume could not be found");
   return { inspect, volume: mount.Name };

@@ -29,7 +29,7 @@ export default function ServerManagementPage() {
   const [tab, setTab] = useState<Tab | null>(null);
   const [pending, setPending] = useState(false);
   const [logs, setLogs] = useState<string | null>(null);
-  const server = data?.servers.find((item) => item.id === id);
+  const server = data?.servers.find((item) => item.serverId === id || item.id === id);
   const permissions = user?.permissions || [];
   const availableTabs = tabs
     .filter(
@@ -84,8 +84,8 @@ export default function ServerManagementPage() {
     setTab(next);
     window.history.replaceState(null, "", `${window.location.pathname}?tab=${next}`);
   }
-  async function configurationUpdated(nextServerId: string) {
-    router.replace(`/app/servers/${nextServerId}?tab=configuration`);
+  async function configurationUpdated(nextServerReference: string) {
+    router.replace(`/app/servers/${nextServerReference}?tab=configuration`);
     await reload();
   }
   return (

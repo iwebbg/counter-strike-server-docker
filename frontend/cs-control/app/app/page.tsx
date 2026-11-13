@@ -54,7 +54,7 @@ export default function DashboardPage() {
         <div className="status-list">
           {servers.map((server) => (
             <Link
-              href={`/app/servers/${server.id}?tab=${server.managedBy === "panel" ? "configuration" : "players"}`}
+              href={`/app/servers/${server.serverId || server.id}?tab=${server.managedBy === "panel" ? "configuration" : "players"}`}
               key={server.id}
             >
               <span className={`server-orb ${server.state === "running" ? "live" : ""}`} />

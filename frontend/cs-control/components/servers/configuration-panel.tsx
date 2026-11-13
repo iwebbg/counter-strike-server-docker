@@ -17,7 +17,7 @@ type Configuration = {
   running: boolean;
   volumes: string[];
 };
-type UpdateResult = { id: string };
+type UpdateResult = { id: string; serverId: string };
 const modeMaps = {
   classic: [
     "de_dust2",
@@ -87,7 +87,7 @@ export function ConfigurationPanel({
         }),
       });
       toast.success(t("serverSaved"));
-      await onUpdated(updated.id);
+      await onUpdated(updated.serverId);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "REQUEST_FAILED");
     } finally {

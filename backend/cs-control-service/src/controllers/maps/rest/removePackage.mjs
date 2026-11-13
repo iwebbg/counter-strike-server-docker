@@ -17,7 +17,7 @@ export default {
     path: {
       type: "object",
       properties: {
-        id: { type: "string", pattern: "^[a-f0-9]{12,64}$" },
+        id: { type: "string", pattern: "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$" },
         packageId: { type: "string", format: "uuid" },
       },
       required: ["id", "packageId"],

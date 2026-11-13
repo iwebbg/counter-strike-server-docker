@@ -43,7 +43,7 @@ export function ServerCard({
   const manage = permissions.includes("servers.manage");
   const manageAdmins = permissions.includes("admins.manage");
   const manageBackups = permissions.includes("backups.manage");
-  const detailUrl = (tab: string) => `/app/servers/${server.id}?tab=${tab}`;
+  const detailUrl = (tab: string) => `/app/servers/${server.serverId || server.id}?tab=${tab}`;
   return (
     <article className={`server-card ${running ? "online" : ""}`}>
       <header>

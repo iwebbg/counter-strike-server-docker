@@ -36,6 +36,7 @@ export default function ServersPage() {
     );
   }, [data, filter, query]);
   const pageSize = 6;
+  const serverReference = (server: Server) => server.serverId || server.id;
   const visibleServers = servers.slice((page - 1) * pageSize, page * pageSize);
   const outdated = (data?.servers || []).filter((server) => server.managedBy === "panel" && server.updateAvailable);
   async function mutate(server: Server, task: () => Promise<unknown>, success: string) {
@@ -51,10 +52,14 @@ export default function ServersPage() {
     }
   }
   const action = (server: Server, value: "start" | "stop" | "restart" | "pause" | "unpause") =>
-    mutate(server, () => api(`/servers/${server.id}/${value}`, { method: "POST" }), `${server.name}: ${value}`);
+    mutate(
+      server,
+      () => api(`/servers/${serverReference(server)}/${value}`, { method: "POST" }),
+      `${server.name}: ${value}`,
+    );
   const showLogs = async (server: Server) => {
     try {
-      const result = await api<{ logs: string } | string>(`/servers/${server.id}/logs`);
+      const result = await api<{ logs: string } | string>(`/servers/${serverReference(server)}/logs`);
       setLogs({ name: server.name, value: typeof result === "string" ? result : result.logs });
     } catch (requestError) {
       toast.error(requestError instanceof Error ? requestError.message : t("requestFailed"));
@@ -148,11 +153,19 @@ export default function ServersPage() {
             onAction={(value) => action(server, value)}
             onLogs={() => showLogs(server)}
             onUpdate={() =>
-              mutate(server, () => api(`/servers/${server.id}/image`, { method: "PUT" }), `${server.name}: updated`)
+              mutate(
+                server,
+                () => api(`/servers/${serverReference(server)}/image`, { method: "PUT" }),
+                `${server.name}: updated`,
+              )
             }
             onRemove={() => {
               if (confirm(`Remove ${server.name}? Volumes will be preserved.`))
-                mutate(server, () => api(`/servers/${server.id}`, { method: "DELETE" }), `${server.name}: removed`);
+                mutate(
+                  server,
+                  () => api(`/servers/${serverReference(server)}`, { method: "DELETE" }),
+                  `${server.name}: removed`,
+                );
             }}
           />
         ))}
