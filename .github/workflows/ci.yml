@@ -49,6 +49,13 @@ jobs:
           cache-from: type=gha,scope=cs16-images
           cache-to: type=gha,mode=max,scope=cs16-images
       - run: npm run test:e2e --prefix backend/cs-control-service
+      - name: Upload E2E failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cs16-e2e-diagnostics
+          path: /tmp/cs16-e2e-control-plane.log
+          if-no-files-found: warn
 
   rehlds-image:
     runs-on: ubuntu-latest

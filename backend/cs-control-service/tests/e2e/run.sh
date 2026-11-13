@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 project_directory="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+readonly control_plane_log=${E2E_CONTROL_PLANE_LOG:-/tmp/cs16-e2e-control-plane.log}
 compose=(
   docker compose
   --project-name cs16-e2e
@@ -44,6 +45,12 @@ cleanup() {
 
   "${compose[@]}" down --volumes --remove-orphans || true
   docker image rm cs16-server:e2e-target cs16-server:e2e-good >/dev/null 2>&1 || true
+
+  if ((exit_code != 0)) && [[ -s "$control_plane_log" ]]; then
+    printf '\n===== E2E CONTROL-PLANE FAILURE SUMMARY =====\n' >&2
+    tail -n 160 "$control_plane_log" >&2
+    printf '===== END E2E FAILURE SUMMARY =====\n' >&2
+  fi
   return "$exit_code"
 }
 
@@ -53,4 +60,5 @@ docker image inspect cs16-server:local >/dev/null
 cleanup
 docker image tag cs16-server:local cs16-server:e2e-target
 "${compose[@]}" up --detach --build --wait --wait-timeout 180 mariadb redis panel
-node "$project_directory/backend/cs-control-service/tests/e2e/control-plane.mjs"
+: > "$control_plane_log"
+node "$project_directory/backend/cs-control-service/tests/e2e/control-plane.mjs" 2>&1 | tee "$control_plane_log"
