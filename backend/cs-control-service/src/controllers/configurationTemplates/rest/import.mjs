@@ -29,6 +29,6 @@ export default {
     res.jsonOk(
       201,
       "CONFIGURATION_IMPORTED",
-      await importConfiguration(req.validated.body.document, req.validated.body),
+      await importConfiguration(req.validated.body.document, req.validated.body, req.user),
     ),
 };

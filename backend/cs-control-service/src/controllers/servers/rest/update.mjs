@@ -1,5 +1,5 @@
 import checkAuth from "../../../middlewares/checkAuth.mjs";
-import { updateServer } from "../services/ServersService.mjs";
+import { updateServerWithHistory } from "../../configurationHistory/services/ConfigurationHistoryService.mjs";
 import { editableConfigurationSchema } from "../services/configurationSchema.mjs";
 
 export default {
@@ -24,5 +24,9 @@ export default {
   },
   middlewares: [checkAuth],
   entryPoint: async (req, res) =>
-    res.jsonOk(200, "SERVER_UPDATED", await updateServer(req.validated.path.id, req.validated.body)),
+    res.jsonOk(
+      200,
+      "SERVER_UPDATED",
+      await updateServerWithHistory(req.validated.path.id, req.validated.body, req.user),
+    ),
 };

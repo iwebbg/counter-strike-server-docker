@@ -715,6 +715,52 @@ button:disabled {
   display: flex;
   gap: 7px;
 }
+.configuration-history {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.75fr) minmax(320px, 1.25fr);
+  gap: 18px;
+}
+.configuration-revisions {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+}
+.configuration-revisions > button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #07130f;
+  color: var(--text);
+}
+.configuration-revisions > button.selected {
+  border-color: var(--accent);
+  background: rgba(186, 255, 53, 0.08);
+}
+.configuration-revisions small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+.configuration-diff {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+.configuration-diff article {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #06110e;
+}
+.configuration-diff code {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
 .management-list {
   overflow-x: auto;
 }

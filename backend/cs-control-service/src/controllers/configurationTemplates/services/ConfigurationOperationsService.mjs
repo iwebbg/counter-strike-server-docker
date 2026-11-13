@@ -1,10 +1,6 @@
-import {
-  createServer,
-  getServerConfiguration,
-  serverAction,
-  updateServer,
-} from "../../servers/services/ServersService.mjs";
+import { createServer, getServerConfiguration, serverAction } from "../../servers/services/ServersService.mjs";
 import { createTemplate, getTemplate, normalizeConfiguration } from "./ConfigurationTemplateService.mjs";
+import { updateServerWithHistory } from "../../configurationHistory/services/ConfigurationHistoryService.mjs";
 
 export async function exportConfiguration(id) {
   return {
@@ -19,19 +15,24 @@ export async function createTemplateFromServer(id, input, actor) {
   return createTemplate({ ...input, configuration: document.configuration }, actor);
 }
 
-export async function applyTemplate(id, templateId) {
+export async function applyTemplate(id, templateId, actor) {
   const [current, template] = await Promise.all([getServerConfiguration(id), getTemplate(templateId)]);
-  return updateServer(id, {
-    ...template.configuration,
-    name: current.name,
-    port: current.port,
-    rconPassword: "",
-    serverPassword: "",
-    clearServerPassword: false,
-  });
+  return updateServerWithHistory(
+    id,
+    {
+      ...template.configuration,
+      name: current.name,
+      port: current.port,
+      rconPassword: "",
+      serverPassword: "",
+      clearServerPassword: false,
+    },
+    actor,
+    `template:${templateId}`,
+  );
 }
 
-async function deployConfiguration(configuration, overrides) {
+async function deployConfiguration(configuration, overrides, actor, reason) {
   const normalized = normalizeConfiguration({
     ...configuration,
     name: overrides.name,
@@ -49,13 +50,18 @@ async function deployConfiguration(configuration, overrides) {
     adminSteamIds: "",
     startImmediately: false,
   });
-  const updated = await updateServer(created.instanceId, {
-    ...normalized,
-    port: created.port,
-    rconPassword: "",
-    serverPassword: "",
-    clearServerPassword: false,
-  });
+  const updated = await updateServerWithHistory(
+    created.instanceId,
+    {
+      ...normalized,
+      port: created.port,
+      rconPassword: "",
+      serverPassword: "",
+      clearServerPassword: false,
+    },
+    actor,
+    reason,
+  );
   if (overrides.startImmediately !== false) await serverAction(created.instanceId, "start");
   return {
     ...updated,
@@ -65,11 +71,11 @@ async function deployConfiguration(configuration, overrides) {
   };
 }
 
-export async function cloneServer(id, input) {
+export async function cloneServer(id, input, actor) {
   const configuration = await getServerConfiguration(id);
-  return deployConfiguration(configuration, input);
+  return deployConfiguration(configuration, input, actor, "clone");
 }
 
-export async function importConfiguration(document, input) {
-  return deployConfiguration(document.configuration, input);
+export async function importConfiguration(document, input, actor) {
+  return deployConfiguration(document.configuration, input, actor, "import");
 }

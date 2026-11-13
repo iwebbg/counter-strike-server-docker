@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Copy, Download, FileUp, Layers3, Save, Trash2 } from "lucide-react";
+import { Copy, Download, FileClock, FileUp, Layers3, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
@@ -21,7 +21,15 @@ type Template = {
 };
 
 type DeployResult = { serverId: string; rconPassword: string; started: boolean };
-type View = "templates" | "save" | "clone" | "import" | null;
+type Revision = {
+  id: string;
+  revision: number;
+  reason: string;
+  actorName?: string;
+  createdAt: string;
+  configuration: Record<string, unknown>;
+};
+type View = "templates" | "history" | "save" | "clone" | "import" | null;
 
 export function ConfigurationTools({
   serverId,
@@ -36,6 +44,8 @@ export function ConfigurationTools({
   const toast = useToast();
   const [view, setView] = useState<View>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [revisions, setRevisions] = useState<Revision[]>([]);
+  const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
   const [document, setDocument] = useState<ConfigurationDocument | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -48,6 +58,16 @@ export function ConfigurationTools({
     if (view !== "templates") return;
     loadTemplates().catch((error) => toast.error(error instanceof Error ? error.message : "REQUEST_FAILED"));
   }, [loadTemplates, toast, view]);
+
+  useEffect(() => {
+    if (view !== "history") return;
+    api<{ revisions: Revision[] }>(`/servers/${serverId}/configuration-history`)
+      .then((result) => {
+        setRevisions(result.revisions);
+        setSelectedRevision(result.revisions[0] || null);
+      })
+      .catch((error) => toast.error(error instanceof Error ? error.message : "REQUEST_FAILED"));
+  }, [serverId, toast, view]);
 
   async function exportJson() {
     try {
@@ -136,6 +156,30 @@ export function ConfigurationTools({
     }
   }
 
+  async function rollback(revision: number) {
+    setPending(true);
+    try {
+      const result = await api<{ serverId: string }>(
+        `/servers/${serverId}/configuration-history/${revision}/rollback`,
+        { method: "POST", body: "{}" },
+      );
+      toast.success(t("configurationRolledBack"));
+      setView(null);
+      onChanged(result.serverId);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "REQUEST_FAILED");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const latest = revisions[0]?.configuration;
+  const differences = selectedRevision
+    ? Object.keys({ ...latest, ...selectedRevision.configuration })
+        .filter((key) => JSON.stringify(latest?.[key]) !== JSON.stringify(selectedRevision.configuration[key]))
+        .sort()
+    : [];
+
   return (
     <>
       <div className="configuration-tools">
@@ -144,6 +188,9 @@ export function ConfigurationTools({
         </button>
         <button className="button ghost" type="button" onClick={() => setView("save")}>
           <Save size={15} /> {t("saveTemplate")}
+        </button>
+        <button className="button ghost" type="button" onClick={() => setView("history")}>
+          <FileClock size={15} /> {t("configurationHistory")}
         </button>
         <button className="button ghost" type="button" onClick={exportJson}>
           <Download size={15} /> {t("exportConfiguration")}
@@ -185,6 +232,56 @@ export function ConfigurationTools({
             </article>
           ))}
           {!templates.length && <p className="empty-copy">{t("noTemplates")}</p>}
+        </div>
+      </Modal>
+
+      <Modal
+        open={view === "history"}
+        onOpenChange={(open) => !open && setView(null)}
+        title={t("configurationHistory")}
+        eyebrow="VERSIONED CONFIGURATION"
+        wide
+      >
+        <div className="configuration-history">
+          <div className="configuration-revisions">
+            {revisions.map((revision) => (
+              <button
+                type="button"
+                className={selectedRevision?.id === revision.id ? "selected" : ""}
+                key={revision.id}
+                onClick={() => setSelectedRevision(revision)}
+              >
+                <strong>#{revision.revision}</strong>
+                <span>{revision.reason}</span>
+                <small>
+                  {revision.actorName || t("system")} · {new Date(revision.createdAt).toLocaleString()}
+                </small>
+              </button>
+            ))}
+            {!revisions.length && <p className="empty-copy">{t("noConfigurationHistory")}</p>}
+          </div>
+          {selectedRevision && (
+            <div className="configuration-diff">
+              <h3>{t("changesAgainstLatest")}</h3>
+              {differences.map((key) => (
+                <article key={key}>
+                  <strong>{key}</strong>
+                  <code>- {JSON.stringify(selectedRevision.configuration[key])}</code>
+                  <code>+ {JSON.stringify(latest?.[key])}</code>
+                </article>
+              ))}
+              {!differences.length && <p className="empty-copy">{t("sameAsLatest")}</p>}
+              {selectedRevision !== revisions[0] && (
+                <button
+                  className="button primary"
+                  disabled={pending}
+                  onClick={() => rollback(selectedRevision.revision)}
+                >
+                  <RotateCcw size={15} /> {t("rollbackToRevision", { revision: selectedRevision.revision })}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
 

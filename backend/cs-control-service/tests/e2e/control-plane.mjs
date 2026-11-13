@@ -177,6 +177,13 @@ try {
   );
   const backups = await byRole.admin.request("GET", `/backups?serverId=${instanceId}`);
   assert.ok(backups.data.backups.length >= 1);
+  const history = await byRole.admin.request("GET", `/servers/${instanceId}/configuration-history`);
+  assert.equal(history.data.revisions.length, 2);
+  assert.equal(history.data.revisions[1].reason, "baseline");
+  await byRole.admin.request("POST", `/servers/${instanceId}/configuration-history/1/rollback`, {});
+  await waitForServer(owner, instanceId);
+  const rolledBack = await byRole.admin.request("GET", `/servers/${instanceId}/configuration`);
+  assert.notEqual(rolledBack.data.welcomeMessage, "E2E control-plane test server");
   await byRole.admin.request("GET", "/audit-logs?limit=20");
 
   await byRole.admin.request("POST", `/servers/${instanceId}/stop`, {});

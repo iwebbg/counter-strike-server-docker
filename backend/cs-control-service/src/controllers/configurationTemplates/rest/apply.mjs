@@ -34,6 +34,6 @@ export default {
     res.jsonOk(
       200,
       "CONFIGURATION_TEMPLATE_APPLIED",
-      await applyTemplate(req.validated.path.id, req.validated.path.templateId),
+      await applyTemplate(req.validated.path.id, req.validated.path.templateId, req.user),
     ),
 };

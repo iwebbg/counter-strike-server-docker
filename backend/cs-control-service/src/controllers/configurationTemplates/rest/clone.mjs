@@ -34,5 +34,5 @@ export default {
   docs: { tags: ["Configuration"], description: "Clone a server with a new identity and newly generated secrets." },
   middlewares: [checkAuth],
   entryPoint: async (req, res) =>
-    res.jsonOk(201, "SERVER_CLONED", await cloneServer(req.validated.path.id, req.validated.body)),
+    res.jsonOk(201, "SERVER_CLONED", await cloneServer(req.validated.path.id, req.validated.body, req.user)),
 };
