@@ -159,6 +159,8 @@ Start it with:
 Open `http://127.0.0.1:8080` and sign in with the generated
 `PANEL_ADMIN_EMAIL` and `PANEL_ADMIN_PASSWORD`. The panel provides:
 
+- a Next.js interface with separate Dashboard, Servers, Operators, and Audit log pages;
+- local hot reload and a production standalone build;
 - dynamic Classic/GunGame server creation and automatic ports;
 - start, stop, restart, logs, A2S status, players, and current map;
 - live map rotation and safe `Play now` through RCON;
@@ -176,7 +178,7 @@ See [CS Control Panel](docs/en/WEB-PANEL.md) for the complete guide.
 Stop only the web layer without stopping game servers:
 
 ```bash
-./docker/compose stop panel panel-proxy
+./docker/compose stop panel panel-web panel-proxy
 ```
 
 ## Administrators and RCON

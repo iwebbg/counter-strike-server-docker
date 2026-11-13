@@ -26,6 +26,10 @@ only project-controlled containers, and performs A2S UDP queries for live game
 status. Dynamically created servers join the configured project network and get
 separate log and AMXX data volumes.
 
+NGINX sends `/api/*` to the Express service at `panel:8080` and all other
+routes to Next.js at `panel-web:3000`. The local overlay runs `next dev` with
+hot reload, while the external/production image contains a standalone build.
+
 One game image is shared by every server. Its entrypoint validates environment
 values, generates `server.cfg`, selects the AMXX plugin list, installs persistent
 custom resources, synchronizes the mapcycle, and starts HLDS. Classic and

@@ -2,9 +2,9 @@
 
 [Български](../HTTPS-PROXY.md) | [English](HTTPS-PROXY.md)
 
-The Control Panel always passes through NGINX and always uses the same backend:
-`panel:8080`. Like `counter-strike-web-laravel`, each environment selects a
-separate Compose overlay and NGINX configuration without changing the app.
+The Control Panel always passes through NGINX. `/api/*` is proxied to
+`panel:8080`, while the interface goes to Next.js `panel-web:3000`. Like
+`uptime-app`, each environment selects a Compose overlay without changing the app.
 
 | Environment | Compose overlay                  | NGINX                       | Browser URL                    |
 | ----------- | -------------------------------- | --------------------------- | ------------------------------ |
@@ -13,9 +13,10 @@ separate Compose overlay and NGINX configuration without changing the app.
 | Production  | `docker/compose.production.yaml` | HTTPS + automatic Certbot   | domain on `443` or custom port |
 
 ```text
-Local:      Browser -> 127.0.0.1:PANEL_PORT -> NGINX:80 -> panel:8080
-External:   Upstream proxy -> external network alias:80 -> NGINX -> panel:8080
-Production: Browser -> domain:PANEL_HTTPS_PORT -> NGINX:443 -> panel:8080
+Local:      Browser -> NGINX -> /api -> panel:8080
+                              `---- -> panel-web:3000 (Next.js dev + HMR)
+External:   Upstream proxy -> NGINX -> API + built Next.js frontend
+Production: Browser -> TLS NGINX -> API + standalone Next.js build
 ```
 
 ## Local
@@ -44,8 +45,8 @@ docker network ls
 ```
 
 Configure the upstream target as `http://cs16-panel:80`. The alias is visible
-only to containers in `server1_net`. `panel:8080` remains accessible only in
-the internal Compose network.
+only to containers in `server1_net`. `panel:8080` and `panel-web:3000` remain
+accessible only in the internal Compose network.
 
 The overlay follows the `docker-compose.external.yaml` model from the Laravel
 project: a separate minimal NGINX image, no published ports, and membership in
@@ -88,7 +89,7 @@ The external HTTPS port does not have to be `443`:
 ```
 
 The URL becomes `https://panel.example.com:8443`, the host mapping is
-`8443:443`, and NGINX still proxies to `panel:8080`. ACME HTTP-01 still needs
+`8443:443`, and NGINX still splits API and frontend traffic. ACME HTTP-01 still needs
 public port 80.
 
 ## Settings
@@ -117,7 +118,7 @@ PANEL_EXTERNAL_ALIAS=cs16-panel
 - HTTPS does not replace a strong admin password and login endpoint protection;
 - NGINX has no Docker socket; only the backend panel gets controlled access;
 - in external mode, only trusted upstream proxy containers should join the network;
-- MariaDB and `panel:8080` are not published directly on the production host.
+- MariaDB, `panel:8080`, and `panel-web:3000` are not published directly on the production host.
 
 ## Diagnostics
 

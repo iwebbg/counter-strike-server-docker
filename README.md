@@ -252,6 +252,8 @@ permissions, управление на operator акаунти и MariaDB audit 
 Отворете `http://127.0.0.1:8080` и влезте с `PANEL_ADMIN_EMAIL` и
 `PANEL_ADMIN_PASSWORD`, създадени от setup командата. Панелът предлага:
 
+- Next.js интерфейс с отделни Табло, Сървъри, Оператори и Журнал;
+- local hot reload и production standalone build;
 - Classic/GunGame и начална карта;
 - max players от 2 до 32;
 - автоматичен свободен порт или ръчен порт;
@@ -268,7 +270,7 @@ permissions, управление на operator акаунти и MariaDB audit 
 Изключване на панела, без спиране на game servers:
 
 ```bash
-./docker/compose stop panel panel-proxy
+./docker/compose stop panel panel-web panel-proxy
 ```
 
 Local NGINX слуша само на `127.0.0.1` по подразбиране. За production domain

@@ -2,9 +2,9 @@
 
 [Български](HTTPS-PROXY.md) | [English](en/HTTPS-PROXY.md)
 
-Control Panel винаги минава през NGINX и винаги използва един backend:
-`panel:8080`. Подобно на `counter-strike-web-laravel`, средата избира отделен
-Compose overlay и отделна NGINX конфигурация, без да променя приложението.
+Control Panel винаги минава през NGINX. `/api/*` се proxy-ва към
+`panel:8080`, а интерфейсът — към Next.js `panel-web:3000`. Подобно на
+`uptime-app`, средата избира отделен Compose overlay без да променя приложението.
 
 | Среда      | Compose overlay                  | NGINX                          | Browser URL                     |
 | ---------- | -------------------------------- | ------------------------------ | ------------------------------- |
@@ -13,9 +13,10 @@ Compose overlay и отделна NGINX конфигурация, без да п
 | Production | `docker/compose.production.yaml` | HTTPS + автоматичен Certbot    | domain на `443` или избран port |
 
 ```text
-Local:      Browser -> 127.0.0.1:PANEL_PORT -> NGINX:80 -> panel:8080
-External:   Upstream proxy -> external network alias:80 -> NGINX -> panel:8080
-Production: Browser -> domain:PANEL_HTTPS_PORT -> NGINX:443 -> panel:8080
+Local:      Browser -> NGINX -> /api -> panel:8080
+                              `---- -> panel-web:3000 (Next.js dev + HMR)
+External:   Upstream proxy -> NGINX -> API + built Next.js frontend
+Production: Browser -> TLS NGINX -> API + standalone Next.js build
 ```
 
 ## Local
@@ -46,8 +47,8 @@ docker network ls
 ```
 
 В upstream proxy-то използвайте target `http://cs16-panel:80`. Alias-ът се
-вижда само от containers в `server1_net`. `panel:8080` остава достъпен само във
-вътрешната Compose network.
+вижда само от containers в `server1_net`. `panel:8080` и `panel-web:3000`
+остават достъпни само във вътрешната Compose network.
 
 Overlay-ът следва `docker-compose.external.yaml` модела от Laravel проекта:
 отделен minimal NGINX image, без публикувани ports, с application и external
@@ -90,7 +91,7 @@ Let's Encrypt HTTP-01 challenge:
 ```
 
 Тогава URL-ът е `https://panel.example.com:8443`, host mapping-ът е
-`8443:443`, а NGINX продължава да proxy-ва към `panel:8080`. ACME HTTP-01 все
+`8443:443`, а NGINX продължава да разделя API и frontend traffic. ACME HTTP-01 все
 още изисква публичен port 80.
 
 ## Настройки
@@ -120,7 +121,7 @@ PANEL_EXTERNAL_ALIAS=cs16-panel
 - NGINX няма Docker socket; само backend panel-ът има контролирания достъп;
 - при external mode само trusted upstream proxy containers трябва да участват
   в зададената network;
-- MariaDB и `panel:8080` не се публикуват директно на production host-а.
+- MariaDB, `panel:8080` и `panel-web:3000` не се публикуват директно на production host-а.
 
 ## Диагностика
 

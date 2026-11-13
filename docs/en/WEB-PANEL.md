@@ -6,6 +6,11 @@ CS Control is an optional web control panel for managing multiple
 Counter-Strike 1.6 containers. It belongs to the `panel` Compose profile. The
 project remains a regular single-server Compose setup when that profile is off.
 
+The frontend is a Next.js App Router application with separate **Dashboard**,
+**Servers**, **Operators**, and **Audit log** pages. The local overlay runs
+`next dev` with bind mounts and hot reload. External and production modes use a
+multi-stage standalone build without source mounts.
+
 The interface supports English and Bulgarian from the top navigation dropdown
 and stores the selection in the browser. The analytics dashboard uses a
 responsive layout for desktop and mobile.
@@ -21,8 +26,21 @@ Prepare the panel and start the stack:
 
 The default local URL is `http://127.0.0.1:8080` without SSL. Production NGINX
 is enabled explicitly with `./docker/compose publish`; it obtains a Let's
-Encrypt certificate and proxies to internal `panel:8080`. See
-[`HTTPS-PROXY.md`](HTTPS-PROXY.md).
+Encrypt certificate, proxies the interface to `panel-web:3000`, and sends
+`/api/*` requests to `panel:8080`. See [`HTTPS-PROXY.md`](HTTPS-PROXY.md).
+
+In local deployment, `panel-web` runs `next dev`. The `app/`, `components/`,
+`i18n/`, `lib/`, and `public/` paths are bind-mounted, so frontend edits appear
+in the browser automatically through Fast Refresh:
+
+```bash
+./docker/compose up -d --build
+./docker/compose logs -f panel-web
+```
+
+Rebuild after changing `package.json`, a Dockerfile, or the Next.js
+configuration. Production and external deployments do not mount source code;
+they run the minimal Next.js standalone runtime with prebuilt static assets.
 
 To use an existing reverse proxy without host ports:
 
@@ -34,7 +52,7 @@ To use an existing reverse proxy without host ports:
 Stop only the UI/control plane with:
 
 ```bash
-./docker/compose stop panel panel-proxy
+./docker/compose stop panel panel-web panel-proxy
 ```
 
 Created game containers keep running and become manageable again when the

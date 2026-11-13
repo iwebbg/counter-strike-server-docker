@@ -20,6 +20,10 @@ containers с project label и прави A2S UDP заявки за live game st
 създадените game containers се включват в `cs16_default` network и получават
 отделни volumes за logs и AMXX data.
 
+NGINX изпраща `/api/*` към Express service-а `panel:8080`, а останалите routes
+към Next.js `panel-web:3000`. Local overlay използва `next dev` и hot reload,
+докато external/production image-ът съдържа standalone build.
+
 Game image-ът съдържа еднаква основа за всички сървъри. Entry point-ът валидира
 environment променливите, генерира `server.cfg`, избира plugin list и стартира
 HLDS. Така режимът не изисква различен image.

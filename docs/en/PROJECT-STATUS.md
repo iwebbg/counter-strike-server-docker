@@ -75,7 +75,8 @@ and automatic port allocation.
 
 - opt-in `panel` Compose profile, loopback-bound by default;
 - MariaDB operator login, access/refresh tokens, HttpOnly cookie, Redis cache;
-- responsive bilingual EN/BG fleet dashboard;
+- Next.js 16 App Router frontend with TypeScript, sidebar routes, and a responsive mobile drawer;
+- local development container with hot reload and a production standalone build;
 - A2S map, player, and slot status;
 - create, start, stop, restart, logs, and safe removal;
 - automatic or manual host port and one-time generated RCON password display;
@@ -94,9 +95,9 @@ and automatic port allocation.
 ## Architecture summary
 
 ```text
-Browser -> NGINX -> CS Control :8080 -> Docker Unix socket -> labeled containers
-                         |                                  |
-                         `------ A2S / GoldSource RCON -----'
+Browser -> NGINX -> Next.js panel-web :3000
+              `-> CS API panel :8080 -> Docker socket -> labeled containers
+                                      `-> A2S / GoldSource RCON
 
 Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
                                                        |
@@ -123,14 +124,14 @@ not be exposed directly to the Internet.
 - Express 5 service with route discovery and centralized errors;
 - allowlisted Docker Engine API over Unix socket;
 - GoldSource A2S and challenge-based UDP RCON;
-- responsive vanilla HTML/CSS/JavaScript UI;
+- Next.js App Router, React, strict TypeScript, Tailwind, Radix UI, and Lucide;
 - AJV validation, OAuth-style login, Redis cache, and container hardening;
 - Node test runner, shell syntax checks, and real Docker smoke tests.
 
 ## Verified
 
 - `bash -n docker/entrypoint.sh`;
-- `node --check` for backend framework modules and `panel/public/app.js`;
+- Next.js TypeScript typecheck and production standalone build;
 - backend tests for routes, AJV, i18n, A2S, RCON, Docker streams, and domains;
 - successful `cs16-server:local` and `cs16-control-panel:local` builds;
 - healthy Compose server, panel, MariaDB, Redis, and NGINX;

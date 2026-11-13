@@ -6,6 +6,11 @@ CS Control е опционален уеб контролен панел за у�
 containers. Той е в Compose profile `panel`; без този profile проектът продължава
 да работи като обикновена едносървърна Compose конфигурация.
 
+Frontend-ът е Next.js App Router приложение с отделни страници **Табло**,
+**Сървъри**, **Оператори** и **Журнал**. Local overlay стартира `next dev` с
+bind mounts и hot reload. External и production режимите използват multi-stage
+standalone build без source mounts.
+
 Интерфейсът поддържа English и Български от dropdown-а в горната навигация.
 Изборът се пази локално в browser-а. Stats dashboard-ът използва responsive
 подредба: full-width leaderboard, равен ред за карти/сесии/постижения и общ ред
@@ -23,7 +28,22 @@ containers. Той е в Compose profile `panel`; без този profile про
 Default локалният URL е `http://127.0.0.1:8080` и не използва SSL. При
 production deployment NGINX се активира изрично с `./docker/compose publish`,
 издава Let’s Encrypt сертификат за избрания domain и proxy-ва към вътрешния
-`panel:8080`. Вижте [`HTTPS-PROXY.md`](HTTPS-PROXY.md).
+Next.js service `panel-web:3000`, а `/api/*` заявките — към `panel:8080`. Вижте
+[`HTTPS-PROXY.md`](HTTPS-PROXY.md).
+
+При local deployment `panel-web` използва `next dev`. Директориите `app/`,
+`components/`, `i18n/`, `lib/` и `public/` са bind-mounted, затова промяната на
+frontend файл се появява автоматично в браузъра чрез Fast Refresh:
+
+```bash
+./docker/compose up -d --build
+./docker/compose logs -f panel-web
+```
+
+При промяна на `package.json`, Dockerfile или Next.js конфигурацията направете
+нов build. Production и external deployment не mount-ват source code: те
+използват минималния Next.js standalone runtime и предварително изградените
+static assets.
 
 За existing reverse proxy може да се избере external overlay без host ports:
 
@@ -35,7 +55,7 @@ production deployment NGINX се активира изрично с `./docker/co
 Спиране само на UI/control-plane слоя:
 
 ```bash
-./docker/compose stop panel panel-proxy
+./docker/compose stop panel panel-web panel-proxy
 ```
 
 Вече създадените game containers продължават да работят. Стартирайте панела

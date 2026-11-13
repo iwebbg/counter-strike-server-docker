@@ -78,7 +78,8 @@ Docker Compose, така и с опционален интерактивен CS 
 - opt-in Compose profile `panel`, bind-нат по подразбиране само към `127.0.0.1`;
 - MariaDB-backed администраторски login с access/refresh tokens, HttpOnly cookie и
   Redis session cache;
-- responsive fleet dashboard за desktop и mobile;
+- Next.js 16 App Router frontend с TypeScript, sidebar routes и responsive mobile drawer;
+- local development container с hot reload и production standalone build;
 - A2S UDP status за карта, players и max players;
 - create на Classic/GunGame инстанция, max players, start map и server password;
 - автоматичен свободен host port или ръчно избран порт;
@@ -108,9 +109,9 @@ Docker Compose, така и с опционален интерактивен CS 
 ## Архитектура накратко
 
 ```text
-Browser -> CS Control :8080 -> Docker Unix socket -> labeled CS containers
-                 |                                  |
-                 `------ A2S / GoldSource RCON -----'
+Browser -> NGINX -> Next.js panel-web :3000
+              `-> CS API panel :8080 -> Docker socket -> labeled containers
+                                      `-> A2S / GoldSource RCON
 
 Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
                                                        |
@@ -137,14 +138,14 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 - Express 5 HTTP service с автоматично route discovery и централизирани errors;
 - Docker Engine API през Unix socket с ограничени операции;
 - GoldSource A2S и challenge-based RCON върху UDP;
-- vanilla HTML/CSS/JavaScript responsive UI;
+- Next.js App Router, React, strict TypeScript, Tailwind, Radix UI и Lucide;
 - AJV input validation, OAuth-style login, Redis cache и container hardening;
 - Node test runner, shell syntax checks и реални Docker smoke tests.
 
 ## Проверено до момента
 
 - `bash -n docker/entrypoint.sh`;
-- `node --check` за backend framework модулите и `panel/public/app.js`;
+- Next.js TypeScript typecheck и production standalone build;
 - `npm --prefix backend/cs-control-service test` — route discovery, AJV, i18n,
   A2S, RCON, Docker stream и domain validation tests;
 - успешен build на `cs16-server:local` и `cs16-control-panel:local`;
@@ -153,11 +154,11 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 - реален live admin save/reset връща `[AMXX] Loaded 1 admin from file`;
 - реален map smoke test открива installed maps, запазва rotation и сменя карта
   чрез RCON върху изолирана временна инстанция;
-- изолиран NGINX smoke test потвърждава proxy към `panel:8080`; local и
+- изолиран NGINX smoke test потвърждава разделянето към API и Next.js; local и
   production използват отделни Compose overlays и NGINX конфигурации;
 - external overlay публикува NGINX само чрез alias в existing Docker network,
-  без host port и без директно излагане на `panel:8080`;
-- Control Panel има dependency-free EN/BG i18n dropdown с persistent browser
+  без host port и без директно излагане на вътрешните services;
+- Control Panel има EN/BG i18n provider с persistent browser
   избор и преработена responsive analytics grid подредба;
 - Owner/Admin/Moderator/Viewer permission matrix се прилага на API и UI ниво;
 - operator management и audit log екрани с филтри по actor, server, action,
