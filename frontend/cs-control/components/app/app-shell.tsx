@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { Gauge, Menu, RefreshCw, ScrollText, Server, Users, X, LogOut } from "lucide-react";
+import { CircleHelp, Gauge, Menu, RefreshCw, ScrollText, Server, Users, X, LogOut } from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
 import { SessionProvider, useSession } from "@/components/session-provider";
 import { useToast } from "@/components/ui/toast";
@@ -14,6 +14,7 @@ const items = [
   { href: "/app/servers", key: "servers" as const, icon: Server },
   { href: "/app/operators", key: "operators" as const, icon: Users, permission: "operators.manage" },
   { href: "/app/audit", key: "audit" as const, icon: ScrollText, permission: "audit.read" },
+  { href: "/app/support", key: "helpSupport" as const, icon: CircleHelp },
 ];
 
 function Shell({ children }: { children: ReactNode }) {
@@ -130,10 +131,13 @@ function Shell({ children }: { children: ReactNode }) {
         </header>
         <main className="page-container">{children}</main>
         <footer className="app-footer">
-          CS 1.6 Server CP · {t("poweredBy")}{" "}
-          <a href="https://interweb.bg" target="_blank" rel="noreferrer">
-            InterWeb
-          </a>
+          <span>
+            CS 1.6 Server CP · {t("poweredBy")}{" "}
+            <a href="https://interweb.bg" target="_blank" rel="noreferrer">
+              InterWeb
+            </a>
+          </span>
+          <Link href="/app/support">{t("helpSupport")}</Link>
         </footer>
       </div>
     </div>

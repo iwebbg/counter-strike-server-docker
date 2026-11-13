@@ -1383,10 +1383,118 @@ button:disabled {
   padding: 22px 38px;
   border-top: 1px solid var(--line);
   color: #58756b;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
   text-align: right;
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+}
+.app-footer > a {
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+}
+.support-channel-grid,
+.donation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.support-card,
+.diagnostics-card,
+.donation-section {
+  padding: 26px;
+}
+.support-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.support-card-icon,
+.donation-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(186, 255, 53, 0.24);
+  border-radius: 12px;
+  background: rgba(186, 255, 53, 0.08);
+  color: var(--accent);
+}
+.support-card h2,
+.diagnostics-card h2,
+.donation-section h2 {
+  margin: 0;
+  font-size: 21px;
+}
+.support-card p,
+.diagnostics-card p,
+.donation-section > p,
+.donation-note {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.support-card .heading-actions {
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+.diagnostics-card header,
+.donation-section header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.diagnostics-command {
+  margin: 20px 0 0;
+  padding: 16px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #030a08;
+  color: var(--cyan);
+  font: 12px/1.6 monospace;
+  white-space: pre-wrap;
+}
+.donation-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 22px;
+}
+.donation-option {
+  min-height: 88px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #081511;
+  transition: 0.18s ease;
+}
+.donation-option:hover {
+  transform: translateY(-2px);
+  border-color: #527522;
+  background: #0d211b;
+}
+.donation-option span:nth-child(2) {
+  display: grid;
+  gap: 5px;
+}
+.donation-option small {
+  color: var(--muted);
+}
+.donation-option > svg {
+  color: var(--muted);
+}
+.donation-note {
+  padding-top: 18px;
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
 }
 .toast-stack {
   position: fixed;
@@ -1547,7 +1655,21 @@ button:disabled {
     grid-column: 2;
   }
   .app-footer {
+    flex-direction: column;
+    gap: 10px;
     text-align: center;
+  }
+  .app-footer > a {
+    padding: 0;
+    border: 0;
+  }
+  .support-channel-grid,
+  .donation-grid {
+    grid-template-columns: 1fr;
+  }
+  .diagnostics-card header,
+  .donation-section header {
+    flex-direction: column;
   }
   .list-controls,
   .table-toolbar,

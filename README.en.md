@@ -251,3 +251,15 @@ the configured HTTPS port.
 The panel controls Docker through `/var/run/docker.sock`; access to the panel is
 therefore equivalent to privileged host administration. Do not expose it
 without authentication and transport security.
+
+## Help and support
+
+If you encounter a problem, open a [GitHub Issue](https://github.com/iwebbg/counter-strike-server-docker/issues/new)
+or email [office@interweb.bg](mailto:office@interweb.bg). Remove passwords,
+tokens, RCON, and personal data before publishing logs.
+
+If this project is useful to you, you can voluntarily support its maintenance and development:
+
+- [Buy Me a Coffee](https://buymeacoffee.com/interweb.bg)
+- [Ko-fi](https://ko-fi.com/interwebltd)
+- [PayPal](https://paypal.me/interwebltd)

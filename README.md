@@ -402,3 +402,15 @@ plugin-а в `configs/plugins/classic.ini`, `configs/plugins/gungame.ini` или
 
 Проектът използва Valve SteamCMD/HLDS съдържание, което се сваля при build;
 това хранилище не разпространява игровите файлове.
+
+## Помощ и подкрепа
+
+При проблем отворете [GitHub Issue](https://github.com/iwebbg/counter-strike-server-docker/issues/new)
+или пишете на [office@interweb.bg](mailto:office@interweb.bg). Преди да
+публикувате логове, премахнете пароли, tokens, RCON и лични данни.
+
+Ако проектът ви е полезен, можете доброволно да подкрепите неговата поддръжка и развитие:
+
+- [Buy Me a Coffee](https://buymeacoffee.com/interweb.bg)
+- [Ko-fi](https://ko-fi.com/interwebltd)
+- [PayPal](https://paypal.me/interwebltd)
