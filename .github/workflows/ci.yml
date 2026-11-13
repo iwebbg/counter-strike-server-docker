@@ -31,7 +31,7 @@ jobs:
 
   docker-e2e:
     runs-on: ubuntu-latest
-    needs: validate
+    needs: rehlds-image
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          target: stable
+          target: rehlds
           load: true
           tags: cs16-server:local
           cache-from: type=gha,scope=cs16-images
@@ -52,7 +52,7 @@ jobs:
 
   rehlds-image:
     runs-on: ubuntu-latest
-    needs: docker-e2e
+    needs: validate
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4

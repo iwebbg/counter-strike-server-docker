@@ -16,6 +16,16 @@ cleanup() {
   if ((exit_code != 0)); then
     "${compose[@]}" ps --all || true
     "${compose[@]}" logs --no-color --tail 200 mariadb redis panel || true
+
+    while IFS= read -r container_id; do
+      [[ -z "$container_id" ]] && continue
+      docker container inspect --format \
+        'managed={{.Name}} status={{.State.Status}} running={{.State.Running}} oom={{.State.OOMKilled}} exit={{.State.ExitCode}} restarts={{.RestartCount}} error={{json .State.Error}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} image={{.Config.Image}}' \
+        "$container_id" || true
+      docker container logs --tail 200 "$container_id" || true
+    done < <(docker container ls --all --quiet --filter network=cs16-e2e_default --filter label=com.cs16.managed-by=panel)
+
+    docker system df || true
   fi
 
   while IFS= read -r evidence_id; do
