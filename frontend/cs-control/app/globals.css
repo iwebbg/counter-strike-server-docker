@@ -512,6 +512,25 @@ button:disabled {
   color: var(--accent);
   border-color: #527522;
 }
+.inline-help-button {
+  min-height: 27px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: 700 9px monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.inline-help-button:hover {
+  border-color: #527522;
+  color: var(--accent);
+}
 .server-metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1412,6 +1431,51 @@ button:disabled {
   color: var(--muted);
   line-height: 1.6;
 }
+.field-hint {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.field-hint a {
+  color: var(--cyan);
+  font-weight: 700;
+}
+.flag-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+.flag-reference-grid article {
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #07130f;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.flag-reference-grid code {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: rgba(186, 255, 53, 0.1);
+  color: var(--accent);
+  font-weight: 800;
+}
+.modal-body > .warning-copy {
+  margin-right: 0;
+  margin-left: 0;
+}
 .audit-filters {
   display: grid;
   grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
@@ -1607,6 +1671,26 @@ button:disabled {
   color: var(--cyan);
   font: 12px/1.6 monospace;
   white-space: pre-wrap;
+}
+.support-steps {
+  margin: 18px 0 0;
+  padding-left: 22px;
+  color: var(--text);
+  line-height: 1.8;
+}
+.support-steps li::marker {
+  color: var(--accent);
+  font-weight: 800;
+}
+.command-copy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+.command-copy-row .diagnostics-command {
+  flex: 1;
+  margin: 0;
 }
 .donation-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1995,8 +2079,13 @@ button:disabled {
     border: 0;
   }
   .support-channel-grid,
-  .donation-grid {
+  .donation-grid,
+  .flag-reference-grid {
     grid-template-columns: 1fr;
+  }
+  .command-copy-row {
+    align-items: stretch;
+    flex-direction: column;
   }
   .diagnostics-card header,
   .donation-section header {

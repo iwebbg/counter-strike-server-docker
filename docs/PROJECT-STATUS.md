@@ -202,8 +202,8 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 ## Следващи логични задачи
 
 1. FragZone telemetry integration като отделен бъдещ track.
-2. UX помощ за откриване на Steam ID и показване на AMXX flag descriptions.
-3. ReHLDS performance benchmark и външна plugin compatibility лаборатория.
+2. ReHLDS performance benchmark и външна plugin compatibility лаборатория.
+3. ReSemiclip evaluation за experimental ReHLDS профила.
 
 ## Продължаване в следваща сесия
 

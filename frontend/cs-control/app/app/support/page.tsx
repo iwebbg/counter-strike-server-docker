@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { CircleHelp, Clipboard, ExternalLink, FileCog, Github, HeartHandshake, Mail } from "lucide-react";
+import {
+  CircleHelp,
+  Clipboard,
+  ExternalLink,
+  FileCog,
+  Github,
+  HeartHandshake,
+  Mail,
+  TerminalSquare,
+} from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
 import { useSession } from "@/components/session-provider";
 import { useToast } from "@/components/ui/toast";
@@ -12,6 +21,7 @@ const issueUrl = `${repositoryUrl}/issues/new`;
 const supportEmail = "office@interweb.bg";
 const diagnosticsCommand =
   "./docker/compose doctor && ./docker/compose ps && ./docker/compose logs --tail=200 panel panel-web panel-proxy server mariadb redis";
+const steamIdCommand = "status";
 
 const donationOptions = [
   {
@@ -82,6 +92,15 @@ export default function SupportPage() {
     try {
       await navigator.clipboard.writeText(diagnosticsCommand);
       toast.success(t("diagnosticsCopied"));
+    } catch {
+      toast.error(t("copyFailed"));
+    }
+  }
+
+  async function copySteamIdCommand() {
+    try {
+      await navigator.clipboard.writeText(steamIdCommand);
+      toast.success(t("steamIdCommandCopied"));
     } catch {
       toast.error(t("copyFailed"));
     }
@@ -163,6 +182,35 @@ export default function SupportPage() {
             </a>
           </div>
         </article>
+      </section>
+
+      <section className="panel diagnostics-card" id="steam-id">
+        <header>
+          <div>
+            <p className="eyebrow">{t("steamIdHelpEyebrow")}</p>
+            <h2>{t("findSteamId")}</h2>
+          </div>
+          <span className="support-card-icon">
+            <TerminalSquare size={23} />
+          </span>
+        </header>
+        <p>{t("steamIdHelpDescription")}</p>
+        <ol className="support-steps">
+          <li>{t("steamIdStepJoin")}</li>
+          <li>{t("steamIdStepConsole")}</li>
+          <li>{t("steamIdStepStatus")}</li>
+          <li>{t("steamIdStepCopy")}</li>
+        </ol>
+        <div className="command-copy-row">
+          <pre className="diagnostics-command">{steamIdCommand}</pre>
+          <button className="button ghost" type="button" onClick={copySteamIdCommand}>
+            <Clipboard size={16} />
+            {t("copyCommand")}
+          </button>
+        </div>
+        <p className="donation-note">
+          {t("steamIdFormatHint")} <code>STEAM_0:1:123456</code>. {t("steamIdLanWarning")}
+        </p>
       </section>
 
       <section className="panel diagnostics-card">

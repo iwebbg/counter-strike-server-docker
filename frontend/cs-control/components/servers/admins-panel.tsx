@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { CircleHelp, Pencil, Plus, Search, ShieldQuestion, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/components/i18n-provider";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -12,6 +13,29 @@ import { api } from "@/lib/api";
 type Admin = { steamId: string; flags: string };
 const roles = { full: "abcdefghijklmnopqrstu", moderator: "bcdefijm", maps: "fj" };
 const pageSize = 10;
+const flagDefinitions = [
+  ["a", "amxxFlagA"],
+  ["b", "amxxFlagB"],
+  ["c", "amxxFlagC"],
+  ["d", "amxxFlagD"],
+  ["e", "amxxFlagE"],
+  ["f", "amxxFlagF"],
+  ["g", "amxxFlagG"],
+  ["h", "amxxFlagH"],
+  ["i", "amxxFlagI"],
+  ["j", "amxxFlagJ"],
+  ["k", "amxxFlagK"],
+  ["l", "amxxFlagL"],
+  ["m", "amxxFlagM"],
+  ["n", "amxxFlagN"],
+  ["o", "amxxFlagO"],
+  ["p", "amxxFlagP"],
+  ["q", "amxxFlagQ"],
+  ["r", "amxxFlagR"],
+  ["s", "amxxFlagS"],
+  ["t", "amxxFlagT"],
+  ["u", "amxxFlagU"],
+] as const;
 
 export function AdminsPanel({ serverId }: { serverId: string }) {
   const toast = useToast();
@@ -25,6 +49,7 @@ export function AdminsPanel({ serverId }: { serverId: string }) {
   const [editing, setEditing] = useState<Admin | null>(null);
   const [deleting, setDeleting] = useState<Admin | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
+  const [flagsHelpOpen, setFlagsHelpOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const load = useCallback(async () => {
     try {
@@ -105,6 +130,10 @@ export function AdminsPanel({ serverId }: { serverId: string }) {
         </div>
         <div className="badges">
           <span>{source || "—"}</span>
+          <button className="inline-help-button" type="button" onClick={() => setFlagsHelpOpen(true)}>
+            <ShieldQuestion size={15} />
+            {t("amxxFlagReference")}
+          </button>
         </div>
       </header>
       <div className="table-toolbar">
@@ -182,6 +211,9 @@ export function AdminsPanel({ serverId }: { serverId: string }) {
               placeholder="STEAM_0:1:123456"
               required
             />
+            <small className="field-hint">
+              {t("steamIdAdminHint")} <Link href="/app/support#steam-id">{t("howToFindSteamId")}</Link>
+            </small>
           </label>
           <label>
             <span>{t("role")}</span>
@@ -212,6 +244,24 @@ export function AdminsPanel({ serverId }: { serverId: string }) {
             </button>
           </footer>
         </form>
+      </Modal>
+      <Modal
+        open={flagsHelpOpen}
+        onOpenChange={setFlagsHelpOpen}
+        title={t("amxxFlagReference")}
+        eyebrow={t("liveAmxxAccess")}
+        wide
+      >
+        <p className="modal-copy">{t("amxxFlagReferenceDescription")}</p>
+        <div className="flag-reference-grid">
+          {flagDefinitions.map(([flag, descriptionKey]) => (
+            <article key={flag}>
+              <code>{flag}</code>
+              <span>{t(descriptionKey)}</span>
+            </article>
+          ))}
+        </div>
+        <p className="warning-copy">{t("amxxFlagZWarning")}</p>
       </Modal>
       <ConfirmModal
         open={Boolean(deleting)}

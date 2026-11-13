@@ -174,8 +174,8 @@ not be exposed directly to the Internet.
 ## Next logical tasks
 
 1. FragZone telemetry integration as a separate future track.
-2. Steam ID discovery help and AMXX flag descriptions in the UI.
-3. ReHLDS performance benchmarks and an external-plugin compatibility lab.
+2. ReHLDS performance benchmarks and an external-plugin compatibility lab.
+3. ReSemiclip evaluation for the experimental ReHLDS profile.
 
 ## Continue in another session
 

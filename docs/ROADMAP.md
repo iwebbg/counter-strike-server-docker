@@ -114,6 +114,13 @@
 
 Инструкции: [`REHLDS.md`](REHLDS.md).
 
+## Operator UX
+
+- [x] интерактивни инструкции за откриване на Steam ID чрез `status`;
+- [x] справочник за AMXX access flags `a`–`u` в admin editor-а;
+- [x] предупреждение за непостоянните `STEAM_ID_LAN`/`VALVE_ID_LAN` стойности;
+- [x] пълни български и английски текстове.
+
 ## Product принципи
 
 - plugins се компилират от source при build;

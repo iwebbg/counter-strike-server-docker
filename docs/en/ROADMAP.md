@@ -111,6 +111,13 @@ This is a separate experimental image, not an immediate stable-image replacement
 
 Instructions: [`REHLDS.md`](REHLDS.md).
 
+## Operator UX
+
+- [x] interactive Steam ID discovery through the `status` command;
+- [x] an AMXX access flag `a`–`u` reference in the administrator editor;
+- [x] a warning for non-persistent `STEAM_ID_LAN`/`VALVE_ID_LAN` values;
+- [x] complete Bulgarian and English copy.
+
 ## Product principles
 
 - compile plugins from source during build;

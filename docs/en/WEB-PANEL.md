@@ -207,6 +207,10 @@ admin, Moderator, Maps & votes, or custom AMXX flags. **Save & reload** writes
 to the persistent data volume and invokes `amx_reloadadmins` over RCON, so the
 change is immediate and survives restart/recreate.
 
+The form links to interactive Steam ID discovery instructions using `status`
+and includes a bilingual reference for AMXX flags `a`–`u`. Values such as
+`STEAM_ID_LAN` are not persistent and are rejected for administrator access.
+
 **Reset to .env** removes the panel override and restores `AMXX_ADMINS` from
 the container configuration. The server must be running for live reload.
 
