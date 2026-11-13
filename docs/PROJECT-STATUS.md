@@ -33,6 +33,8 @@ Docker Compose, така и с опционален интерактивен CS 
   Swagger, MariaDB migrations, OAuth-style operator login и Redis session cache;
 - deployment и capacity planning guide с минимални изисквания, препоръчани VPS
   профили, базови idle измервания и bandwidth формула.
+- opt-in ReHLDS/ReGameDLL/Metamod-R/ReAPI image с native ReSemiclip, pin-нати
+  версии/checksum, CI build, compatibility evidence и benchmark tooling.
 
 ### Карти и режими
 
@@ -207,8 +209,8 @@ Internet -> host game port -> HLDS -> Metamod -> AMX Mod X -> active mode
 ## Следващи логични задачи
 
 1. FragZone telemetry integration като отделен бъдещ track.
-2. ReHLDS performance benchmark и външна plugin compatibility лаборатория.
-3. ReSemiclip evaluation за experimental ReHLDS профила.
+2. Реален сравним Valve/ReHLDS performance benchmark с player load.
+3. Попълване на compatibility reports за конкретни външни signature/Orpheu plugins.
 
 ## Продължаване в следваща сесия
 

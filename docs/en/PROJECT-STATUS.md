@@ -33,6 +33,8 @@ and automatic port allocation.
   Swagger, MariaDB migrations, OAuth-style login, and Redis session cache;
 - deployment and capacity planning guide with VPS profiles, idle measurements,
   and a bandwidth formula.
+- an opt-in ReHLDS/ReGameDLL/Metamod-R/ReAPI image with native ReSemiclip,
+  pinned versions/checksum, CI build, compatibility evidence, and benchmark tooling.
 
 ### Maps and modes
 
@@ -179,8 +181,8 @@ not be exposed directly to the Internet.
 ## Next logical tasks
 
 1. FragZone telemetry integration as a separate future track.
-2. ReHLDS performance benchmarks and an external-plugin compatibility lab.
-3. ReSemiclip evaluation for the experimental ReHLDS profile.
+2. A comparable Valve/ReHLDS real-player-load performance benchmark.
+3. Compatibility reports for exact external signature/Orpheu plugin versions.
 
 ## Continue in another session
 
